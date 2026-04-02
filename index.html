@@ -13,7 +13,47 @@
     <link rel="stylesheet" href="./styles.css" />
   </head>
   <body>
-    <div class="app-shell">
+    <section class="auth-screen" id="authScreen">
+      <div class="auth-card">
+        <p class="eyebrow">Acceso privado</p>
+        <h1>Entra a Flujo Claro</h1>
+        <p class="auth-copy">
+          Crea tu cuenta o inicia sesión para guardar tu flujo de caja en la nube
+          y ver solo tu información.
+        </p>
+
+        <form id="authForm" class="transaction-form">
+          <label>
+            Correo
+            <input type="email" name="email" autocomplete="email" required />
+          </label>
+
+          <label>
+            Contraseña
+            <input
+              type="password"
+              name="password"
+              autocomplete="current-password"
+              minlength="6"
+              required
+            />
+          </label>
+
+          <p class="auth-message" id="authMessage"></p>
+
+          <div class="form-actions">
+            <button type="submit" class="primary-btn" id="authSubmitBtn">
+              Iniciar sesión
+            </button>
+            <button type="button" class="ghost-btn" id="toggleAuthModeBtn">
+              Crear cuenta
+            </button>
+          </div>
+        </form>
+      </div>
+    </section>
+
+    <div class="app-shell" id="appShell" hidden>
       <aside class="sidebar">
         <div class="brand-block">
           <div class="brand-mark">FC</div>
@@ -49,6 +89,14 @@
           <p id="adviceText">
             Registra ingresos y egresos del mismo periodo para ver tu flujo real.
           </p>
+        </div>
+
+        <div class="sidebar-section sidebar-note">
+          <p class="section-label">Sesión</p>
+          <p id="userEmailLabel">-</p>
+          <button type="button" class="ghost-btn session-btn" id="logoutBtn">
+            Cerrar sesión
+          </button>
         </div>
       </aside>
 
@@ -474,6 +522,7 @@
       </main>
     </div>
 
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="./app.js"></script>
   </body>
 </html>

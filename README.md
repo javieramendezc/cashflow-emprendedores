@@ -24,3 +24,9 @@ python3 -m http.server 8080
 ```
 
 Luego visita `http://localhost:8080`.
+
+## Login real con Supabase
+
+Antes de usar la app con usuarios, ejecuta el SQL de
+`/Users/javimc/Documents/Playground/cashflow-emprendedores/supabase-schema.sql`
+en **Supabase → SQL Editor**.

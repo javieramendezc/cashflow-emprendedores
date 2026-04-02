@@ -51,6 +51,53 @@ body::before {
   padding: 24px;
 }
 
+.auth-screen {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+}
+
+.auth-card {
+  width: min(520px, 100%);
+  padding: 36px;
+  border-radius: 32px;
+  backdrop-filter: blur(18px);
+  background: var(--surface);
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  box-shadow: var(--shadow);
+}
+
+.auth-card h1 {
+  margin: 0 0 12px;
+  font-family: "Space Grotesk", sans-serif;
+  font-size: clamp(2rem, 4vw, 3rem);
+  letter-spacing: -0.03em;
+}
+
+.auth-copy,
+.auth-message,
+#userEmailLabel {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.6;
+}
+
+.auth-message {
+  min-height: 24px;
+  font-size: 0.92rem;
+  color: var(--negative);
+}
+
+.auth-message.success {
+  color: var(--positive);
+}
+
+.session-btn {
+  margin-top: 14px;
+  width: 100%;
+}
+
 .sidebar,
 .panel,
 .hero-panel {
@@ -610,7 +657,8 @@ tbody tr:hover {
 
   .sidebar,
   .panel,
-  .hero-panel {
+  .hero-panel,
+  .auth-card {
     border-radius: 22px;
     padding: 18px;
   }

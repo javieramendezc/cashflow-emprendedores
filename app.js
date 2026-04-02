@@ -1,4 +1,7 @@
 const STORAGE_KEY = "cashflow-emprendedores-data-v2";
+const SUPABASE_URL = "https://pmrbxgnpdxqkeihcinvj.supabase.co";
+const SUPABASE_PUBLIC_KEY = "sb_publishable_-sACG1yR0TURwqX70-XwTA_1Q9QPJ0w";
+const SUPABASE_STATE_TABLE = "cashflow_user_data";
 
 const categoryMap = {
   income: ["Ventas", "Servicios", "Inversión", "Otros ingresos"],
@@ -22,11 +25,23 @@ const seedState = {
   payables: [],
 };
 
+const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLIC_KEY);
+
 const state = {
-  data: loadData(),
+  data: cloneSeedState(),
   filterMonth: currentMonth(),
+  session: null,
+  authMode: "signIn",
 };
 
+const authScreen = document.querySelector("#authScreen");
+const appShell = document.querySelector("#appShell");
+const authForm = document.querySelector("#authForm");
+const authMessage = document.querySelector("#authMessage");
+const authSubmitBtn = document.querySelector("#authSubmitBtn");
+const toggleAuthModeBtn = document.querySelector("#toggleAuthModeBtn");
+const userEmailLabel = document.querySelector("#userEmailLabel");
+const logoutBtn = document.querySelector("#logoutBtn");
 const transactionForm = document.querySelector("#transactionForm");
 const receivableForm = document.querySelector("#receivableForm");
 const payableForm = document.querySelector("#payableForm");
@@ -54,12 +69,30 @@ monthFilter.value = state.filterMonth;
 
 renderCategoryOptions(transactionForm.type.value);
 render();
+initializeAuth();
 
 transactionForm.type.addEventListener("change", (event) => {
   renderCategoryOptions(event.target.value);
 });
 
-transactionForm.addEventListener("submit", (event) => {
+authForm.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  await handleAuthSubmit();
+});
+
+toggleAuthModeBtn.addEventListener("click", () => {
+  state.authMode = state.authMode === "signIn" ? "signUp" : "signIn";
+  authMessage.textContent = "";
+  authMessage.classList.remove("success");
+  authSubmitBtn.textContent = state.authMode === "signIn" ? "Iniciar sesión" : "Crear cuenta";
+  toggleAuthModeBtn.textContent = state.authMode === "signIn" ? "Crear cuenta" : "Ya tengo cuenta";
+});
+
+logoutBtn.addEventListener("click", async () => {
+  await supabaseClient.auth.signOut();
+});
+
+transactionForm.addEventListener("submit", async (event) => {
   event.preventDefault();
 
   const formData = new FormData(transactionForm);
@@ -87,14 +120,14 @@ transactionForm.addEventListener("submit", (event) => {
         .sort(sortByDateDesc)
     : [transaction, ...state.data.transactions].sort(sortByDateDesc);
 
-  saveData();
+  await saveData();
   state.filterMonth = transaction.date.slice(0, 7);
   monthFilter.value = state.filterMonth;
   resetTransactionForm();
   render();
 });
 
-receivableForm.addEventListener("submit", (event) => {
+receivableForm.addEventListener("submit", async (event) => {
   event.preventDefault();
 
   const formData = new FormData(receivableForm);
@@ -123,14 +156,14 @@ receivableForm.addEventListener("submit", (event) => {
   }
 
   state.data.receivables = [receivable, ...state.data.receivables].sort(sortByDueDateAsc);
-  saveData();
+  await saveData();
   receivableForm.reset();
   receivableForm.issueDate.value = today();
   receivableForm.dueDate.value = addDays(10);
   render();
 });
 
-payableForm.addEventListener("submit", (event) => {
+payableForm.addEventListener("submit", async (event) => {
   event.preventDefault();
 
   const formData = new FormData(payableForm);
@@ -159,7 +192,7 @@ payableForm.addEventListener("submit", (event) => {
   }
 
   state.data.payables = [payable, ...state.data.payables].sort(sortByDueDateAsc);
-  saveData();
+  await saveData();
   payableForm.reset();
   payableForm.issueDate.value = today();
   payableForm.dueDate.value = addDays(7);
@@ -171,7 +204,7 @@ monthFilter.addEventListener("change", (event) => {
   render();
 });
 
-transactionTableBody.addEventListener("click", (event) => {
+transactionTableBody.addEventListener("click", async (event) => {
   const editButton = event.target.closest("[data-edit-transaction]");
   if (editButton) {
     const transaction = state.data.transactions.find(
@@ -193,12 +226,12 @@ transactionTableBody.addEventListener("click", (event) => {
   state.data.transactions = state.data.transactions.filter(
     (item) => item.id !== button.dataset.deleteTransaction
   );
-  saveData();
+  await saveData();
   resetTransactionForm();
   render();
 });
 
-receivableTableBody.addEventListener("click", (event) => {
+receivableTableBody.addEventListener("click", async (event) => {
   const button = event.target.closest("[data-delete-receivable]");
   if (!button) {
     return;
@@ -207,11 +240,11 @@ receivableTableBody.addEventListener("click", (event) => {
   state.data.receivables = state.data.receivables.filter(
     (item) => item.id !== button.dataset.deleteReceivable
   );
-  saveData();
+  await saveData();
   render();
 });
 
-payableTableBody.addEventListener("click", (event) => {
+payableTableBody.addEventListener("click", async (event) => {
   const button = event.target.closest("[data-delete-payable]");
   if (!button) {
     return;
@@ -220,7 +253,7 @@ payableTableBody.addEventListener("click", (event) => {
   state.data.payables = state.data.payables.filter(
     (item) => item.id !== button.dataset.deletePayable
   );
-  saveData();
+  await saveData();
   render();
 });
 
@@ -236,14 +269,87 @@ cancelTransactionEditBtn.addEventListener("click", () => {
   resetTransactionForm();
 });
 
-resetDataBtn.addEventListener("click", () => {
+resetDataBtn.addEventListener("click", async () => {
   state.data = cloneSeedState();
   state.filterMonth = currentMonth();
   monthFilter.value = state.filterMonth;
-  saveData();
+  await saveData();
   resetTransactionForm();
   render();
 });
+
+async function initializeAuth() {
+  const {
+    data: { session },
+  } = await supabaseClient.auth.getSession();
+
+  state.session = session;
+  await syncSessionView();
+
+  supabaseClient.auth.onAuthStateChange(async (_event, sessionState) => {
+    state.session = sessionState;
+    await syncSessionView();
+  });
+}
+
+async function handleAuthSubmit() {
+  const formData = new FormData(authForm);
+  const email = String(formData.get("email") || "").trim();
+  const password = String(formData.get("password") || "");
+
+  authSubmitBtn.disabled = true;
+  authMessage.classList.remove("success");
+  authMessage.textContent = "Procesando...";
+
+  const authResponse =
+    state.authMode === "signIn"
+      ? await supabaseClient.auth.signInWithPassword({ email, password })
+      : await supabaseClient.auth.signUp({ email, password });
+
+  authSubmitBtn.disabled = false;
+
+  if (authResponse.error) {
+    authMessage.textContent = authResponse.error.message;
+    return;
+  }
+
+  if (state.authMode === "signUp" && !authResponse.data.session) {
+    authMessage.classList.add("success");
+    authMessage.textContent =
+      "Cuenta creada. Revisa tu correo si Supabase pide confirmación y luego inicia sesión.";
+    state.authMode = "signIn";
+    authSubmitBtn.textContent = "Iniciar sesión";
+    toggleAuthModeBtn.textContent = "Crear cuenta";
+    authForm.reset();
+    return;
+  }
+
+  authMessage.textContent = "";
+  authForm.reset();
+}
+
+async function syncSessionView() {
+  if (!state.session?.user) {
+    appShell.hidden = true;
+    authScreen.hidden = false;
+    userEmailLabel.textContent = "-";
+    state.data = cloneSeedState();
+    state.filterMonth = currentMonth();
+    monthFilter.value = state.filterMonth;
+    resetTransactionForm();
+    render();
+    return;
+  }
+
+  userEmailLabel.textContent = state.session.user.email || "-";
+  authScreen.hidden = true;
+  appShell.hidden = false;
+  state.data = await loadData();
+  state.filterMonth = currentMonth();
+  monthFilter.value = state.filterMonth;
+  resetTransactionForm();
+  render();
+}
 
 function render() {
   const transactions = state.data.transactions.filter((item) =>
@@ -614,42 +720,68 @@ function renderTips(
   tipsList.innerHTML = tips.map((tip) => `<li>${tip}</li>`).join("");
 }
 
-function loadData() {
-  const stored = localStorage.getItem(STORAGE_KEY);
-
-  if (!stored) {
-    const seed = cloneSeedState();
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(seed));
-    return seed;
+async function loadData() {
+  if (!state.session?.user) {
+    return cloneSeedState();
   }
 
-  try {
-    const parsed = JSON.parse(stored);
+  const storageKey = getUserStorageKey();
+  const localBackup = localStorage.getItem(storageKey);
 
-    if (Array.isArray(parsed)) {
-      const migrated = {
-        transactions: parsed.sort(sortByDateDesc),
-        receivables: cloneSeedState().receivables,
-        payables: cloneSeedState().payables,
-      };
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(migrated));
-      return migrated;
+  try {
+    const { data, error } = await supabaseClient
+      .from(SUPABASE_STATE_TABLE)
+      .select("payload")
+      .eq("user_id", state.session.user.id)
+      .limit(1);
+
+    if (error) {
+      throw error;
     }
 
-    return {
-      transactions: (parsed.transactions || []).sort(sortByDateDesc),
-      receivables: normalizeLedgerItems(parsed.receivables || []).sort(sortByDueDateAsc),
-      payables: normalizeLedgerItems(parsed.payables || []).sort(sortByDueDateAsc),
-    };
-  } catch {
+    if (data?.[0]?.payload) {
+      const parsedRemote = normalizeStatePayload(data[0].payload);
+      localStorage.setItem(storageKey, JSON.stringify(parsedRemote));
+      return parsedRemote;
+    }
+
+    if (localBackup) {
+      const parsedLocal = normalizeStatePayload(JSON.parse(localBackup));
+      await saveDataToSupabase(parsedLocal);
+      return parsedLocal;
+    }
+
     const seed = cloneSeedState();
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(seed));
+    await saveDataToSupabase(seed);
+    localStorage.setItem(storageKey, JSON.stringify(seed));
     return seed;
+  } catch {
+    if (localBackup) {
+      try {
+        return normalizeStatePayload(JSON.parse(localBackup));
+      } catch {
+        return cloneSeedState();
+      }
+    }
+
+    return cloneSeedState();
   }
 }
 
-function saveData() {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(state.data));
+async function saveData() {
+  if (!state.session?.user) {
+    return;
+  }
+
+  const normalizedData = normalizeStatePayload(state.data);
+  state.data = normalizedData;
+  localStorage.setItem(getUserStorageKey(), JSON.stringify(normalizedData));
+
+  try {
+    await saveDataToSupabase(normalizedData);
+  } catch (error) {
+    console.warn("No se pudo sincronizar con Supabase:", error.message);
+  }
 }
 
 function getHealth(incomeTotal, expenseTotal, balance) {
@@ -805,6 +937,33 @@ function cloneSeedState() {
     receivables: normalizeLedgerItems([...seedState.receivables]).sort(sortByDueDateAsc),
     payables: normalizeLedgerItems([...seedState.payables]).sort(sortByDueDateAsc),
   };
+}
+
+function normalizeStatePayload(payload) {
+  return {
+    transactions: (payload?.transactions || []).sort(sortByDateDesc),
+    receivables: normalizeLedgerItems(payload?.receivables || []).sort(sortByDueDateAsc),
+    payables: normalizeLedgerItems(payload?.payables || []).sort(sortByDueDateAsc),
+  };
+}
+
+function getUserStorageKey() {
+  return `${STORAGE_KEY}-${state.session.user.id}`;
+}
+
+async function saveDataToSupabase(payload) {
+  const { error } = await supabaseClient.from(SUPABASE_STATE_TABLE).upsert(
+    {
+      user_id: state.session.user.id,
+      payload,
+      updated_at: new Date().toISOString(),
+    },
+    { onConflict: "user_id" }
+  );
+
+  if (error) {
+    throw error;
+  }
 }
 
 function text(selector, value) {
