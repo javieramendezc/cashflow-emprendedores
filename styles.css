@@ -58,6 +58,11 @@ body::before {
   padding: 24px;
 }
 
+.auth-screen[hidden],
+.app-shell[hidden] {
+  display: none;
+}
+
 .auth-card {
   width: min(520px, 100%);
   padding: 36px;
