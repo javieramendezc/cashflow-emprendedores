@@ -331,6 +331,8 @@
             </div>
 
             <form id="receivableForm" class="transaction-form compact-form">
+              <input type="hidden" name="receivableId" />
+
               <div class="form-row form-row-3">
                 <label>
                   Cliente
@@ -375,7 +377,25 @@
                   />
                 </label>
               </div>
-              <button type="submit" class="primary-btn">Registrar cuenta por cobrar</button>
+
+              <label>
+                Nota
+                <input
+                  type="text"
+                  name="note"
+                  placeholder="Escribe una nota breve"
+                  maxlength="120"
+                />
+              </label>
+
+              <div class="form-actions">
+                <button type="submit" class="primary-btn" id="saveReceivableBtn">
+                  Registrar cuenta por cobrar
+                </button>
+                <button type="button" class="ghost-btn" id="cancelReceivableEditBtn" hidden>
+                  Cancelar edición
+                </button>
+              </div>
             </form>
 
             <div class="table-wrap">
@@ -388,6 +408,7 @@
                     <th>Estado</th>
                     <th>Monto total</th>
                     <th>Monto pendiente</th>
+                    <th>Nota</th>
                     <th>Acción</th>
                   </tr>
                 </thead>
@@ -406,6 +427,8 @@
             </div>
 
             <form id="payableForm" class="transaction-form compact-form">
+              <input type="hidden" name="payableId" />
+
               <div class="form-row form-row-3">
                 <label>
                   Proveedor
@@ -451,7 +474,25 @@
                   />
                 </label>
               </div>
-              <button type="submit" class="primary-btn">Registrar factura por pagar</button>
+
+              <label>
+                Nota
+                <input
+                  type="text"
+                  name="note"
+                  placeholder="Escribe una nota breve"
+                  maxlength="120"
+                />
+              </label>
+
+              <div class="form-actions">
+                <button type="submit" class="primary-btn" id="savePayableBtn">
+                  Registrar factura por pagar
+                </button>
+                <button type="button" class="ghost-btn" id="cancelPayableEditBtn" hidden>
+                  Cancelar edición
+                </button>
+              </div>
             </form>
 
             <div class="table-wrap">
@@ -464,6 +505,7 @@
                     <th>Estado</th>
                     <th>Monto total</th>
                     <th>Monto pendiente</th>
+                    <th>Nota</th>
                     <th>Acción</th>
                   </tr>
                 </thead>

@@ -58,6 +58,10 @@ const exportExcelBtn = document.querySelector("#exportExcelBtn");
 const exportPdfBtn = document.querySelector("#exportPdfBtn");
 const saveTransactionBtn = document.querySelector("#saveTransactionBtn");
 const cancelTransactionEditBtn = document.querySelector("#cancelTransactionEditBtn");
+const saveReceivableBtn = document.querySelector("#saveReceivableBtn");
+const cancelReceivableEditBtn = document.querySelector("#cancelReceivableEditBtn");
+const savePayableBtn = document.querySelector("#savePayableBtn");
+const cancelPayableEditBtn = document.querySelector("#cancelPayableEditBtn");
 const resetDataBtn = document.querySelector("#resetDataBtn");
 
 transactionForm.date.value = today();
@@ -141,7 +145,7 @@ receivableForm.addEventListener("submit", async (event) => {
   }
 
   const receivable = {
-    id: crypto.randomUUID(),
+    id: formData.get("receivableId") || crypto.randomUUID(),
     client: String(formData.get("client")).trim(),
     document: String(formData.get("document")).trim(),
     amount,
@@ -149,17 +153,23 @@ receivableForm.addEventListener("submit", async (event) => {
     issueDate: formData.get("issueDate"),
     dueDate: formData.get("dueDate"),
     status,
+    note: String(formData.get("note") || "").trim(),
   };
 
   if (!receivable.client || !receivable.document || !receivable.amount || !receivable.dueDate) {
     return;
   }
 
-  state.data.receivables = [receivable, ...state.data.receivables].sort(sortByDueDateAsc);
+  const isEditing = Boolean(formData.get("receivableId"));
+
+  state.data.receivables = isEditing
+    ? state.data.receivables
+        .map((item) => (item.id === receivable.id ? receivable : item))
+        .sort(sortByDueDateAsc)
+    : [receivable, ...state.data.receivables].sort(sortByDueDateAsc);
+
   await saveData();
-  receivableForm.reset();
-  receivableForm.issueDate.value = today();
-  receivableForm.dueDate.value = addDays(10);
+  resetReceivableForm();
   render();
 });
 
@@ -177,7 +187,7 @@ payableForm.addEventListener("submit", async (event) => {
   }
 
   const payable = {
-    id: crypto.randomUUID(),
+    id: formData.get("payableId") || crypto.randomUUID(),
     vendor: String(formData.get("vendor")).trim(),
     document: String(formData.get("document")).trim(),
     amount,
@@ -185,17 +195,23 @@ payableForm.addEventListener("submit", async (event) => {
     issueDate: formData.get("issueDate"),
     dueDate: formData.get("dueDate"),
     status,
+    note: String(formData.get("note") || "").trim(),
   };
 
   if (!payable.vendor || !payable.document || !payable.amount || !payable.dueDate) {
     return;
   }
 
-  state.data.payables = [payable, ...state.data.payables].sort(sortByDueDateAsc);
+  const isEditing = Boolean(formData.get("payableId"));
+
+  state.data.payables = isEditing
+    ? state.data.payables
+        .map((item) => (item.id === payable.id ? payable : item))
+        .sort(sortByDueDateAsc)
+    : [payable, ...state.data.payables].sort(sortByDueDateAsc);
+
   await saveData();
-  payableForm.reset();
-  payableForm.issueDate.value = today();
-  payableForm.dueDate.value = addDays(7);
+  resetPayableForm();
   render();
 });
 
@@ -232,6 +248,19 @@ transactionTableBody.addEventListener("click", async (event) => {
 });
 
 receivableTableBody.addEventListener("click", async (event) => {
+  const editButton = event.target.closest("[data-edit-receivable]");
+  if (editButton) {
+    const receivable = state.data.receivables.find(
+      (item) => item.id === editButton.dataset.editReceivable
+    );
+
+    if (receivable) {
+      fillReceivableForm(receivable);
+    }
+
+    return;
+  }
+
   const button = event.target.closest("[data-delete-receivable]");
   if (!button) {
     return;
@@ -241,10 +270,24 @@ receivableTableBody.addEventListener("click", async (event) => {
     (item) => item.id !== button.dataset.deleteReceivable
   );
   await saveData();
+  resetReceivableForm();
   render();
 });
 
 payableTableBody.addEventListener("click", async (event) => {
+  const editButton = event.target.closest("[data-edit-payable]");
+  if (editButton) {
+    const payable = state.data.payables.find(
+      (item) => item.id === editButton.dataset.editPayable
+    );
+
+    if (payable) {
+      fillPayableForm(payable);
+    }
+
+    return;
+  }
+
   const button = event.target.closest("[data-delete-payable]");
   if (!button) {
     return;
@@ -254,6 +297,7 @@ payableTableBody.addEventListener("click", async (event) => {
     (item) => item.id !== button.dataset.deletePayable
   );
   await saveData();
+  resetPayableForm();
   render();
 });
 
@@ -269,12 +313,22 @@ cancelTransactionEditBtn.addEventListener("click", () => {
   resetTransactionForm();
 });
 
+cancelReceivableEditBtn.addEventListener("click", () => {
+  resetReceivableForm();
+});
+
+cancelPayableEditBtn.addEventListener("click", () => {
+  resetPayableForm();
+});
+
 resetDataBtn.addEventListener("click", async () => {
   state.data = cloneSeedState();
   state.filterMonth = currentMonth();
   monthFilter.value = state.filterMonth;
   await saveData();
   resetTransactionForm();
+  resetReceivableForm();
+  resetPayableForm();
   render();
 });
 
@@ -337,6 +391,8 @@ async function syncSessionView() {
     state.filterMonth = currentMonth();
     monthFilter.value = state.filterMonth;
     resetTransactionForm();
+    resetReceivableForm();
+    resetPayableForm();
     render();
     return;
   }
@@ -348,6 +404,8 @@ async function syncSessionView() {
   state.filterMonth = currentMonth();
   monthFilter.value = state.filterMonth;
   resetTransactionForm();
+  resetReceivableForm();
+  resetPayableForm();
   render();
 }
 
@@ -471,7 +529,7 @@ function renderTable(transactions) {
 function renderReceivables(receivables) {
   if (!receivables.length) {
     receivableTableBody.innerHTML =
-      '<tr><td colspan="7">No hay cuentas por cobrar registradas.</td></tr>';
+      '<tr><td colspan="8">No hay cuentas por cobrar registradas.</td></tr>';
     return;
   }
 
@@ -485,7 +543,9 @@ function renderReceivables(receivables) {
           <td><span class="type-badge ${item.status}">${labelStatus(item.status)}</span></td>
           <td class="amount-positive">${formatCurrency(item.amount)}</td>
           <td class="amount-positive">${formatCurrency(getOutstandingAmount(item))}</td>
-          <td>
+          <td>${escapeHtml(item.note || "-")}</td>
+          <td class="action-cell">
+            <button type="button" class="edit-btn" data-edit-receivable="${item.id}">Modificar</button>
             <button type="button" class="delete-btn" data-delete-receivable="${item.id}">Eliminar</button>
           </td>
         </tr>
@@ -497,7 +557,7 @@ function renderReceivables(receivables) {
 function renderPayables(payables) {
   if (!payables.length) {
     payableTableBody.innerHTML =
-      '<tr><td colspan="7">No hay facturas por pagar registradas.</td></tr>';
+      '<tr><td colspan="8">No hay facturas por pagar registradas.</td></tr>';
     return;
   }
 
@@ -511,7 +571,9 @@ function renderPayables(payables) {
           <td><span class="type-badge ${item.status}">${labelStatus(item.status)}</span></td>
           <td class="amount-negative">${formatCurrency(item.amount)}</td>
           <td class="amount-negative">${formatCurrency(getOutstandingAmount(item))}</td>
-          <td>
+          <td>${escapeHtml(item.note || "-")}</td>
+          <td class="action-cell">
+            <button type="button" class="edit-btn" data-edit-payable="${item.id}">Modificar</button>
             <button type="button" class="delete-btn" data-delete-payable="${item.id}">Eliminar</button>
           </td>
         </tr>
@@ -996,6 +1058,54 @@ function resetTransactionForm() {
   cancelTransactionEditBtn.hidden = true;
 }
 
+function fillReceivableForm(receivable) {
+  receivableForm.receivableId.value = receivable.id;
+  receivableForm.client.value = receivable.client;
+  receivableForm.document.value = receivable.document;
+  receivableForm.amount.value = receivable.amount;
+  receivableForm.issueDate.value = receivable.issueDate;
+  receivableForm.dueDate.value = receivable.dueDate;
+  receivableForm.status.value = receivable.status;
+  receivableForm.pendingAmount.value = getOutstandingAmount(receivable);
+  receivableForm.note.value = receivable.note || "";
+  saveReceivableBtn.textContent = "Guardar cambios";
+  cancelReceivableEditBtn.hidden = false;
+  receivableForm.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+function resetReceivableForm() {
+  receivableForm.reset();
+  receivableForm.receivableId.value = "";
+  receivableForm.issueDate.value = today();
+  receivableForm.dueDate.value = addDays(10);
+  saveReceivableBtn.textContent = "Registrar cuenta por cobrar";
+  cancelReceivableEditBtn.hidden = true;
+}
+
+function fillPayableForm(payable) {
+  payableForm.payableId.value = payable.id;
+  payableForm.vendor.value = payable.vendor;
+  payableForm.document.value = payable.document;
+  payableForm.amount.value = payable.amount;
+  payableForm.issueDate.value = payable.issueDate;
+  payableForm.dueDate.value = payable.dueDate;
+  payableForm.status.value = payable.status;
+  payableForm.pendingAmount.value = getOutstandingAmount(payable);
+  payableForm.note.value = payable.note || "";
+  savePayableBtn.textContent = "Guardar cambios";
+  cancelPayableEditBtn.hidden = false;
+  payableForm.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+function resetPayableForm() {
+  payableForm.reset();
+  payableForm.payableId.value = "";
+  payableForm.issueDate.value = today();
+  payableForm.dueDate.value = addDays(7);
+  savePayableBtn.textContent = "Registrar factura por pagar";
+  cancelPayableEditBtn.hidden = true;
+}
+
 function resolvePendingAmount(totalAmount, pendingAmount, status) {
   if (status === "paid") {
     return 0;
@@ -1069,6 +1179,7 @@ function exportToExcel() {
             "Estado",
             "Monto total",
             "Monto pendiente",
+            "Nota",
           ],
           state.data.receivables.map((item) => [
             item.client,
@@ -1078,6 +1189,7 @@ function exportToExcel() {
             labelStatus(item.status),
             item.amount,
             getOutstandingAmount(item),
+            item.note || "",
           ])
         )}
         <h2>Facturas por pagar</h2>
@@ -1090,6 +1202,7 @@ function exportToExcel() {
             "Estado",
             "Monto total",
             "Monto pendiente",
+            "Nota",
           ],
           state.data.payables.map((item) => [
             item.vendor,
@@ -1099,6 +1212,7 @@ function exportToExcel() {
             labelStatus(item.status),
             item.amount,
             getOutstandingAmount(item),
+            item.note || "",
           ])
         )}
         <h2>Resumen por mes</h2>
@@ -1209,6 +1323,7 @@ function exportToPdf() {
             "Estado",
             "Monto total",
             "Monto pendiente",
+            "Nota",
           ],
           state.data.receivables.map((item) => [
             item.client,
@@ -1218,6 +1333,7 @@ function exportToPdf() {
             labelStatus(item.status),
             formatCurrency(item.amount),
             formatCurrency(getOutstandingAmount(item)),
+            item.note || "",
           ])
         )}
 
@@ -1231,6 +1347,7 @@ function exportToPdf() {
             "Estado",
             "Monto total",
             "Monto pendiente",
+            "Nota",
           ],
           state.data.payables.map((item) => [
             item.vendor,
@@ -1240,6 +1357,7 @@ function exportToPdf() {
             labelStatus(item.status),
             formatCurrency(item.amount),
             formatCurrency(getOutstandingAmount(item)),
+            item.note || "",
           ])
         )}
       </body>
