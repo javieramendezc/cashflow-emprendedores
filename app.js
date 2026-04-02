@@ -1,0 +1,1174 @@
+const STORAGE_KEY = "cashflow-emprendedores-data-v2";
+
+const categoryMap = {
+  income: ["Ventas", "Servicios", "Inversión", "Otros ingresos"],
+  expense: [
+    "Insumos",
+    "Marketing",
+    "Envíos",
+    "Sueldo honorario",
+    "Sueldo contrato",
+    "Previred",
+    "Arriendo",
+    "Servicios básicos",
+    "Impuestos",
+    "Otros gastos",
+  ],
+};
+
+const seedState = {
+  transactions: [],
+  receivables: [],
+  payables: [],
+};
+
+const state = {
+  data: loadData(),
+  filterMonth: currentMonth(),
+};
+
+const transactionForm = document.querySelector("#transactionForm");
+const receivableForm = document.querySelector("#receivableForm");
+const payableForm = document.querySelector("#payableForm");
+const categorySelect = transactionForm.querySelector('[name="category"]');
+const monthFilter = document.querySelector("#monthFilter");
+const transactionTableBody = document.querySelector("#transactionTableBody");
+const receivableTableBody = document.querySelector("#receivableTableBody");
+const payableTableBody = document.querySelector("#payableTableBody");
+const monthlySummaryTableBody = document.querySelector("#monthlySummaryTableBody");
+const expenseBreakdown = document.querySelector("#expenseBreakdown");
+const forecastList = document.querySelector("#forecastList");
+const tipsList = document.querySelector("#tipsList");
+const exportExcelBtn = document.querySelector("#exportExcelBtn");
+const exportPdfBtn = document.querySelector("#exportPdfBtn");
+const saveTransactionBtn = document.querySelector("#saveTransactionBtn");
+const cancelTransactionEditBtn = document.querySelector("#cancelTransactionEditBtn");
+const resetDataBtn = document.querySelector("#resetDataBtn");
+
+transactionForm.date.value = today();
+receivableForm.issueDate.value = today();
+receivableForm.dueDate.value = addDays(10);
+payableForm.issueDate.value = today();
+payableForm.dueDate.value = addDays(7);
+monthFilter.value = state.filterMonth;
+
+renderCategoryOptions(transactionForm.type.value);
+render();
+
+transactionForm.type.addEventListener("change", (event) => {
+  renderCategoryOptions(event.target.value);
+});
+
+transactionForm.addEventListener("submit", (event) => {
+  event.preventDefault();
+
+  const formData = new FormData(transactionForm);
+  const transaction = {
+    id: formData.get("transactionId") || crypto.randomUUID(),
+    type: formData.get("type"),
+    description: String(formData.get("description")).trim(),
+    note: String(formData.get("note") || "").trim(),
+    amount: Number(formData.get("amount")),
+    date: formData.get("date"),
+    category: formData.get("category"),
+    channel: formData.get("channel"),
+    recurring: formData.get("recurring") === "on",
+  };
+
+  if (!transaction.description || !transaction.amount || !transaction.date) {
+    return;
+  }
+
+  const isEditing = Boolean(formData.get("transactionId"));
+
+  state.data.transactions = isEditing
+    ? state.data.transactions
+        .map((item) => (item.id === transaction.id ? transaction : item))
+        .sort(sortByDateDesc)
+    : [transaction, ...state.data.transactions].sort(sortByDateDesc);
+
+  saveData();
+  state.filterMonth = transaction.date.slice(0, 7);
+  monthFilter.value = state.filterMonth;
+  resetTransactionForm();
+  render();
+});
+
+receivableForm.addEventListener("submit", (event) => {
+  event.preventDefault();
+
+  const formData = new FormData(receivableForm);
+  const amount = Number(formData.get("amount"));
+  const pendingAmount = Number(formData.get("pendingAmount"));
+  const status = formData.get("status");
+
+  if (status === "partial" && (pendingAmount <= 0 || pendingAmount >= amount)) {
+    alert("Si el estado es Abono parcial, el Monto pendiente debe ser mayor a 0 y menor que el monto total.");
+    return;
+  }
+
+  const receivable = {
+    id: crypto.randomUUID(),
+    client: String(formData.get("client")).trim(),
+    document: String(formData.get("document")).trim(),
+    amount,
+    pendingAmount: resolvePendingAmount(amount, pendingAmount, status),
+    issueDate: formData.get("issueDate"),
+    dueDate: formData.get("dueDate"),
+    status,
+  };
+
+  if (!receivable.client || !receivable.document || !receivable.amount || !receivable.dueDate) {
+    return;
+  }
+
+  state.data.receivables = [receivable, ...state.data.receivables].sort(sortByDueDateAsc);
+  saveData();
+  receivableForm.reset();
+  receivableForm.issueDate.value = today();
+  receivableForm.dueDate.value = addDays(10);
+  render();
+});
+
+payableForm.addEventListener("submit", (event) => {
+  event.preventDefault();
+
+  const formData = new FormData(payableForm);
+  const amount = Number(formData.get("amount"));
+  const pendingAmount = Number(formData.get("pendingAmount"));
+  const status = formData.get("status");
+
+  if (status === "partial" && (pendingAmount <= 0 || pendingAmount >= amount)) {
+    alert("Si el estado es Abono parcial, el Monto pendiente debe ser mayor a 0 y menor que el monto total.");
+    return;
+  }
+
+  const payable = {
+    id: crypto.randomUUID(),
+    vendor: String(formData.get("vendor")).trim(),
+    document: String(formData.get("document")).trim(),
+    amount,
+    pendingAmount: resolvePendingAmount(amount, pendingAmount, status),
+    issueDate: formData.get("issueDate"),
+    dueDate: formData.get("dueDate"),
+    status,
+  };
+
+  if (!payable.vendor || !payable.document || !payable.amount || !payable.dueDate) {
+    return;
+  }
+
+  state.data.payables = [payable, ...state.data.payables].sort(sortByDueDateAsc);
+  saveData();
+  payableForm.reset();
+  payableForm.issueDate.value = today();
+  payableForm.dueDate.value = addDays(7);
+  render();
+});
+
+monthFilter.addEventListener("change", (event) => {
+  state.filterMonth = event.target.value || currentMonth();
+  render();
+});
+
+transactionTableBody.addEventListener("click", (event) => {
+  const editButton = event.target.closest("[data-edit-transaction]");
+  if (editButton) {
+    const transaction = state.data.transactions.find(
+      (item) => item.id === editButton.dataset.editTransaction
+    );
+
+    if (transaction) {
+      fillTransactionForm(transaction);
+    }
+
+    return;
+  }
+
+  const button = event.target.closest("[data-delete-transaction]");
+  if (!button) {
+    return;
+  }
+
+  state.data.transactions = state.data.transactions.filter(
+    (item) => item.id !== button.dataset.deleteTransaction
+  );
+  saveData();
+  resetTransactionForm();
+  render();
+});
+
+receivableTableBody.addEventListener("click", (event) => {
+  const button = event.target.closest("[data-delete-receivable]");
+  if (!button) {
+    return;
+  }
+
+  state.data.receivables = state.data.receivables.filter(
+    (item) => item.id !== button.dataset.deleteReceivable
+  );
+  saveData();
+  render();
+});
+
+payableTableBody.addEventListener("click", (event) => {
+  const button = event.target.closest("[data-delete-payable]");
+  if (!button) {
+    return;
+  }
+
+  state.data.payables = state.data.payables.filter(
+    (item) => item.id !== button.dataset.deletePayable
+  );
+  saveData();
+  render();
+});
+
+exportExcelBtn.addEventListener("click", () => {
+  exportToExcel();
+});
+
+exportPdfBtn.addEventListener("click", () => {
+  exportToPdf();
+});
+
+cancelTransactionEditBtn.addEventListener("click", () => {
+  resetTransactionForm();
+});
+
+resetDataBtn.addEventListener("click", () => {
+  state.data = cloneSeedState();
+  state.filterMonth = currentMonth();
+  monthFilter.value = state.filterMonth;
+  saveData();
+  resetTransactionForm();
+  render();
+});
+
+function render() {
+  const transactions = state.data.transactions.filter((item) =>
+    item.date.startsWith(state.filterMonth)
+  );
+  const receivables = state.data.receivables.filter((item) =>
+    item.dueDate.startsWith(state.filterMonth)
+  );
+  const payables = state.data.payables.filter((item) =>
+    item.dueDate.startsWith(state.filterMonth)
+  );
+
+  const incomes = transactions.filter((item) => item.type === "income");
+  const salesIncomes = incomes.filter((item) => item.category === "Ventas");
+  const expenses = transactions.filter((item) => item.type === "expense");
+  const openReceivables = receivables.filter((item) => item.status !== "paid");
+  const openPayables = payables.filter((item) => item.status !== "paid");
+
+  const incomeTotal = sum(incomes);
+  const monthlyVatTotal = calculateIncludedVat(sum(salesIncomes));
+  const monthlyVatCreditTotal = calculateIncludedVat(
+    payables.reduce((total, item) => total + Number(item.amount || 0), 0)
+  );
+  const expenseTotal = sum(expenses);
+  const receivableTotal = sum(openReceivables);
+  const payableTotal = sum(openPayables);
+  const netTotal = incomeTotal - expenseTotal;
+  const currentBalance = sum(
+    state.data.transactions.map((item) => (item.type === "income" ? item.amount : -item.amount))
+  );
+  const projectedBalance = currentBalance + receivableTotal - payableTotal;
+  const recurring = transactions.filter((item) => item.recurring);
+  const averageIncome = incomes.length ? Math.round(incomeTotal / incomes.length) : 0;
+  const topCategory = findTopExpenseCategory(expenses);
+  const hasAnyData =
+    state.data.transactions.length > 0 ||
+    state.data.receivables.length > 0 ||
+    state.data.payables.length > 0;
+  const nextCommitment = sum(
+    state.data.payables.filter((item) => item.status !== "paid" && daysUntil(item.dueDate) <= 30)
+  );
+  const health = getHealth(incomeTotal, expenseTotal, projectedBalance);
+
+  text("#incomeTotal", formatCurrency(incomeTotal));
+  text("#expenseTotal", formatCurrency(expenseTotal));
+  text("#receivableTotal", formatCurrency(receivableTotal));
+  text("#payableTotal", formatCurrency(payableTotal));
+  text("#monthlyVatTotal", formatCurrency(monthlyVatTotal));
+  text("#monthlyVatCreditTotal", formatCurrency(monthlyVatCreditTotal));
+  text("#netTotal", formatCurrency(netTotal));
+  text("#sidebarBalance", formatCurrency(projectedBalance));
+  text("#sidebarHealth", health.description);
+  text("#recurringCount", `${recurring.length} movimientos`);
+  text("#avgIncome", formatCurrency(averageIncome));
+  text("#topCategory", topCategory);
+  text("#nextCommitment", formatCurrency(nextCommitment));
+  text(
+    "#adviceText",
+    createAdvice(netTotal, recurring.length, topCategory, receivableTotal, payableTotal, hasAnyData)
+  );
+  text("#receivablePill", `${openReceivables.length} pendientes`);
+  text("#payablePill", `${openPayables.length} pendientes`);
+
+  const healthPill = document.querySelector("#healthPill");
+  healthPill.textContent = health.label;
+  healthPill.className = `pill ${health.tone}`;
+
+  renderTable(transactions);
+  renderReceivables(receivables);
+  renderPayables(payables);
+  renderMonthlySummary();
+  renderBreakdown(expenses);
+  renderForecast(projectedBalance, recurring, incomes, expenses, receivableTotal, payableTotal);
+  renderTips(
+    incomeTotal,
+    expenseTotal,
+    recurring,
+    projectedBalance,
+    openReceivables,
+    openPayables,
+    hasAnyData
+  );
+}
+
+function renderCategoryOptions(type) {
+  categorySelect.innerHTML = categoryMap[type]
+    .map((category) => `<option value="${category}">${category}</option>`)
+    .join("");
+}
+
+function renderTable(transactions) {
+  if (!transactions.length) {
+    transactionTableBody.innerHTML =
+      '<tr><td colspan="8">No hay movimientos para este mes aún.</td></tr>';
+    return;
+  }
+
+  transactionTableBody.innerHTML = transactions
+    .map(
+      (item) => `
+        <tr>
+          <td>${formatDate(item.date)}</td>
+          <td>${escapeHtml(item.description)}</td>
+          <td>${item.category}</td>
+          <td>${item.channel}</td>
+          <td>${escapeHtml(item.note || "-")}</td>
+          <td><span class="type-badge ${item.type}">${item.type === "income" ? "Ingreso" : "Egreso"}</span></td>
+          <td class="${item.type === "income" ? "amount-positive" : "amount-negative"}">${item.type === "income" ? "+" : "-"}${formatCurrency(item.amount)}</td>
+          <td class="action-cell">
+            <button type="button" class="edit-btn" data-edit-transaction="${item.id}">Modificar</button>
+            <button type="button" class="delete-btn" data-delete-transaction="${item.id}">Eliminar</button>
+          </td>
+        </tr>
+      `
+    )
+    .join("");
+}
+
+function renderReceivables(receivables) {
+  if (!receivables.length) {
+    receivableTableBody.innerHTML =
+      '<tr><td colspan="7">No hay cuentas por cobrar registradas.</td></tr>';
+    return;
+  }
+
+  receivableTableBody.innerHTML = receivables
+    .map(
+      (item) => `
+        <tr>
+          <td>${escapeHtml(item.client)}</td>
+          <td>${escapeHtml(item.document)}</td>
+          <td>${formatDate(item.dueDate)}</td>
+          <td><span class="type-badge ${item.status}">${labelStatus(item.status)}</span></td>
+          <td class="amount-positive">${formatCurrency(item.amount)}</td>
+          <td class="amount-positive">${formatCurrency(getOutstandingAmount(item))}</td>
+          <td>
+            <button type="button" class="delete-btn" data-delete-receivable="${item.id}">Eliminar</button>
+          </td>
+        </tr>
+      `
+    )
+    .join("");
+}
+
+function renderPayables(payables) {
+  if (!payables.length) {
+    payableTableBody.innerHTML =
+      '<tr><td colspan="7">No hay facturas por pagar registradas.</td></tr>';
+    return;
+  }
+
+  payableTableBody.innerHTML = payables
+    .map(
+      (item) => `
+        <tr>
+          <td>${escapeHtml(item.vendor)}</td>
+          <td>${escapeHtml(item.document)}</td>
+          <td>${formatDate(item.dueDate)}</td>
+          <td><span class="type-badge ${item.status}">${labelStatus(item.status)}</span></td>
+          <td class="amount-negative">${formatCurrency(item.amount)}</td>
+          <td class="amount-negative">${formatCurrency(getOutstandingAmount(item))}</td>
+          <td>
+            <button type="button" class="delete-btn" data-delete-payable="${item.id}">Eliminar</button>
+          </td>
+        </tr>
+      `
+    )
+    .join("");
+}
+
+function renderMonthlySummary() {
+  const monthlyData = {};
+
+  state.data.transactions.forEach((item) => {
+    const month = item.date.slice(0, 7);
+    if (!monthlyData[month]) {
+      monthlyData[month] = { income: 0, expense: 0, receivable: 0, payable: 0 };
+    }
+    monthlyData[month][item.type] += item.amount;
+  });
+
+  state.data.receivables
+    .filter((item) => item.status !== "paid")
+    .forEach((item) => {
+      const month = item.dueDate.slice(0, 7);
+      if (!monthlyData[month]) {
+        monthlyData[month] = { income: 0, expense: 0, receivable: 0, payable: 0 };
+      }
+      monthlyData[month].receivable += getOutstandingAmount(item);
+    });
+
+  state.data.payables
+    .filter((item) => item.status !== "paid")
+    .forEach((item) => {
+      const month = item.dueDate.slice(0, 7);
+      if (!monthlyData[month]) {
+        monthlyData[month] = { income: 0, expense: 0, receivable: 0, payable: 0 };
+      }
+      monthlyData[month].payable += getOutstandingAmount(item);
+    });
+
+  const rows = Object.entries(monthlyData).sort(([monthA], [monthB]) =>
+    monthB.localeCompare(monthA)
+  );
+
+  if (!rows.length) {
+    monthlySummaryTableBody.innerHTML =
+      '<tr><td colspan="6">Aún no hay información mensual para mostrar.</td></tr>';
+    return;
+  }
+
+  monthlySummaryTableBody.innerHTML = rows
+    .map(([month, values]) => {
+      const projected = values.income - values.expense + values.receivable - values.payable;
+      return `
+        <tr>
+          <td><strong>${formatMonthLabel(month)}</strong></td>
+          <td class="amount-positive">${formatCurrency(values.income)}</td>
+          <td class="amount-negative">${formatCurrency(values.expense)}</td>
+          <td class="amount-positive">${formatCurrency(values.receivable)}</td>
+          <td class="amount-negative">${formatCurrency(values.payable)}</td>
+          <td class="${projected >= 0 ? "amount-positive" : "amount-negative"}">${formatCurrency(projected)}</td>
+        </tr>
+      `;
+    })
+    .join("");
+}
+
+function renderBreakdown(expenses) {
+  if (!expenses.length) {
+    expenseBreakdown.innerHTML = '<div class="breakdown-row">Aún no hay egresos para analizar.</div>';
+    return;
+  }
+
+  const totalsByCategory = expenses.reduce((acc, expense) => {
+    acc[expense.category] = (acc[expense.category] || 0) + expense.amount;
+    return acc;
+  }, {});
+
+  const highest = Math.max(...Object.values(totalsByCategory));
+
+  expenseBreakdown.innerHTML = Object.entries(totalsByCategory)
+    .sort(([, a], [, b]) => b - a)
+    .map(
+      ([category, amount]) => `
+        <div class="breakdown-row">
+          <div class="mini-chart-header">
+            <strong>${category}</strong>
+            <span>${formatCurrency(amount)}</span>
+          </div>
+          <div class="breakdown-line">
+            <span style="width: ${(amount / highest) * 100}%"></span>
+          </div>
+        </div>
+      `
+    )
+    .join("");
+}
+
+function renderForecast(balance, recurring, incomes, expenses, receivableTotal, payableTotal) {
+  const weeklyRecurring = recurring.reduce((total, item) => total + item.amount / 4, 0);
+  const weeklyIncome = incomes.length ? sum(incomes) / 4 : 0;
+  const weeklyExpense = expenses.length ? sum(expenses) / 4 : 0;
+
+  let rollingBalance = balance;
+  const weeks = Array.from({ length: 8 }, (_, index) => {
+    if (index === 0) {
+      rollingBalance += receivableTotal * 0.35 - payableTotal * 0.45;
+    }
+
+    rollingBalance += weeklyIncome - Math.max(weeklyExpense, weeklyRecurring);
+
+    return {
+      label: `Semana ${index + 1}`,
+      amount: Math.round(rollingBalance),
+      tone: rollingBalance > 300000 ? "ok" : rollingBalance > 100000 ? "warn" : "risk",
+    };
+  });
+
+  forecastList.innerHTML = weeks
+    .map(
+      (week) => `
+        <div class="forecast-row">
+          <span class="forecast-dot ${week.tone}"></span>
+          <strong>${week.label}</strong>
+          <span>${formatCurrency(week.amount)}</span>
+        </div>
+      `
+    )
+    .join("");
+}
+
+function renderTips(
+  incomeTotal,
+  expenseTotal,
+  recurring,
+  balance,
+  openReceivables,
+  openPayables,
+  hasAnyData
+) {
+  if (!hasAnyData) {
+    tipsList.innerHTML = "";
+    return;
+  }
+
+  const tips = [];
+
+  if (expenseTotal > incomeTotal) {
+    tips.push(
+      "Tus egresos del mes superan los ingresos. Revisa precios, frecuencia de compra o gastos que puedas postergar."
+    );
+  }
+
+  if (recurring.length >= 3) {
+    tips.push(
+      "Ya tienes varios movimientos recurrentes. Conviene separar costos fijos de variables para anticipar semanas más estrechas."
+    );
+  }
+
+  if (balance < 150000) {
+    tips.push(
+      "El saldo proyectado está bajo para operar con holgura. Considera resguardar una reserva mínima para compras y despachos."
+    );
+  }
+
+  const receivablesDueTomorrow = openReceivables.filter(
+    (item) => daysUntil(item.dueDate) === 1
+  );
+  const payablesDueTomorrow = openPayables.filter((item) => daysUntil(item.dueDate) === 1);
+
+  if (openReceivables.some((item) => daysUntil(item.dueDate) < 0)) {
+    tips.push(
+      "Tienes cuentas por cobrar vencidas. Prioriza seguimiento de clientes antes de comprometer nuevas compras."
+    );
+  }
+
+  if (receivablesDueTomorrow.length) {
+    receivablesDueTomorrow.forEach((item) => {
+      tips.push(`Mañana vence ${item.document} de ${item.client}.`);
+    });
+  }
+
+  if (payablesDueTomorrow.length) {
+    payablesDueTomorrow.forEach((item) => {
+      tips.push(`Mañana vence ${item.document} de ${item.vendor}.`);
+    });
+  }
+
+  if (openPayables.some((item) => daysUntil(item.dueDate) <= 7)) {
+    tips.push(
+      "Hay facturas por pagar con vencimiento cercano. Programa esos pagos para evitar recargos o tensión con proveedores."
+    );
+  }
+
+  if (incomeTotal > expenseTotal && balance >= 150000) {
+    tips.push(
+      "Tu caja se ve estable este mes. Puede ser buen momento para definir un porcentaje fijo de reinversión."
+    );
+  }
+
+  if (!tips.length) {
+    tips.push(
+      "Carga más movimientos y vencimientos para que la aplicación pueda detectar patrones y darte recomendaciones más precisas."
+    );
+  }
+
+  tipsList.innerHTML = tips.map((tip) => `<li>${tip}</li>`).join("");
+}
+
+function loadData() {
+  const stored = localStorage.getItem(STORAGE_KEY);
+
+  if (!stored) {
+    const seed = cloneSeedState();
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(seed));
+    return seed;
+  }
+
+  try {
+    const parsed = JSON.parse(stored);
+
+    if (Array.isArray(parsed)) {
+      const migrated = {
+        transactions: parsed.sort(sortByDateDesc),
+        receivables: cloneSeedState().receivables,
+        payables: cloneSeedState().payables,
+      };
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(migrated));
+      return migrated;
+    }
+
+    return {
+      transactions: (parsed.transactions || []).sort(sortByDateDesc),
+      receivables: normalizeLedgerItems(parsed.receivables || []).sort(sortByDueDateAsc),
+      payables: normalizeLedgerItems(parsed.payables || []).sort(sortByDueDateAsc),
+    };
+  } catch {
+    const seed = cloneSeedState();
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(seed));
+    return seed;
+  }
+}
+
+function saveData() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(state.data));
+}
+
+function getHealth(incomeTotal, expenseTotal, balance) {
+  if (balance <= 100000 || expenseTotal > incomeTotal) {
+    return {
+      label: "Atención inmediata",
+      tone: "risk",
+      description: "La caja proyectada está bajo presión y requiere ajustes pronto.",
+    };
+  }
+
+  if (balance <= 350000 || expenseTotal > incomeTotal * 0.8) {
+    return {
+      label: "Zona de cuidado",
+      tone: "warn",
+      description: "La operación sigue viva, pero con margen más estrecho.",
+    };
+  }
+
+  return {
+    label: "Caja saludable",
+    tone: "ok",
+    description: "Tu flujo aguanta mejor compras, pagos y semanas lentas.",
+  };
+}
+
+function findTopExpenseCategory(expenses) {
+  if (!expenses.length) {
+    return "Sin movimientos";
+  }
+
+  const totals = expenses.reduce((acc, item) => {
+    acc[item.category] = (acc[item.category] || 0) + item.amount;
+    return acc;
+  }, {});
+
+  const [category, amount] = Object.entries(totals).sort(([, a], [, b]) => b - a)[0];
+  return `${category} · ${formatCurrency(amount)}`;
+}
+
+function createAdvice(
+  netTotal,
+  recurringCount,
+  topCategory,
+  receivableTotal,
+  payableTotal,
+  hasAnyData
+) {
+  if (!hasAnyData) {
+    return "";
+  }
+
+  if (netTotal < 0) {
+    return `Este mes cerraría en rojo. Parte revisando la categoría más pesada: ${topCategory}.`;
+  }
+
+  if (payableTotal > receivableTotal) {
+    return "Tus salidas comprometidas superan lo que tienes por cobrar. Cuida compras nuevas y ordena vencimientos.";
+  }
+
+  if (recurringCount > 0) {
+    return "Tus cargos recurrentes ya están visibles. Usa esa base para definir un piso mínimo de ventas cada mes.";
+  }
+
+  return "Tu flujo mensual va positivo. Ahora conviene registrar también tus costos fijos para no sobreestimar margen.";
+}
+
+function sum(items) {
+  if (!items.length) {
+    return 0;
+  }
+
+  if (typeof items[0] === "number") {
+    return items.reduce((total, item) => total + item, 0);
+  }
+
+  return items.reduce((total, item) => total + getOutstandingAmount(item), 0);
+}
+
+function formatCurrency(value) {
+  return new Intl.NumberFormat("es-CL", {
+    style: "currency",
+    currency: "CLP",
+    maximumFractionDigits: 0,
+  }).format(value);
+}
+
+function formatDate(value) {
+  return new Intl.DateTimeFormat("es-CL", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  }).format(new Date(`${value}T12:00:00`));
+}
+
+function formatMonthLabel(value) {
+  const [year, month] = value.split("-");
+  return new Intl.DateTimeFormat("es-CL", {
+    month: "long",
+    year: "numeric",
+  }).format(new Date(`${year}-${month}-01T12:00:00`));
+}
+
+function currentMonth() {
+  return today().slice(0, 7);
+}
+
+function today() {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+  const day = String(now.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function addDays(days) {
+  const base = new Date(`${today()}T12:00:00`);
+  base.setDate(base.getDate() + days);
+  const year = base.getFullYear();
+  const month = String(base.getMonth() + 1).padStart(2, "0");
+  const day = String(base.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function daysUntil(dateValue) {
+  const target = new Date(`${dateValue}T12:00:00`);
+  const base = new Date(`${today()}T12:00:00`);
+  return Math.floor((target - base) / 86400000);
+}
+
+function sortByDateDesc(a, b) {
+  return b.date.localeCompare(a.date);
+}
+
+function sortByDueDateAsc(a, b) {
+  return a.dueDate.localeCompare(b.dueDate);
+}
+
+function labelStatus(status) {
+  const labels = {
+    pending: "Pendiente",
+    partial: "Abono parcial",
+    scheduled: "Programada",
+    paid: "Pagada",
+  };
+
+  return labels[status] || status;
+}
+
+function cloneSeedState() {
+  return {
+    transactions: [...seedState.transactions].sort(sortByDateDesc),
+    receivables: normalizeLedgerItems([...seedState.receivables]).sort(sortByDueDateAsc),
+    payables: normalizeLedgerItems([...seedState.payables]).sort(sortByDueDateAsc),
+  };
+}
+
+function text(selector, value) {
+  document.querySelector(selector).textContent = value;
+}
+
+function fillTransactionForm(transaction) {
+  transactionForm.transactionId.value = transaction.id;
+  transactionForm.type.value = transaction.type;
+  renderCategoryOptions(transaction.type);
+  transactionForm.description.value = transaction.description;
+  transactionForm.note.value = transaction.note || "";
+  transactionForm.amount.value = transaction.amount;
+  transactionForm.date.value = transaction.date;
+  transactionForm.category.value = transaction.category;
+  transactionForm.channel.value = transaction.channel;
+  transactionForm.recurring.checked = Boolean(transaction.recurring);
+  saveTransactionBtn.textContent = "Guardar cambios";
+  cancelTransactionEditBtn.hidden = false;
+  document.querySelector("#transactionForm").scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+function resetTransactionForm() {
+  transactionForm.reset();
+  transactionForm.transactionId.value = "";
+  transactionForm.date.value = today();
+  transactionForm.type.value = "income";
+  renderCategoryOptions("income");
+  saveTransactionBtn.textContent = "Guardar movimiento";
+  cancelTransactionEditBtn.hidden = true;
+}
+
+function resolvePendingAmount(totalAmount, pendingAmount, status) {
+  if (status === "paid") {
+    return 0;
+  }
+
+  if (status === "partial") {
+    if (pendingAmount > 0 && pendingAmount <= totalAmount) {
+      return pendingAmount;
+    }
+    return totalAmount;
+  }
+
+  return totalAmount;
+}
+
+function normalizeLedgerItems(items) {
+  return items.map((item) => ({
+    ...item,
+    pendingAmount: resolvePendingAmount(
+      Number(item.amount) || 0,
+      Number(item.pendingAmount ?? item.amount) || 0,
+      item.status
+    ),
+  }));
+}
+
+function getOutstandingAmount(item) {
+  if (typeof item !== "object" || item === null) {
+    return Number(item) || 0;
+  }
+
+  if (!("status" in item) && !("pendingAmount" in item)) {
+    return Number(item.amount) || 0;
+  }
+
+  return Number(item.status === "paid" ? 0 : item.pendingAmount ?? item.amount) || 0;
+}
+
+function calculateIncludedVat(amount) {
+  return Math.round((Number(amount || 0) * 19) / 119);
+}
+
+function exportToExcel() {
+  const monthlyRows = buildMonthlySummaryRows();
+  const workbookHtml = `
+    <html xmlns:o="urn:schemas-microsoft-com:office:office"
+      xmlns:x="urn:schemas-microsoft-com:office:excel"
+      xmlns="http://www.w3.org/TR/REC-html40">
+      <head><meta charset="UTF-8" /></head>
+      <body>
+        <h2>Movimientos</h2>
+        ${buildExportTable(
+          ["Fecha", "Concepto", "Categoría", "Método", "Nota", "Tipo", "Monto"],
+          state.data.transactions.map((item) => [
+            formatDate(item.date),
+            item.description,
+            item.category,
+            item.channel,
+            item.note || "",
+            item.type === "income" ? "Ingreso" : "Egreso",
+            item.amount,
+          ])
+        )}
+        <h2>Cuentas por cobrar</h2>
+        ${buildExportTable(
+          [
+            "Cliente",
+            "Documento",
+            "Emisión",
+            "Vencimiento",
+            "Estado",
+            "Monto total",
+            "Monto pendiente",
+          ],
+          state.data.receivables.map((item) => [
+            item.client,
+            item.document,
+            formatDate(item.issueDate),
+            formatDate(item.dueDate),
+            labelStatus(item.status),
+            item.amount,
+            getOutstandingAmount(item),
+          ])
+        )}
+        <h2>Facturas por pagar</h2>
+        ${buildExportTable(
+          [
+            "Proveedor",
+            "Factura",
+            "Emisión",
+            "Vencimiento",
+            "Estado",
+            "Monto total",
+            "Monto pendiente",
+          ],
+          state.data.payables.map((item) => [
+            item.vendor,
+            item.document,
+            formatDate(item.issueDate),
+            formatDate(item.dueDate),
+            labelStatus(item.status),
+            item.amount,
+            getOutstandingAmount(item),
+          ])
+        )}
+        <h2>Resumen por mes</h2>
+        ${buildExportTable(
+          ["Mes", "Ingresos", "Egresos", "Por cobrar", "Por pagar", "Saldo proyectado"],
+          monthlyRows.map(([month, values]) => [
+            formatMonthLabel(month),
+            values.income,
+            values.expense,
+            values.receivable,
+            values.payable,
+            values.income - values.expense + values.receivable - values.payable,
+          ])
+        )}
+      </body>
+    </html>
+  `;
+
+  downloadFile(
+    `flujo-caja-${today()}.xls`,
+    "application/vnd.ms-excel;charset=utf-8;",
+    workbookHtml
+  );
+}
+
+function exportToPdf() {
+  const monthlyRows = buildMonthlySummaryRows();
+  const reportWindow = window.open("", "_blank");
+
+  if (!reportWindow) {
+    alert("Permite ventanas emergentes para generar el PDF.");
+    return;
+  }
+
+  reportWindow.document.write(`
+    <!DOCTYPE html>
+    <html lang="es">
+      <head>
+        <meta charset="UTF-8" />
+        <title>Reporte Flujo de Caja</title>
+        <style>
+          body {
+            font-family: Arial, sans-serif;
+            padding: 32px;
+            color: #18261f;
+          }
+          h1, h2 {
+            margin: 0 0 12px;
+          }
+          h2 {
+            margin-top: 28px;
+            font-size: 18px;
+          }
+          table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 18px;
+            font-size: 12px;
+          }
+          th, td {
+            border: 1px solid #ccd5cf;
+            padding: 8px;
+            text-align: left;
+          }
+          th {
+            background: #f3efe7;
+          }
+        </style>
+      </head>
+      <body>
+        <h1>Reporte Flujo Claro</h1>
+        <p>Generado el ${formatDate(today())}</p>
+
+        <h2>Resumen por mes</h2>
+        ${buildExportTable(
+          ["Mes", "Ingresos", "Egresos", "Por cobrar", "Por pagar", "Saldo proyectado"],
+          monthlyRows.map(([month, values]) => [
+            formatMonthLabel(month),
+            formatCurrency(values.income),
+            formatCurrency(values.expense),
+            formatCurrency(values.receivable),
+            formatCurrency(values.payable),
+            formatCurrency(values.income - values.expense + values.receivable - values.payable),
+          ])
+        )}
+
+        <h2>Movimientos</h2>
+        ${buildExportTable(
+          ["Fecha", "Concepto", "Categoría", "Método", "Nota", "Tipo", "Monto"],
+          state.data.transactions.map((item) => [
+            formatDate(item.date),
+            item.description,
+            item.category,
+            item.channel,
+            item.note || "",
+            item.type === "income" ? "Ingreso" : "Egreso",
+            formatCurrency(item.amount),
+          ])
+        )}
+
+        <h2>Cuentas por cobrar</h2>
+        ${buildExportTable(
+          [
+            "Cliente",
+            "Documento",
+            "Emisión",
+            "Vencimiento",
+            "Estado",
+            "Monto total",
+            "Monto pendiente",
+          ],
+          state.data.receivables.map((item) => [
+            item.client,
+            item.document,
+            formatDate(item.issueDate),
+            formatDate(item.dueDate),
+            labelStatus(item.status),
+            formatCurrency(item.amount),
+            formatCurrency(getOutstandingAmount(item)),
+          ])
+        )}
+
+        <h2>Facturas por pagar</h2>
+        ${buildExportTable(
+          [
+            "Proveedor",
+            "Factura",
+            "Emisión",
+            "Vencimiento",
+            "Estado",
+            "Monto total",
+            "Monto pendiente",
+          ],
+          state.data.payables.map((item) => [
+            item.vendor,
+            item.document,
+            formatDate(item.issueDate),
+            formatDate(item.dueDate),
+            labelStatus(item.status),
+            formatCurrency(item.amount),
+            formatCurrency(getOutstandingAmount(item)),
+          ])
+        )}
+      </body>
+    </html>
+  `);
+
+  reportWindow.document.close();
+  reportWindow.focus();
+  reportWindow.print();
+}
+
+function buildMonthlySummaryRows() {
+  const monthlyData = {};
+
+  state.data.transactions.forEach((item) => {
+    const month = item.date.slice(0, 7);
+    if (!monthlyData[month]) {
+      monthlyData[month] = { income: 0, expense: 0, receivable: 0, payable: 0 };
+    }
+    monthlyData[month][item.type] += item.amount;
+  });
+
+  state.data.receivables
+    .filter((item) => item.status !== "paid")
+    .forEach((item) => {
+      const month = item.dueDate.slice(0, 7);
+      if (!monthlyData[month]) {
+        monthlyData[month] = { income: 0, expense: 0, receivable: 0, payable: 0 };
+      }
+      monthlyData[month].receivable += getOutstandingAmount(item);
+    });
+
+  state.data.payables
+    .filter((item) => item.status !== "paid")
+    .forEach((item) => {
+      const month = item.dueDate.slice(0, 7);
+      if (!monthlyData[month]) {
+        monthlyData[month] = { income: 0, expense: 0, receivable: 0, payable: 0 };
+      }
+      monthlyData[month].payable += getOutstandingAmount(item);
+    });
+
+  return Object.entries(monthlyData).sort(([monthA], [monthB]) =>
+    monthB.localeCompare(monthA)
+  );
+}
+
+function buildExportTable(headers, rows) {
+  return `
+    <table>
+      <thead>
+        <tr>${headers.map((header) => `<th>${escapeHtml(String(header))}</th>`).join("")}</tr>
+      </thead>
+      <tbody>
+        ${
+          rows.length
+            ? rows
+                .map(
+                  (row) =>
+                    `<tr>${row
+                      .map((cell) => `<td>${escapeHtml(String(cell))}</td>`)
+                      .join("")}</tr>`
+                )
+                .join("")
+            : `<tr><td colspan="${headers.length}">Sin datos</td></tr>`
+        }
+      </tbody>
+    </table>
+  `;
+}
+
+function downloadFile(filename, mimeType, content) {
+  const blob = new Blob(["\ufeff", content], { type: mimeType });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+}
+
+function escapeHtml(value) {
+  return value
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#39;");
+}

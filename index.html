@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Flujo Claro | Gestión de caja para emprendedores</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <aside class="sidebar">
+        <div class="brand-block">
+          <div class="brand-mark">FC</div>
+          <div>
+            <p class="eyebrow">Flujo claro</p>
+            <h1>Controla tu caja sin hojas sueltas</h1>
+          </div>
+        </div>
+
+        <div class="sidebar-section">
+          <p class="section-label">Atajos</p>
+          <nav class="quick-links">
+            <a href="#overview">Resumen</a>
+            <a href="#transactions">Movimientos</a>
+            <a href="#receivables">Cuentas por cobrar</a>
+            <a href="#payables">Facturas por pagar</a>
+            <a href="#monthly-summary">Ver por mes</a>
+            <a href="#forecast">Proyección</a>
+          </nav>
+        </div>
+
+        <div class="sidebar-section">
+          <p class="section-label">Estado actual</p>
+          <div class="balance-card">
+            <span>Saldo disponible</span>
+            <strong id="sidebarBalance">$0</strong>
+            <small id="sidebarHealth">Sin datos aún</small>
+          </div>
+        </div>
+
+        <div class="sidebar-section sidebar-note">
+          <p class="section-label">Sugerencia</p>
+          <p id="adviceText">
+            Registra ingresos y egresos del mismo periodo para ver tu flujo real.
+          </p>
+        </div>
+      </aside>
+
+      <main class="dashboard">
+        <section class="hero-panel" id="overview">
+          <div class="hero-copy">
+            <p class="eyebrow">Workspace financiero</p>
+            <h2>Ve en minutos si tu emprendimiento respira o se aprieta.</h2>
+            <p>
+              Sigue tus entradas, egresos, gastos fijos y la proyección de caja
+              para tomar decisiones con más calma.
+            </p>
+          </div>
+
+          <div class="hero-metrics">
+            <article class="metric">
+              <span>Ingresos del mes</span>
+              <strong id="incomeTotal">$0</strong>
+            </article>
+            <article class="metric">
+              <span>Egresos del mes</span>
+              <strong id="expenseTotal">$0</strong>
+            </article>
+            <article class="metric">
+              <span>Por cobrar pendiente</span>
+              <strong id="receivableTotal">$0</strong>
+            </article>
+            <article class="metric">
+              <span>Por pagar pendiente</span>
+              <strong id="payableTotal">$0</strong>
+            </article>
+            <article class="metric">
+              <span>IVA mensual estimado (19%)</span>
+              <strong id="monthlyVatTotal">$0</strong>
+            </article>
+            <article class="metric">
+              <span>IVA a descontar estimado (19%)</span>
+              <strong id="monthlyVatCreditTotal">$0</strong>
+            </article>
+            <article class="metric accent">
+              <span>Resultado neto</span>
+              <strong id="netTotal">$0</strong>
+            </article>
+          </div>
+        </section>
+
+        <section class="workspace-grid">
+          <section class="panel form-panel">
+            <div class="panel-header">
+              <div>
+                <p class="section-label">Nuevo movimiento</p>
+                <h3>Carga ingresos y gastos</h3>
+              </div>
+            </div>
+
+            <form id="transactionForm" class="transaction-form">
+              <input type="hidden" name="transactionId" />
+
+              <label>
+                Tipo
+                <select name="type" required>
+                  <option value="income">Ingreso</option>
+                  <option value="expense">Egreso</option>
+                </select>
+              </label>
+
+              <label>
+                Concepto
+                <input
+                  type="text"
+                  name="description"
+                  placeholder="Ej. Venta por Instagram"
+                  required
+                />
+              </label>
+
+              <label>
+                Nota
+                <input
+                  type="text"
+                  name="note"
+                  placeholder="Escribe una nota breve"
+                  maxlength="120"
+                />
+              </label>
+
+              <div class="form-row">
+                <label>
+                  Monto IVA incluido
+                  <input
+                    type="number"
+                    name="amount"
+                    min="0"
+                    step="100"
+                    placeholder="25000"
+                    required
+                  />
+                </label>
+
+                <label>
+                  Fecha
+                  <input type="date" name="date" required />
+                </label>
+              </div>
+
+              <div class="form-row">
+                <label>
+                  Categoría
+                  <select name="category" required></select>
+                </label>
+
+                <label>
+                  Método
+                  <select name="channel" required>
+                    <option value="Transferencia">Transferencia</option>
+                    <option value="Efectivo">Efectivo</option>
+                    <option value="Tarjeta">Tarjeta</option>
+                    <option value="Mercado Pago">Mercado Pago</option>
+                  </select>
+                </label>
+              </div>
+
+              <label class="checkbox-row">
+                <input type="checkbox" name="recurring" />
+                <span>Marcar como gasto o ingreso recurrente</span>
+              </label>
+
+              <div class="form-actions">
+                <button type="submit" class="primary-btn" id="saveTransactionBtn">
+                  Guardar movimiento
+                </button>
+                <button
+                  type="button"
+                  class="ghost-btn"
+                  id="cancelTransactionEditBtn"
+                  hidden
+                >
+                  Cancelar edición
+                </button>
+              </div>
+            </form>
+          </section>
+
+          <section class="panel insights-panel">
+            <div class="panel-header">
+              <div>
+                <p class="section-label">Lectura rápida</p>
+                <h3>Salud de caja</h3>
+              </div>
+              <span class="pill" id="healthPill">Sin datos</span>
+            </div>
+
+            <div class="kpi-stack">
+              <div>
+                <span>Gastos fijos detectados</span>
+                <strong id="recurringCount">0 movimientos</strong>
+              </div>
+              <div>
+                <span>Ticket promedio de ingreso</span>
+                <strong id="avgIncome">$0</strong>
+              </div>
+              <div>
+                <span>Categoría que más pesa</span>
+                <strong id="topCategory">Sin movimientos</strong>
+              </div>
+              <div>
+                <span>Compromiso próximos 30 días</span>
+                <strong id="nextCommitment">$0</strong>
+              </div>
+            </div>
+
+            <div class="mini-chart">
+              <div class="mini-chart-header">
+                <span>Distribución de egresos</span>
+                <small>Por categoría</small>
+              </div>
+              <div id="expenseBreakdown" class="breakdown-list"></div>
+            </div>
+          </section>
+        </section>
+
+        <section class="panel transaction-panel" id="transactions">
+          <div class="panel-header panel-header-split">
+            <div>
+              <p class="section-label">Registro</p>
+              <h3>Movimientos del flujo de caja</h3>
+            </div>
+            <div class="filters">
+              <label>
+                Mes
+                <input type="month" id="monthFilter" />
+              </label>
+              <button id="exportExcelBtn" class="ghost-btn" type="button">
+                Descargar Excel
+              </button>
+              <button id="exportPdfBtn" class="ghost-btn" type="button">
+                Descargar PDF
+              </button>
+              <button id="resetDataBtn" class="ghost-btn" type="button">
+                Reiniciar en cero
+              </button>
+            </div>
+          </div>
+
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Fecha</th>
+                  <th>Concepto</th>
+                  <th>Categoría</th>
+                  <th>Método</th>
+                  <th>Nota</th>
+                  <th>Tipo</th>
+                  <th>Monto</th>
+                  <th>Acción</th>
+                </tr>
+              </thead>
+              <tbody id="transactionTableBody"></tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="ledger-grid">
+          <section class="panel" id="receivables">
+            <div class="panel-header">
+              <div>
+                <p class="section-label">Cobranza</p>
+                <h3>Cuentas por cobrar</h3>
+              </div>
+              <span class="pill warn" id="receivablePill">0 pendientes</span>
+            </div>
+
+            <form id="receivableForm" class="transaction-form compact-form">
+              <div class="form-row form-row-3">
+                <label>
+                  Cliente
+                  <input type="text" name="client" placeholder="Ej. Tienda Rocio" required />
+                </label>
+                <label>
+                  Documento
+                  <input type="text" name="document" placeholder="OC-102 / Factura 33" required />
+                </label>
+                <label>
+                  Monto
+                  <input type="number" name="amount" min="0" step="100" required />
+                </label>
+              </div>
+              <div class="form-row form-row-3">
+                <label>
+                  Emisión
+                  <input type="date" name="issueDate" required />
+                </label>
+                <label>
+                  Vencimiento
+                  <input type="date" name="dueDate" required />
+                </label>
+                <label>
+                  Estado
+                  <select name="status" required>
+                    <option value="pending">Pendiente</option>
+                    <option value="partial">Abono parcial</option>
+                    <option value="paid">Pagada</option>
+                  </select>
+                </label>
+              </div>
+              <div class="form-row">
+                <label>
+                  Monto pendiente
+                  <input
+                    type="number"
+                    name="pendingAmount"
+                    min="0"
+                    step="100"
+                    placeholder="Completar si hay abono parcial"
+                  />
+                </label>
+              </div>
+              <button type="submit" class="primary-btn">Registrar cuenta por cobrar</button>
+            </form>
+
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Cliente</th>
+                    <th>Documento</th>
+                    <th>Vence</th>
+                    <th>Estado</th>
+                    <th>Monto total</th>
+                    <th>Monto pendiente</th>
+                    <th>Acción</th>
+                  </tr>
+                </thead>
+                <tbody id="receivableTableBody"></tbody>
+              </table>
+            </div>
+          </section>
+
+          <section class="panel" id="payables">
+            <div class="panel-header">
+              <div>
+                <p class="section-label">Obligaciones</p>
+                <h3>Registro de facturas por pagar</h3>
+              </div>
+              <span class="pill risk" id="payablePill">0 pendientes</span>
+            </div>
+
+            <form id="payableForm" class="transaction-form compact-form">
+              <div class="form-row form-row-3">
+                <label>
+                  Proveedor
+                  <input type="text" name="vendor" placeholder="Ej. Proveedor textil" required />
+                </label>
+                <label>
+                  Factura
+                  <input type="text" name="document" placeholder="F-8832" required />
+                </label>
+                <label>
+                  Monto
+                  <input type="number" name="amount" min="0" step="100" required />
+                </label>
+              </div>
+              <div class="form-row form-row-3">
+                <label>
+                  Emisión
+                  <input type="date" name="issueDate" required />
+                </label>
+                <label>
+                  Vencimiento
+                  <input type="date" name="dueDate" required />
+                </label>
+                <label>
+                  Estado
+                  <select name="status" required>
+                    <option value="pending">Pendiente</option>
+                    <option value="partial">Abono parcial</option>
+                    <option value="scheduled">Programada</option>
+                    <option value="paid">Pagada</option>
+                  </select>
+                </label>
+              </div>
+              <div class="form-row">
+                <label>
+                  Monto pendiente
+                  <input
+                    type="number"
+                    name="pendingAmount"
+                    min="0"
+                    step="100"
+                    placeholder="Completar si hay abono parcial"
+                  />
+                </label>
+              </div>
+              <button type="submit" class="primary-btn">Registrar factura por pagar</button>
+            </form>
+
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Proveedor</th>
+                    <th>Factura</th>
+                    <th>Vence</th>
+                    <th>Estado</th>
+                    <th>Monto total</th>
+                    <th>Monto pendiente</th>
+                    <th>Acción</th>
+                  </tr>
+                </thead>
+                <tbody id="payableTableBody"></tbody>
+              </table>
+            </div>
+          </section>
+        </section>
+
+        <section class="panel transaction-panel" id="monthly-summary">
+          <div class="panel-header">
+            <div>
+              <p class="section-label">Vista mensual</p>
+              <h3>Resumen por mes</h3>
+            </div>
+          </div>
+
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Mes</th>
+                  <th>Ingresos</th>
+                  <th>Egresos</th>
+                  <th>Por cobrar</th>
+                  <th>Por pagar</th>
+                  <th>Saldo proyectado</th>
+                </tr>
+              </thead>
+              <tbody id="monthlySummaryTableBody"></tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="forecast-grid" id="forecast">
+          <section class="panel forecast-panel">
+            <div class="panel-header">
+              <div>
+                <p class="section-label">Proyección</p>
+                <h3>Semáforo de las próximas 8 semanas</h3>
+              </div>
+            </div>
+            <div id="forecastList" class="forecast-list"></div>
+          </section>
+
+          <section class="panel tips-panel">
+            <div class="panel-header">
+              <div>
+                <p class="section-label">Decisión operativa</p>
+                <h3>Recomendaciones útiles</h3>
+              </div>
+            </div>
+            <ul id="tipsList" class="tips-list"></ul>
+          </section>
+        </section>
+      </main>
+    </div>
+
+    <script src="./app.js"></script>
+  </body>
+</html>
