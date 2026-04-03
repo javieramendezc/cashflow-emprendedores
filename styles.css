@@ -502,6 +502,14 @@ select:focus {
   margin-top: 26px;
 }
 
+.monthly-chart-wrap {
+  margin-bottom: 28px;
+  padding: 20px;
+  border-radius: 24px;
+  background: rgba(255, 255, 255, 0.5);
+  border: 1px solid rgba(24, 38, 31, 0.07);
+}
+
 .mini-chart-header {
   display: flex;
   justify-content: space-between;
@@ -515,6 +523,119 @@ select:focus {
 .tips-list {
   display: grid;
   gap: 12px;
+}
+
+.monthly-flow-chart {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 16px;
+  align-items: end;
+  min-height: 220px;
+}
+
+.monthly-flow-empty {
+  display: grid;
+  place-items: center;
+  min-height: 180px;
+  color: var(--muted);
+  text-align: center;
+}
+
+.monthly-flow-bar {
+  display: grid;
+  gap: 12px;
+  align-content: end;
+}
+
+.monthly-flow-stack {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  align-items: end;
+  gap: 8px;
+  min-height: 170px;
+}
+
+.flow-column {
+  position: relative;
+  min-height: 16px;
+  border-radius: 16px 16px 6px 6px;
+  transition: transform 180ms ease, filter 180ms ease;
+}
+
+.flow-column:hover {
+  transform: translateY(-3px);
+  filter: brightness(1.03);
+}
+
+.flow-column.income {
+  background: linear-gradient(180deg, rgba(23, 114, 69, 0.95), rgba(23, 114, 69, 0.7));
+}
+
+.flow-column.expense {
+  background: linear-gradient(180deg, rgba(181, 58, 36, 0.92), rgba(181, 58, 36, 0.68));
+}
+
+.flow-column.net.positive {
+  background: linear-gradient(180deg, rgba(255, 122, 0, 0.95), rgba(255, 181, 107, 0.85));
+}
+
+.flow-column.net.negative {
+  background: linear-gradient(180deg, rgba(24, 38, 31, 0.95), rgba(49, 88, 70, 0.8));
+}
+
+.flow-column span {
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% + 8px);
+  transform: translateX(-50%);
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--ink);
+  white-space: nowrap;
+}
+
+.monthly-flow-label {
+  display: grid;
+  gap: 8px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+}
+
+.monthly-flow-label strong {
+  font-size: 0.92rem;
+  text-transform: capitalize;
+}
+
+.flow-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 14px;
+  font-size: 0.76rem;
+  color: var(--muted);
+}
+
+.flow-legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.flow-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.flow-dot.income {
+  background: var(--positive);
+}
+
+.flow-dot.expense {
+  background: var(--negative);
+}
+
+.flow-dot.net {
+  background: var(--accent);
 }
 
 .breakdown-row,
@@ -759,6 +880,19 @@ tbody tr:hover {
 
   .metric.accent {
     grid-column: auto;
+  }
+
+  .monthly-chart-wrap {
+    padding: 16px;
+  }
+
+  .monthly-flow-chart {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    min-height: auto;
+  }
+
+  .monthly-flow-stack {
+    min-height: 150px;
   }
 
   .panel-header,

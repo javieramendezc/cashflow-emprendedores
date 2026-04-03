@@ -91,6 +91,7 @@ const monthFilter = document.querySelector("#monthFilter");
 const transactionTableBody = document.querySelector("#transactionTableBody");
 const receivableTableBody = document.querySelector("#receivableTableBody");
 const payableTableBody = document.querySelector("#payableTableBody");
+const monthlyFlowChart = document.querySelector("#monthlyFlowChart");
 const monthlySummaryTableBody = document.querySelector("#monthlySummaryTableBody");
 const expenseBreakdown = document.querySelector("#expenseBreakdown");
 const forecastList = document.querySelector("#forecastList");
@@ -670,6 +671,38 @@ function renderPayables(payables) {
 }
 
 function renderMonthlySummary() {
+  const monthlyData = getMonthlySummaryData();
+
+  const rows = Object.entries(monthlyData).sort(([monthA], [monthB]) =>
+    monthB.localeCompare(monthA)
+  );
+
+  renderMonthlyFlowChart(rows.slice().reverse());
+
+  if (!rows.length) {
+    monthlySummaryTableBody.innerHTML =
+      '<tr><td colspan="6">Aún no hay información mensual para mostrar.</td></tr>';
+    return;
+  }
+
+  monthlySummaryTableBody.innerHTML = rows
+    .map(([month, values]) => {
+      const projected = values.income - values.expense + values.receivable - values.payable;
+      return `
+        <tr>
+          <td><strong>${formatMonthLabel(month)}</strong></td>
+          <td class="amount-positive">${formatCurrency(values.income)}</td>
+          <td class="amount-negative">${formatCurrency(values.expense)}</td>
+          <td class="amount-positive">${formatCurrency(values.receivable)}</td>
+          <td class="amount-negative">${formatCurrency(values.payable)}</td>
+          <td class="${projected >= 0 ? "amount-positive" : "amount-negative"}">${formatCurrency(projected)}</td>
+        </tr>
+      `;
+    })
+    .join("");
+}
+
+function getMonthlySummaryData() {
   const monthlyData = {};
 
   state.data.transactions.forEach((item) => {
@@ -700,28 +733,58 @@ function renderMonthlySummary() {
       monthlyData[month].payable += getOutstandingAmount(item);
     });
 
-  const rows = Object.entries(monthlyData).sort(([monthA], [monthB]) =>
-    monthB.localeCompare(monthA)
-  );
+  return monthlyData;
+}
 
+function renderMonthlyFlowChart(rows) {
   if (!rows.length) {
-    monthlySummaryTableBody.innerHTML =
-      '<tr><td colspan="6">Aún no hay información mensual para mostrar.</td></tr>';
+    monthlyFlowChart.innerHTML =
+      '<div class="monthly-flow-empty">Aún no hay datos suficientes para graficar el flujo mensual.</div>';
     return;
   }
 
-  monthlySummaryTableBody.innerHTML = rows
-    .map(([month, values]) => {
-      const projected = values.income - values.expense + values.receivable - values.payable;
+  const chartRows = rows.slice(-6).map(([month, values]) => ({
+    month,
+    income: values.income,
+    expense: values.expense,
+    net: values.income - values.expense,
+  }));
+
+  const maxAmount =
+    Math.max(
+      ...chartRows.flatMap((item) => [item.income, item.expense, Math.abs(item.net)]),
+      1
+    ) || 1;
+
+  monthlyFlowChart.innerHTML = chartRows
+    .map((item) => {
+      const incomeHeight = Math.max((item.income / maxAmount) * 100, item.income ? 8 : 0);
+      const expenseHeight = Math.max((item.expense / maxAmount) * 100, item.expense ? 8 : 0);
+      const netHeight = Math.max((Math.abs(item.net) / maxAmount) * 100, item.net ? 8 : 0);
+      const netTone = item.net >= 0 ? "positive" : "negative";
+
       return `
-        <tr>
-          <td><strong>${formatMonthLabel(month)}</strong></td>
-          <td class="amount-positive">${formatCurrency(values.income)}</td>
-          <td class="amount-negative">${formatCurrency(values.expense)}</td>
-          <td class="amount-positive">${formatCurrency(values.receivable)}</td>
-          <td class="amount-negative">${formatCurrency(values.payable)}</td>
-          <td class="${projected >= 0 ? "amount-positive" : "amount-negative"}">${formatCurrency(projected)}</td>
-        </tr>
+        <article class="monthly-flow-bar">
+          <div class="monthly-flow-stack">
+            <div class="flow-column income" style="height:${incomeHeight}%">
+              <span>${formatCompactCurrency(item.income)}</span>
+            </div>
+            <div class="flow-column expense" style="height:${expenseHeight}%">
+              <span>${formatCompactCurrency(item.expense)}</span>
+            </div>
+            <div class="flow-column net ${netTone}" style="height:${netHeight}%">
+              <span>${formatCompactCurrency(item.net)}</span>
+            </div>
+          </div>
+          <div class="monthly-flow-label">
+            <strong>${formatMonthLabel(item.month)}</strong>
+            <div class="flow-legend">
+              <span class="flow-legend-item"><i class="flow-dot income"></i>Ingresos</span>
+              <span class="flow-legend-item"><i class="flow-dot expense"></i>Egresos</span>
+              <span class="flow-legend-item"><i class="flow-dot net"></i>Neto</span>
+            </div>
+          </div>
+        </article>
       `;
     })
     .join("");
@@ -1016,6 +1079,21 @@ function formatCurrency(value) {
     currency: "CLP",
     maximumFractionDigits: 0,
   }).format(value);
+}
+
+function formatCompactCurrency(value) {
+  const absoluteValue = Math.abs(Number(value) || 0);
+  const sign = Number(value) < 0 ? "-" : "";
+
+  if (absoluteValue >= 1000000) {
+    return `${sign}$${(absoluteValue / 1000000).toFixed(1).replace(".0", "")}M`;
+  }
+
+  if (absoluteValue >= 1000) {
+    return `${sign}$${Math.round(absoluteValue / 1000)}K`;
+  }
+
+  return `${sign}$${absoluteValue}`;
 }
 
 function formatDate(value) {
