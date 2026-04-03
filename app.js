@@ -1,5 +1,4 @@
 const STORAGE_KEY = "cashflow-emprendedores-data-v2";
-const REMEMBERED_EMAIL_KEY = "cashflow-emprendedores-remembered-email";
 const SUPABASE_URL = "https://pmrbxgnpdxqkeihcinvj.supabase.co";
 const SUPABASE_PUBLIC_KEY = "sb_publishable_-sACG1yR0TURwqX70-XwTA_1Q9QPJ0w";
 const SUPABASE_STATE_TABLE = "cashflow_user_data";
@@ -47,8 +46,6 @@ const authPasswordField = document.querySelector("#authPasswordField");
 const authPasswordLabel = document.querySelector("#authPasswordLabel");
 const authEmailInput = authForm.querySelector('[name="email"]');
 const authPasswordInput = authForm.querySelector('[name="password"]');
-const authRememberField = document.querySelector("#authRememberField");
-const rememberAccessInput = document.querySelector("#rememberAccessInput");
 const authMessage = document.querySelector("#authMessage");
 const authSubmitBtn = document.querySelector("#authSubmitBtn");
 const toggleAuthModeBtn = document.querySelector("#toggleAuthModeBtn");
@@ -133,7 +130,6 @@ renderCategoryOptions(transactionFields.type.value);
 togglePartialAmountField(receivableFields, receivablePartialField);
 togglePartialAmountField(payableFields, payablePartialField);
 setAuthMode("signIn");
-restoreRememberedAccess();
 render();
 initializeAuth();
 
@@ -445,26 +441,6 @@ resetDataBtn.addEventListener("click", async () => {
 
 async function initializeAuth() {
   try {
-    if (hasPasswordRecoveryParams()) {
-      setAuthMode("updatePassword", {
-        message: "Ingresa tu nueva contraseña para completar la recuperación.",
-        tone: "success",
-      });
-    }
-
-    supabaseClient.auth.onAuthStateChange(async (event, sessionState) => {
-      if (event === "PASSWORD_RECOVERY") {
-        setAuthMode("updatePassword", {
-          message: "Ingresa tu nueva contraseña para completar la recuperación.",
-          tone: "success",
-        });
-      }
-
-      state.session = sessionState;
-      await syncSessionView();
-      document.body.classList.remove("auth-loading");
-    });
-
     const {
       data: { session },
     } = await supabaseClient.auth.getSession();
@@ -474,9 +450,19 @@ async function initializeAuth() {
   } catch {
     state.session = null;
     await syncSessionView();
-  } finally {
-    document.body.classList.remove("auth-loading");
   }
+
+  supabaseClient.auth.onAuthStateChange(async (event, sessionState) => {
+    if (event === "PASSWORD_RECOVERY") {
+      setAuthMode("updatePassword", {
+        message: "Ingresa tu nueva contraseña para completar la recuperación.",
+        tone: "success",
+      });
+    }
+
+    state.session = sessionState;
+    await syncSessionView();
+  });
 }
 
 async function handleAuthSubmit() {
@@ -539,13 +525,8 @@ async function handleAuthSubmit() {
     return;
   }
 
-  if (state.authMode === "signIn") {
-    persistRememberedAccess(email);
-  }
-
   authMessage.textContent = "";
   authForm.reset();
-  restoreRememberedAccess();
 }
 
 async function syncSessionView() {
@@ -603,7 +584,6 @@ function setAuthMode(mode, feedback = {}) {
 
   authEmailField.hidden = mode === "updatePassword";
   authPasswordField.hidden = mode === "recoverPassword";
-  authRememberField.hidden = mode !== "signIn";
   authEmailInput.required = mode !== "updatePassword";
   authPasswordInput.required = mode !== "recoverPassword";
   authPasswordInput.autocomplete = mode === "signUp" || mode === "updatePassword"
@@ -635,27 +615,6 @@ function setAuthMode(mode, feedback = {}) {
   } else {
     authPasswordInput.focus();
   }
-}
-
-function restoreRememberedAccess() {
-  const rememberedEmail = localStorage.getItem(REMEMBERED_EMAIL_KEY) || "";
-  authEmailInput.value = rememberedEmail;
-  rememberAccessInput.checked = Boolean(rememberedEmail);
-}
-
-function persistRememberedAccess(email) {
-  if (rememberAccessInput.checked && email) {
-    localStorage.setItem(REMEMBERED_EMAIL_KEY, email);
-    return;
-  }
-
-  localStorage.removeItem(REMEMBERED_EMAIL_KEY);
-}
-
-function hasPasswordRecoveryParams() {
-  const hashParams = new URLSearchParams(window.location.hash.replace(/^#/, ""));
-  const queryParams = new URLSearchParams(window.location.search);
-  return hashParams.get("type") === "recovery" || queryParams.get("type") === "recovery";
 }
 
 function render() {
