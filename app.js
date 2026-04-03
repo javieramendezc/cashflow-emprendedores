@@ -597,9 +597,6 @@ function withTimeout(promise, timeoutMs) {
 }
 
 async function syncSessionView() {
-  logoutBtn.disabled = false;
-  logoutBtn.textContent = "Cerrar sesión";
-
   if (state.authMode === "updatePassword") {
     appShell.hidden = true;
     authScreen.hidden = false;
