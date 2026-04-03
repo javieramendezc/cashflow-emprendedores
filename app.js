@@ -28,14 +28,7 @@ const seedState = {
   payables: [],
 };
 
-const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLIC_KEY, {
-  auth: {
-    persistSession: true,
-    autoRefreshToken: true,
-    detectSessionInUrl: true,
-    flowType: "pkce",
-  },
-});
+const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLIC_KEY);
 
 const state = {
   data: cloneSeedState(),
@@ -513,73 +506,64 @@ async function handleAuthSubmit() {
   authMessage.classList.remove("success");
   authMessage.textContent = "Procesando...";
 
-  try {
-    let authResponse;
+  let authResponse;
 
-    if (state.authMode === "recoverPassword") {
-      authResponse = await supabaseClient.auth.resetPasswordForEmail(email, {
-        redirectTo: window.location.origin,
-      });
-    } else if (state.authMode === "updatePassword") {
-      authResponse = await supabaseClient.auth.updateUser({ password });
-    } else {
-      authResponse =
-        state.authMode === "signIn"
-          ? await supabaseClient.auth.signInWithPassword({ email, password })
-          : await supabaseClient.auth.signUp({ email, password });
-    }
-
-    if (authResponse.error) {
-      authMessage.textContent = authResponse.error.message;
-      return;
-    }
-
-    if (state.authMode === "recoverPassword") {
-      setAuthMode("signIn", {
-        message: "Te enviamos un correo para recuperar tu contraseña.",
-        tone: "success",
-      });
-      authForm.reset();
-      restoreRememberedAccess();
-      return;
-    }
-
-    if (state.authMode === "updatePassword") {
-      await supabaseClient.auth.signOut();
-      setAuthMode("signIn", {
-        message: "Contraseña actualizada. Ya puedes iniciar sesión.",
-        tone: "success",
-      });
-      authForm.reset();
-      restoreRememberedAccess();
-      return;
-    }
-
-    if (state.authMode === "signUp" && !authResponse.data.session) {
-      setAuthMode("signIn", {
-        message:
-          "Cuenta creada. Revisa tu correo si Supabase pide confirmación y luego inicia sesión.",
-        tone: "success",
-      });
-      authForm.reset();
-      restoreRememberedAccess();
-      return;
-    }
-
-    if (state.authMode === "signIn") {
-      persistRememberedAccess(email);
-    }
-
-    authMessage.textContent = "";
-    authForm.reset();
-    restoreRememberedAccess();
-  } catch (error) {
-    authMessage.classList.remove("success");
-    authMessage.textContent =
-      error?.message || "No se pudo procesar el acceso. Intenta nuevamente.";
-  } finally {
-    authSubmitBtn.disabled = false;
+  if (state.authMode === "recoverPassword") {
+    authResponse = await supabaseClient.auth.resetPasswordForEmail(email, {
+      redirectTo: window.location.origin,
+    });
+  } else if (state.authMode === "updatePassword") {
+    authResponse = await supabaseClient.auth.updateUser({ password });
+  } else {
+    authResponse =
+      state.authMode === "signIn"
+        ? await supabaseClient.auth.signInWithPassword({ email, password })
+        : await supabaseClient.auth.signUp({ email, password });
   }
+
+  authSubmitBtn.disabled = false;
+
+  if (authResponse.error) {
+    authMessage.textContent = authResponse.error.message;
+    return;
+  }
+
+  if (state.authMode === "recoverPassword") {
+    setAuthMode("signIn", {
+      message: "Te enviamos un correo para recuperar tu contraseña.",
+      tone: "success",
+    });
+    authForm.reset();
+    return;
+  }
+
+  if (state.authMode === "updatePassword") {
+    await supabaseClient.auth.signOut();
+    setAuthMode("signIn", {
+      message: "Contraseña actualizada. Ya puedes iniciar sesión.",
+      tone: "success",
+    });
+    authForm.reset();
+    return;
+  }
+
+  if (state.authMode === "signUp" && !authResponse.data.session) {
+    setAuthMode("signIn", {
+      message:
+        "Cuenta creada. Revisa tu correo si Supabase pide confirmación y luego inicia sesión.",
+      tone: "success",
+    });
+    authForm.reset();
+    return;
+  }
+
+  if (state.authMode === "signIn") {
+    persistRememberedAccess(email);
+  }
+
+  authMessage.textContent = "";
+  authForm.reset();
+  restoreRememberedAccess();
 }
 
 async function handleLogout() {
@@ -1275,7 +1259,6 @@ async function loadData() {
 
   const storageKey = getUserStorageKey();
   const localBackup = safeGetLocalStorage(storageKey);
-  const parsedLocal = parseStoredPayload(localBackup);
 
   try {
     const { data, error } = await supabaseClient
@@ -1288,15 +1271,25 @@ async function loadData() {
       throw error;
     }
 
-    if (parsedLocal) {
-      await saveDataToSupabase(parsedLocal);
-      return parsedLocal;
-    }
-
     if (data?.[0]?.payload) {
       const parsedRemote = normalizeStatePayload(data[0].payload);
+      if (localBackup) {
+        const parsedLocal = normalizeStatePayload(JSON.parse(localBackup));
+
+        if (!hasStoredBusinessData(parsedRemote) && hasStoredBusinessData(parsedLocal)) {
+          await saveDataToSupabase(parsedLocal);
+          return parsedLocal;
+        }
+      }
+
       safeSetLocalStorage(storageKey, JSON.stringify(parsedRemote));
       return parsedRemote;
+    }
+
+    if (localBackup) {
+      const parsedLocal = normalizeStatePayload(JSON.parse(localBackup));
+      await saveDataToSupabase(parsedLocal);
+      return parsedLocal;
     }
 
     const seed = cloneSeedState();
@@ -1304,8 +1297,12 @@ async function loadData() {
     safeSetLocalStorage(storageKey, JSON.stringify(seed));
     return seed;
   } catch {
-    if (parsedLocal) {
-      return parsedLocal;
+    if (localBackup) {
+      try {
+        return normalizeStatePayload(JSON.parse(localBackup));
+      } catch {
+        return cloneSeedState();
+      }
     }
 
     return cloneSeedState();
@@ -1345,19 +1342,15 @@ function safeSetLocalStorage(key, value) {
   }
 }
 
-function parseStoredPayload(rawValue) {
-  if (!rawValue) {
-    return null;
-  }
-
-  try {
-    return normalizeStatePayload(JSON.parse(rawValue));
-  } catch (error) {
-    console.warn("No se pudo interpretar respaldo local:", error?.message || error);
-    return null;
-  }
+function hasStoredBusinessData(payload) {
+  return Boolean(
+    payload.companyLogo ||
+      payload.cashFloor ||
+      payload.transactions.length ||
+      payload.receivables.length ||
+      payload.payables.length
+  );
 }
-
 
 function getHealth(incomeTotal, expenseTotal, balance, cashFloor = 0) {
   const minimumBalance = cashFloor > 0 ? cashFloor : 100000;
@@ -1565,13 +1558,16 @@ function getUserStorageKey() {
 }
 
 async function saveDataToSupabase(payload) {
-  const { error } = await supabaseClient.from(SUPABASE_STATE_TABLE).upsert(
-    {
-      user_id: state.session.user.id,
-      payload,
-      updated_at: new Date().toISOString(),
-    },
-    { onConflict: "user_id" }
+  const { error } = await withTimeout(
+    supabaseClient.from(SUPABASE_STATE_TABLE).upsert(
+      {
+        user_id: state.session.user.id,
+        payload,
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: "user_id" }
+    ),
+    2500
   );
 
   if (error) {
