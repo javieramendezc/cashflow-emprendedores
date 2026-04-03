@@ -44,6 +44,8 @@ const toggleAuthModeBtn = document.querySelector("#toggleAuthModeBtn");
 const userEmailLabel = document.querySelector("#userEmailLabel");
 const logoutBtn = document.querySelector("#logoutBtn");
 const dynamicFavicon = document.querySelector("#dynamicFavicon");
+const logoSettingsToggle = document.querySelector("#logoSettingsToggle");
+const logoSettingsPanel = document.querySelector("#logoSettingsPanel");
 const brandLogoPreview = document.querySelector("#brandLogoPreview");
 const brandLogoFallback = document.querySelector("#brandLogoFallback");
 const companyLogoInput = document.querySelector("#companyLogoInput");
@@ -104,6 +106,10 @@ toggleAuthModeBtn.addEventListener("click", () => {
 
 logoutBtn.addEventListener("click", async () => {
   await supabaseClient.auth.signOut();
+});
+
+logoSettingsToggle.addEventListener("click", () => {
+  logoSettingsPanel.hidden = !logoSettingsPanel.hidden;
 });
 
 companyLogoInput.addEventListener("change", async () => {
