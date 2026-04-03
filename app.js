@@ -430,12 +430,17 @@ resetDataBtn.addEventListener("click", async () => {
 });
 
 async function initializeAuth() {
-  const {
-    data: { session },
-  } = await supabaseClient.auth.getSession();
+  try {
+    const {
+      data: { session },
+    } = await supabaseClient.auth.getSession();
 
-  state.session = session;
-  await syncSessionView();
+    state.session = session;
+    await syncSessionView();
+  } catch {
+    state.session = null;
+    await syncSessionView();
+  }
 
   supabaseClient.auth.onAuthStateChange(async (_event, sessionState) => {
     state.session = sessionState;
