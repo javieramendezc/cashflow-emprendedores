@@ -1518,13 +1518,16 @@ function getUserStorageKey() {
 }
 
 async function saveDataToSupabase(payload) {
-  const { error } = await supabaseClient.from(SUPABASE_STATE_TABLE).upsert(
-    {
-      user_id: state.session.user.id,
-      payload,
-      updated_at: new Date().toISOString(),
-    },
-    { onConflict: "user_id" }
+  const { error } = await withTimeout(
+    supabaseClient.from(SUPABASE_STATE_TABLE).upsert(
+      {
+        user_id: state.session.user.id,
+        payload,
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: "user_id" }
+    ),
+    2500
   );
 
   if (error) {
