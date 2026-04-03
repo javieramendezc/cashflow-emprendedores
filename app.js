@@ -53,6 +53,39 @@ const removeLogoBtn = document.querySelector("#removeLogoBtn");
 const transactionForm = document.querySelector("#transactionForm");
 const receivableForm = document.querySelector("#receivableForm");
 const payableForm = document.querySelector("#payableForm");
+const transactionFields = getNamedFields(transactionForm, [
+  "transactionId",
+  "type",
+  "description",
+  "note",
+  "amount",
+  "date",
+  "category",
+  "channel",
+  "recurring",
+]);
+const receivableFields = getNamedFields(receivableForm, [
+  "receivableId",
+  "client",
+  "document",
+  "amount",
+  "issueDate",
+  "dueDate",
+  "status",
+  "pendingAmount",
+  "note",
+]);
+const payableFields = getNamedFields(payableForm, [
+  "payableId",
+  "vendor",
+  "document",
+  "amount",
+  "issueDate",
+  "dueDate",
+  "status",
+  "pendingAmount",
+  "note",
+]);
 const categorySelect = transactionForm.querySelector('[name="category"]');
 const monthFilter = document.querySelector("#monthFilter");
 const transactionTableBody = document.querySelector("#transactionTableBody");
@@ -74,20 +107,20 @@ const receivablePartialField = document.querySelector("#receivablePartialField")
 const payablePartialField = document.querySelector("#payablePartialField");
 const resetDataBtn = document.querySelector("#resetDataBtn");
 
-transactionForm.date.value = today();
-receivableForm.issueDate.value = today();
-receivableForm.dueDate.value = addDays(10);
-payableForm.issueDate.value = today();
-payableForm.dueDate.value = addDays(7);
+transactionFields.date.value = today();
+receivableFields.issueDate.value = today();
+receivableFields.dueDate.value = addDays(10);
+payableFields.issueDate.value = today();
+payableFields.dueDate.value = addDays(7);
 monthFilter.value = state.filterMonth;
 
-renderCategoryOptions(transactionForm.type.value);
-togglePartialAmountField(receivableForm, receivablePartialField);
-togglePartialAmountField(payableForm, payablePartialField);
+renderCategoryOptions(transactionFields.type.value);
+togglePartialAmountField(receivableFields, receivablePartialField);
+togglePartialAmountField(payableFields, payablePartialField);
 render();
 initializeAuth();
 
-transactionForm.type.addEventListener("change", (event) => {
+transactionFields.type.addEventListener("change", (event) => {
   renderCategoryOptions(event.target.value);
 });
 
@@ -136,12 +169,12 @@ removeLogoBtn.addEventListener("click", async () => {
   applyCompanyLogo();
 });
 
-receivableForm.status.addEventListener("change", () => {
-  togglePartialAmountField(receivableForm, receivablePartialField);
+receivableFields.status.addEventListener("change", () => {
+  togglePartialAmountField(receivableFields, receivablePartialField);
 });
 
-payableForm.status.addEventListener("change", () => {
-  togglePartialAmountField(payableForm, payablePartialField);
+payableFields.status.addEventListener("change", () => {
+  togglePartialAmountField(payableFields, payablePartialField);
 });
 
 transactionForm.addEventListener("submit", async (event) => {
@@ -217,6 +250,8 @@ receivableForm.addEventListener("submit", async (event) => {
     : [receivable, ...state.data.receivables].sort(sortByDueDateAsc);
 
   await saveData();
+  state.filterMonth = receivable.dueDate.slice(0, 7);
+  monthFilter.value = state.filterMonth;
   resetReceivableForm();
   render();
 });
@@ -259,6 +294,8 @@ payableForm.addEventListener("submit", async (event) => {
     : [payable, ...state.data.payables].sort(sortByDueDateAsc);
 
   await saveData();
+  state.filterMonth = payable.dueDate.slice(0, 7);
+  monthFilter.value = state.filterMonth;
   resetPayableForm();
   render();
 });
@@ -1085,16 +1122,16 @@ function text(selector, value) {
 }
 
 function fillTransactionForm(transaction) {
-  transactionForm.transactionId.value = transaction.id;
-  transactionForm.type.value = transaction.type;
+  transactionFields.transactionId.value = transaction.id;
+  transactionFields.type.value = transaction.type;
   renderCategoryOptions(transaction.type);
-  transactionForm.description.value = transaction.description;
-  transactionForm.note.value = transaction.note || "";
-  transactionForm.amount.value = transaction.amount;
-  transactionForm.date.value = transaction.date;
-  transactionForm.category.value = transaction.category;
-  transactionForm.channel.value = transaction.channel;
-  transactionForm.recurring.checked = Boolean(transaction.recurring);
+  transactionFields.description.value = transaction.description;
+  transactionFields.note.value = transaction.note || "";
+  transactionFields.amount.value = transaction.amount;
+  transactionFields.date.value = transaction.date;
+  transactionFields.category.value = transaction.category;
+  transactionFields.channel.value = transaction.channel;
+  transactionFields.recurring.checked = Boolean(transaction.recurring);
   saveTransactionBtn.textContent = "Guardar cambios";
   cancelTransactionEditBtn.hidden = false;
   document.querySelector("#transactionForm").scrollIntoView({ behavior: "smooth", block: "start" });
@@ -1102,25 +1139,25 @@ function fillTransactionForm(transaction) {
 
 function resetTransactionForm() {
   transactionForm.reset();
-  transactionForm.transactionId.value = "";
-  transactionForm.date.value = today();
-  transactionForm.type.value = "income";
+  transactionFields.transactionId.value = "";
+  transactionFields.date.value = today();
+  transactionFields.type.value = "income";
   renderCategoryOptions("income");
   saveTransactionBtn.textContent = "Guardar movimiento";
   cancelTransactionEditBtn.hidden = true;
 }
 
 function fillReceivableForm(receivable) {
-  receivableForm.receivableId.value = receivable.id;
-  receivableForm.client.value = receivable.client;
-  receivableForm.document.value = receivable.document;
-  receivableForm.amount.value = receivable.amount;
-  receivableForm.issueDate.value = receivable.issueDate;
-  receivableForm.dueDate.value = receivable.dueDate;
-  receivableForm.status.value = receivable.status;
-  receivableForm.pendingAmount.value = getPartialAmount(receivable) || "";
-  receivableForm.note.value = receivable.note || "";
-  togglePartialAmountField(receivableForm, receivablePartialField);
+  receivableFields.receivableId.value = receivable.id;
+  receivableFields.client.value = receivable.client;
+  receivableFields.document.value = receivable.document;
+  receivableFields.amount.value = receivable.amount;
+  receivableFields.issueDate.value = receivable.issueDate;
+  receivableFields.dueDate.value = receivable.dueDate;
+  receivableFields.status.value = receivable.status;
+  receivableFields.pendingAmount.value = getPartialAmount(receivable) || "";
+  receivableFields.note.value = receivable.note || "";
+  togglePartialAmountField(receivableFields, receivablePartialField);
   saveReceivableBtn.textContent = "Guardar cambios";
   cancelReceivableEditBtn.hidden = false;
   receivableForm.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -1128,25 +1165,25 @@ function fillReceivableForm(receivable) {
 
 function resetReceivableForm() {
   receivableForm.reset();
-  receivableForm.receivableId.value = "";
-  receivableForm.issueDate.value = today();
-  receivableForm.dueDate.value = addDays(10);
-  togglePartialAmountField(receivableForm, receivablePartialField);
+  receivableFields.receivableId.value = "";
+  receivableFields.issueDate.value = today();
+  receivableFields.dueDate.value = addDays(10);
+  togglePartialAmountField(receivableFields, receivablePartialField);
   saveReceivableBtn.textContent = "Registrar cuenta por cobrar";
   cancelReceivableEditBtn.hidden = true;
 }
 
 function fillPayableForm(payable) {
-  payableForm.payableId.value = payable.id;
-  payableForm.vendor.value = payable.vendor;
-  payableForm.document.value = payable.document;
-  payableForm.amount.value = payable.amount;
-  payableForm.issueDate.value = payable.issueDate;
-  payableForm.dueDate.value = payable.dueDate;
-  payableForm.status.value = payable.status;
-  payableForm.pendingAmount.value = getPartialAmount(payable) || "";
-  payableForm.note.value = payable.note || "";
-  togglePartialAmountField(payableForm, payablePartialField);
+  payableFields.payableId.value = payable.id;
+  payableFields.vendor.value = payable.vendor;
+  payableFields.document.value = payable.document;
+  payableFields.amount.value = payable.amount;
+  payableFields.issueDate.value = payable.issueDate;
+  payableFields.dueDate.value = payable.dueDate;
+  payableFields.status.value = payable.status;
+  payableFields.pendingAmount.value = getPartialAmount(payable) || "";
+  payableFields.note.value = payable.note || "";
+  togglePartialAmountField(payableFields, payablePartialField);
   savePayableBtn.textContent = "Guardar cambios";
   cancelPayableEditBtn.hidden = false;
   payableForm.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -1154,10 +1191,10 @@ function fillPayableForm(payable) {
 
 function resetPayableForm() {
   payableForm.reset();
-  payableForm.payableId.value = "";
-  payableForm.issueDate.value = today();
-  payableForm.dueDate.value = addDays(7);
-  togglePartialAmountField(payableForm, payablePartialField);
+  payableFields.payableId.value = "";
+  payableFields.issueDate.value = today();
+  payableFields.dueDate.value = addDays(7);
+  togglePartialAmountField(payableFields, payablePartialField);
   savePayableBtn.textContent = "Registrar factura por pagar";
   cancelPayableEditBtn.hidden = true;
 }
@@ -1222,12 +1259,25 @@ function getPartialAmount(item) {
   return Math.max(Number(item.amount || 0) - getOutstandingAmount(item), 0);
 }
 
-function togglePartialAmountField(form, field) {
-  const showField = form.status.value === "partial";
+function togglePartialAmountField(fields, field) {
+  const showField = fields.status.value === "partial";
   field.hidden = !showField;
   if (!showField) {
-    form.pendingAmount.value = "";
+    fields.pendingAmount.value = "";
   }
+}
+
+function getNamedFields(form, names) {
+  return names.reduce((fields, name) => {
+    const field = form.querySelector(`[name="${name}"]`);
+
+    if (!field) {
+      throw new Error(`No se encontró el campo ${name} en ${form.id}.`);
+    }
+
+    fields[name] = field;
+    return fields;
+  }, {});
 }
 
 function calculateIncludedVat(amount) {
