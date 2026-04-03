@@ -640,6 +640,22 @@
       </main>
     </div>
 
+    <div class="reset-modal" id="resetConfirmModal" hidden>
+      <div class="reset-modal-card" role="dialog" aria-modal="true" aria-labelledby="resetModalTitle">
+        <p class="section-label">Advertencia</p>
+        <h3 id="resetModalTitle">¿Reiniciar en cero?</h3>
+        <p class="reset-modal-copy">
+          Si borras los datos de esta cuenta, no se podrán rescatar después.
+        </p>
+        <div class="reset-modal-actions">
+          <button type="button" class="ghost-btn" id="cancelResetModalBtn">Cancelar</button>
+          <button type="button" class="danger-confirm-btn" id="confirmResetModalBtn">
+            Aceptar borrado
+          </button>
+        </div>
+      </div>
+    </div>
+
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
     <script src="./app.js"></script>

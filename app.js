@@ -121,6 +121,9 @@ const invoiceReadStatus = document.querySelector("#invoiceReadStatus");
 const readInvoiceBtn = document.querySelector("#readInvoiceBtn");
 const removeInvoicePhotoBtn = document.querySelector("#removeInvoicePhotoBtn");
 const resetDataBtn = document.querySelector("#resetDataBtn");
+const resetConfirmModal = document.querySelector("#resetConfirmModal");
+const cancelResetModalBtn = document.querySelector("#cancelResetModalBtn");
+const confirmResetModalBtn = document.querySelector("#confirmResetModalBtn");
 
 transactionFields.date.value = today();
 receivableFields.issueDate.value = today();
@@ -512,14 +515,22 @@ cancelPayableEditBtn.addEventListener("click", () => {
 });
 
 resetDataBtn.addEventListener("click", async () => {
-  const confirmReset = window.confirm(
-    "Advertencia: si reinicias en cero, los datos borrados no se podrán rescatar. ¿Quieres continuar?"
-  );
+  resetConfirmModal.hidden = false;
+});
 
-  if (!confirmReset) {
-    return;
+cancelResetModalBtn.addEventListener("click", () => {
+  resetConfirmModal.hidden = true;
+});
+
+resetConfirmModal.addEventListener("click", (event) => {
+  if (event.target === resetConfirmModal) {
+    resetConfirmModal.hidden = true;
   }
+});
 
+confirmResetModalBtn.addEventListener("click", async () => {
+  confirmResetModalBtn.disabled = true;
+  confirmResetModalBtn.textContent = "Borrando...";
   state.data = cloneSeedState();
   state.filterMonth = currentMonth();
   monthFilter.value = state.filterMonth;
@@ -528,6 +539,9 @@ resetDataBtn.addEventListener("click", async () => {
   resetTransactionForm();
   resetReceivableForm();
   resetPayableForm();
+  resetConfirmModal.hidden = true;
+  confirmResetModalBtn.disabled = false;
+  confirmResetModalBtn.textContent = "Aceptar borrado";
   render();
 });
 
