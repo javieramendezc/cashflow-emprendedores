@@ -134,8 +134,6 @@ togglePartialAmountField(receivableFields, receivablePartialField);
 togglePartialAmountField(payableFields, payablePartialField);
 setAuthMode("signIn");
 restoreRememberedAccess();
-render();
-initializeAuth();
 
 transactionFields.type.addEventListener("change", (event) => {
   renderCategoryOptions(event.target.value);
@@ -443,6 +441,21 @@ resetDataBtn.addEventListener("click", async () => {
   render();
 });
 
+startApp();
+
+async function startApp() {
+  try {
+    await initializeAuth();
+  } catch (error) {
+    console.error("No se pudo iniciar la aplicación:", error);
+    authScreen.hidden = false;
+    appShell.hidden = true;
+    authMessage.classList.remove("success");
+    authMessage.textContent =
+      "No se pudo iniciar la aplicación. Recarga la página e intenta de nuevo.";
+  }
+}
+
 async function initializeAuth() {
   try {
     if (hasPasswordRecoveryParams()) {
@@ -638,18 +651,27 @@ function setAuthMode(mode, feedback = {}) {
 }
 
 function restoreRememberedAccess() {
-  const rememberedEmail = localStorage.getItem(REMEMBERED_EMAIL_KEY) || "";
-  authEmailInput.value = rememberedEmail;
-  rememberAccessInput.checked = Boolean(rememberedEmail);
+  try {
+    const rememberedEmail = localStorage.getItem(REMEMBERED_EMAIL_KEY) || "";
+    authEmailInput.value = rememberedEmail;
+    rememberAccessInput.checked = Boolean(rememberedEmail);
+  } catch {
+    authEmailInput.value = "";
+    rememberAccessInput.checked = false;
+  }
 }
 
 function persistRememberedAccess(email) {
-  if (rememberAccessInput.checked && email) {
-    localStorage.setItem(REMEMBERED_EMAIL_KEY, email);
-    return;
-  }
+  try {
+    if (rememberAccessInput.checked && email) {
+      localStorage.setItem(REMEMBERED_EMAIL_KEY, email);
+      return;
+    }
 
-  localStorage.removeItem(REMEMBERED_EMAIL_KEY);
+    localStorage.removeItem(REMEMBERED_EMAIL_KEY);
+  } catch {
+    // Si el navegador bloquea localStorage, solo se omite el recuerdo del correo.
+  }
 }
 
 function hasPasswordRecoveryParams() {
