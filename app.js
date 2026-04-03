@@ -154,7 +154,7 @@ recoverPasswordBtn.addEventListener("click", () => {
 });
 
 logoutBtn.addEventListener("click", async () => {
-  await supabaseClient.auth.signOut();
+  await handleLogout();
 });
 
 logoSettingsToggle.addEventListener("click", () => {
@@ -559,6 +559,28 @@ async function handleAuthSubmit() {
   authMessage.textContent = "";
   authForm.reset();
   restoreRememberedAccess();
+}
+
+async function handleLogout() {
+  logoutBtn.disabled = true;
+  logoutBtn.textContent = "Cerrando...";
+
+  try {
+    const { error } = await supabaseClient.auth.signOut();
+
+    if (error) {
+      throw error;
+    }
+  } catch (error) {
+    console.warn("No se pudo cerrar sesión en Supabase:", error?.message || error);
+  } finally {
+    logoutBtn.disabled = false;
+    logoutBtn.textContent = "Cerrar sesión";
+    state.session = null;
+    setAuthMode("signIn");
+    restoreRememberedAccess();
+    await syncSessionView();
+  }
 }
 
 async function syncSessionView() {
