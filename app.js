@@ -565,22 +565,35 @@ async function handleLogout() {
   logoutBtn.disabled = true;
   logoutBtn.textContent = "Cerrando...";
 
+  state.session = null;
+  setAuthMode("signIn");
+  restoreRememberedAccess();
+  await syncSessionView();
+
+  logoutBtn.disabled = false;
+  logoutBtn.textContent = "Cerrar sesión";
+
   try {
-    const { error } = await supabaseClient.auth.signOut();
+    const { error } = await withTimeout(
+      supabaseClient.auth.signOut({ scope: "local" }),
+      2500
+    );
 
     if (error) {
       throw error;
     }
   } catch (error) {
     console.warn("No se pudo cerrar sesión en Supabase:", error?.message || error);
-  } finally {
-    logoutBtn.disabled = false;
-    logoutBtn.textContent = "Cerrar sesión";
-    state.session = null;
-    setAuthMode("signIn");
-    restoreRememberedAccess();
-    await syncSessionView();
   }
+}
+
+function withTimeout(promise, timeoutMs) {
+  return Promise.race([
+    promise,
+    new Promise((_, reject) => {
+      window.setTimeout(() => reject(new Error("timeout")), timeoutMs);
+    }),
+  ]);
 }
 
 async function syncSessionView() {
