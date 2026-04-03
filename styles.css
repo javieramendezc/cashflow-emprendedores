@@ -63,6 +63,11 @@ body::before {
   display: none;
 }
 
+body.auth-loading .auth-screen,
+body.auth-loading .app-shell {
+  display: none;
+}
+
 .auth-card {
   width: min(520px, 100%);
   padding: 36px;
@@ -96,6 +101,10 @@ body::before {
 
 .auth-message.success {
   color: var(--positive);
+}
+
+.auth-remember-row {
+  color: var(--ink);
 }
 
 .auth-link-btn {
