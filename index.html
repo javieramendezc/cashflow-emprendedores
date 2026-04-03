@@ -97,6 +97,21 @@
             <strong id="sidebarBalance">$0</strong>
             <small id="sidebarHealth">Sin datos aún</small>
           </div>
+          <div class="cash-floor-card">
+            <label>
+              Caja mínima
+              <input
+                type="number"
+                id="cashFloorInput"
+                min="0"
+                step="1000"
+                placeholder="Ej. 200000"
+              />
+            </label>
+            <small class="cash-floor-alert" id="cashFloorAlert">
+              Define tu caja mínima para activar alertas.
+            </small>
+          </div>
         </div>
 
         <div class="sidebar-section sidebar-note">

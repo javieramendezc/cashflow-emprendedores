@@ -218,6 +218,38 @@ body::before {
   font-size: 2rem;
 }
 
+.cash-floor-card {
+  display: grid;
+  gap: 12px;
+  margin-top: 14px;
+  padding: 16px;
+  border-radius: 22px;
+  background: rgba(255, 255, 255, 0.52);
+  border: 1px solid rgba(24, 38, 31, 0.07);
+}
+
+.cash-floor-card label {
+  gap: 10px;
+}
+
+.cash-floor-alert {
+  line-height: 1.5;
+  color: var(--muted);
+}
+
+.cash-floor-alert.ok {
+  color: var(--positive);
+}
+
+.cash-floor-alert.warn {
+  color: #a45a00;
+}
+
+.cash-floor-alert.risk {
+  color: var(--negative);
+  font-weight: 700;
+}
+
 .quick-links {
   display: grid;
   gap: 10px;
@@ -751,6 +783,11 @@ tbody tr:hover {
   grid-template-columns: auto 1fr auto;
   gap: 14px;
   align-items: center;
+}
+
+.forecast-row.alert {
+  background: rgba(181, 58, 36, 0.08);
+  border-color: rgba(181, 58, 36, 0.18);
 }
 
 .forecast-dot {

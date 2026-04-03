@@ -21,6 +21,7 @@ const categoryMap = {
 
 const seedState = {
   companyLogo: "",
+  cashFloor: 0,
   transactions: [],
   receivables: [],
   payables: [],
@@ -50,6 +51,8 @@ const brandLogoPreview = document.querySelector("#brandLogoPreview");
 const brandLogoFallback = document.querySelector("#brandLogoFallback");
 const companyLogoInput = document.querySelector("#companyLogoInput");
 const removeLogoBtn = document.querySelector("#removeLogoBtn");
+const cashFloorInput = document.querySelector("#cashFloorInput");
+const cashFloorAlert = document.querySelector("#cashFloorAlert");
 const transactionForm = document.querySelector("#transactionForm");
 const receivableForm = document.querySelector("#receivableForm");
 const payableForm = document.querySelector("#payableForm");
@@ -168,6 +171,13 @@ removeLogoBtn.addEventListener("click", async () => {
   state.data.companyLogo = "";
   await saveData();
   applyCompanyLogo();
+});
+
+cashFloorInput.addEventListener("change", async (event) => {
+  state.data.cashFloor = Math.max(0, Number(event.target.value) || 0);
+  cashFloorInput.value = state.data.cashFloor || "";
+  await saveData();
+  render();
 });
 
 receivableFields.status.addEventListener("change", () => {
@@ -411,6 +421,7 @@ resetDataBtn.addEventListener("click", async () => {
   state.data = cloneSeedState();
   state.filterMonth = currentMonth();
   monthFilter.value = state.filterMonth;
+  cashFloorInput.value = "";
   await saveData();
   resetTransactionForm();
   resetReceivableForm();
@@ -476,6 +487,7 @@ async function syncSessionView() {
     state.data = cloneSeedState();
     state.filterMonth = currentMonth();
     monthFilter.value = state.filterMonth;
+    cashFloorInput.value = "";
     resetTransactionForm();
     resetReceivableForm();
     resetPayableForm();
@@ -489,6 +501,7 @@ async function syncSessionView() {
   state.data = await loadData();
   state.filterMonth = currentMonth();
   monthFilter.value = state.filterMonth;
+  cashFloorInput.value = state.data.cashFloor || "";
   resetTransactionForm();
   resetReceivableForm();
   resetPayableForm();
@@ -505,6 +518,7 @@ function render() {
   const payables = state.data.payables.filter((item) =>
     item.dueDate.startsWith(state.filterMonth)
   );
+  const cashFloor = Number(state.data.cashFloor) || 0;
 
   const incomes = transactions.filter((item) => item.type === "income");
   const salesIncomes = incomes.filter((item) => item.category === "Ventas");
@@ -535,7 +549,19 @@ function render() {
   const nextCommitment = sum(
     state.data.payables.filter((item) => item.status !== "paid" && daysUntil(item.dueDate) <= 30)
   );
-  const health = getHealth(incomeTotal, expenseTotal, projectedBalance);
+  const forecastWeeks = createForecastWeeks(
+    projectedBalance,
+    recurring,
+    incomes,
+    expenses,
+    receivableTotal,
+    payableTotal,
+    cashFloor
+  );
+  const lowCashWeek = cashFloor
+    ? forecastWeeks.find((week) => week.amount < cashFloor)
+    : null;
+  const health = getHealth(incomeTotal, expenseTotal, projectedBalance, cashFloor);
 
   text("#incomeTotal", formatCurrency(incomeTotal));
   text("#expenseTotal", formatCurrency(expenseTotal));
@@ -568,7 +594,8 @@ function render() {
   renderPayables(payables);
   renderMonthlySummary();
   renderBreakdown(expenses);
-  renderForecast(projectedBalance, recurring, incomes, expenses, receivableTotal, payableTotal);
+  renderForecast(forecastWeeks, cashFloor);
+  renderCashFloorStatus(projectedBalance, cashFloor, lowCashWeek, hasAnyData);
   renderTips(
     incomeTotal,
     expenseTotal,
@@ -576,7 +603,9 @@ function render() {
     projectedBalance,
     openReceivables,
     openPayables,
-    hasAnyData
+    hasAnyData,
+    cashFloor,
+    lowCashWeek
   );
 }
 
@@ -821,7 +850,15 @@ function renderBreakdown(expenses) {
     .join("");
 }
 
-function renderForecast(balance, recurring, incomes, expenses, receivableTotal, payableTotal) {
+function createForecastWeeks(
+  balance,
+  recurring,
+  incomes,
+  expenses,
+  receivableTotal,
+  payableTotal,
+  cashFloor
+) {
   const weeklyRecurring = recurring.reduce((total, item) => total + item.amount / 4, 0);
   const weeklyIncome = incomes.length ? sum(incomes) / 4 : 0;
   const weeklyExpense = expenses.length ? sum(expenses) / 4 : 0;
@@ -834,17 +871,21 @@ function renderForecast(balance, recurring, incomes, expenses, receivableTotal, 
 
     rollingBalance += weeklyIncome - Math.max(weeklyExpense, weeklyRecurring);
 
+    const amount = Math.round(rollingBalance);
+
     return {
       label: `Semana ${index + 1}`,
-      amount: Math.round(rollingBalance),
-      tone: rollingBalance > 300000 ? "ok" : rollingBalance > 100000 ? "warn" : "risk",
+      amount,
+      tone: getForecastTone(amount, cashFloor),
     };
   });
+}
 
+function renderForecast(weeks, cashFloor) {
   forecastList.innerHTML = weeks
     .map(
       (week) => `
-        <div class="forecast-row">
+        <div class="forecast-row ${cashFloor > 0 && week.amount < cashFloor ? "alert" : ""}">
           <span class="forecast-dot ${week.tone}"></span>
           <strong>${week.label}</strong>
           <span>${formatCurrency(week.amount)}</span>
@@ -854,6 +895,35 @@ function renderForecast(balance, recurring, incomes, expenses, receivableTotal, 
     .join("");
 }
 
+function renderCashFloorStatus(balance, cashFloor, lowCashWeek, hasAnyData) {
+  if (!cashFloor) {
+    cashFloorAlert.className = "cash-floor-alert";
+    cashFloorAlert.textContent = "Define tu caja mínima para activar alertas.";
+    return;
+  }
+
+  if (!hasAnyData) {
+    cashFloorAlert.className = "cash-floor-alert warn";
+    cashFloorAlert.textContent = "Cuando cargues movimientos, te avisaré si bajas de tu caja mínima.";
+    return;
+  }
+
+  if (balance < cashFloor) {
+    cashFloorAlert.className = "cash-floor-alert risk";
+    cashFloorAlert.textContent = `Alerta: tu saldo proyectado está bajo tu caja mínima de ${formatCurrency(cashFloor)}.`;
+    return;
+  }
+
+  if (lowCashWeek) {
+    cashFloorAlert.className = "cash-floor-alert warn";
+    cashFloorAlert.textContent = `Alerta: ${lowCashWeek.label} baja a ${formatCurrency(lowCashWeek.amount)}, bajo tu mínimo.`;
+    return;
+  }
+
+  cashFloorAlert.className = "cash-floor-alert ok";
+  cashFloorAlert.textContent = `Tu proyección se mantiene sobre tu caja mínima de ${formatCurrency(cashFloor)}.`;
+}
+
 function renderTips(
   incomeTotal,
   expenseTotal,
@@ -861,7 +931,9 @@ function renderTips(
   balance,
   openReceivables,
   openPayables,
-  hasAnyData
+  hasAnyData,
+  cashFloor,
+  lowCashWeek
 ) {
   if (!hasAnyData) {
     tipsList.innerHTML = "";
@@ -869,6 +941,16 @@ function renderTips(
   }
 
   const tips = [];
+
+  if (cashFloor > 0 && balance < cashFloor) {
+    tips.push(
+      `Tu saldo proyectado está bajo tu caja mínima de ${formatCurrency(cashFloor)}. Prioriza cobrar pendientes o postergar pagos no urgentes.`
+    );
+  } else if (lowCashWeek) {
+    tips.push(
+      `${lowCashWeek.label} caería a ${formatCurrency(lowCashWeek.amount)}, bajo tu caja mínima de ${formatCurrency(cashFloor)}. Ajusta vencimientos o refuerza cobranza antes de esa semana.`
+    );
+  }
 
   if (expenseTotal > incomeTotal) {
     tips.push(
@@ -996,8 +1078,11 @@ async function saveData() {
   }
 }
 
-function getHealth(incomeTotal, expenseTotal, balance) {
-  if (balance <= 100000 || expenseTotal > incomeTotal) {
+function getHealth(incomeTotal, expenseTotal, balance, cashFloor = 0) {
+  const minimumBalance = cashFloor > 0 ? cashFloor : 100000;
+  const cautionBalance = cashFloor > 0 ? cashFloor * 1.35 : 350000;
+
+  if (balance <= minimumBalance || expenseTotal > incomeTotal) {
     return {
       label: "Atención inmediata",
       tone: "risk",
@@ -1005,7 +1090,7 @@ function getHealth(incomeTotal, expenseTotal, balance) {
     };
   }
 
-  if (balance <= 350000 || expenseTotal > incomeTotal * 0.8) {
+  if (balance <= cautionBalance || expenseTotal > incomeTotal * 0.8) {
     return {
       label: "Zona de cuidado",
       tone: "warn",
@@ -1018,6 +1103,22 @@ function getHealth(incomeTotal, expenseTotal, balance) {
     tone: "ok",
     description: "Tu flujo aguanta mejor compras, pagos y semanas lentas.",
   };
+}
+
+function getForecastTone(amount, cashFloor) {
+  if (cashFloor > 0) {
+    if (amount < cashFloor) {
+      return "risk";
+    }
+
+    if (amount < cashFloor * 1.35) {
+      return "warn";
+    }
+
+    return "ok";
+  }
+
+  return amount > 300000 ? "ok" : amount > 100000 ? "warn" : "risk";
 }
 
 function findTopExpenseCategory(expenses) {
@@ -1161,6 +1262,7 @@ function labelStatus(status) {
 function cloneSeedState() {
   return {
     companyLogo: seedState.companyLogo,
+    cashFloor: seedState.cashFloor,
     transactions: [...seedState.transactions].sort(sortByDateDesc),
     receivables: normalizeLedgerItems([...seedState.receivables]).sort(sortByDueDateAsc),
     payables: normalizeLedgerItems([...seedState.payables]).sort(sortByDueDateAsc),
@@ -1170,6 +1272,7 @@ function cloneSeedState() {
 function normalizeStatePayload(payload) {
   return {
     companyLogo: typeof payload?.companyLogo === "string" ? payload.companyLogo : "",
+    cashFloor: Math.max(0, Number(payload?.cashFloor) || 0),
     transactions: (payload?.transactions || []).sort(sortByDateDesc),
     receivables: normalizeLedgerItems(payload?.receivables || []).sort(sortByDueDateAsc),
     payables: normalizeLedgerItems(payload?.payables || []).sort(sortByDueDateAsc),
