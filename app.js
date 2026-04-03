@@ -62,6 +62,8 @@ const saveReceivableBtn = document.querySelector("#saveReceivableBtn");
 const cancelReceivableEditBtn = document.querySelector("#cancelReceivableEditBtn");
 const savePayableBtn = document.querySelector("#savePayableBtn");
 const cancelPayableEditBtn = document.querySelector("#cancelPayableEditBtn");
+const receivablePartialField = document.querySelector("#receivablePartialField");
+const payablePartialField = document.querySelector("#payablePartialField");
 const resetDataBtn = document.querySelector("#resetDataBtn");
 
 transactionForm.date.value = today();
@@ -72,6 +74,8 @@ payableForm.dueDate.value = addDays(7);
 monthFilter.value = state.filterMonth;
 
 renderCategoryOptions(transactionForm.type.value);
+togglePartialAmountField(receivableForm, receivablePartialField);
+togglePartialAmountField(payableForm, payablePartialField);
 render();
 initializeAuth();
 
@@ -94,6 +98,14 @@ toggleAuthModeBtn.addEventListener("click", () => {
 
 logoutBtn.addEventListener("click", async () => {
   await supabaseClient.auth.signOut();
+});
+
+receivableForm.status.addEventListener("change", () => {
+  togglePartialAmountField(receivableForm, receivablePartialField);
+});
+
+payableForm.status.addEventListener("change", () => {
+  togglePartialAmountField(payableForm, payablePartialField);
 });
 
 transactionForm.addEventListener("submit", async (event) => {
@@ -136,11 +148,11 @@ receivableForm.addEventListener("submit", async (event) => {
 
   const formData = new FormData(receivableForm);
   const amount = Number(formData.get("amount"));
-  const pendingAmount = Number(formData.get("pendingAmount"));
+  const partialAmount = Number(formData.get("pendingAmount"));
   const status = formData.get("status");
 
-  if (status === "partial" && (pendingAmount <= 0 || pendingAmount >= amount)) {
-    alert("Si el estado es Abono parcial, el Monto pendiente debe ser mayor a 0 y menor que el monto total.");
+  if (status === "partial" && (partialAmount <= 0 || partialAmount >= amount)) {
+    alert("Si el estado es Abono parcial, el Abono debe ser mayor a 0 y menor que el monto total.");
     return;
   }
 
@@ -149,7 +161,7 @@ receivableForm.addEventListener("submit", async (event) => {
     client: String(formData.get("client")).trim(),
     document: String(formData.get("document")).trim(),
     amount,
-    pendingAmount: resolvePendingAmount(amount, pendingAmount, status),
+    pendingAmount: resolvePendingAmount(amount, partialAmount, status),
     issueDate: formData.get("issueDate"),
     dueDate: formData.get("dueDate"),
     status,
@@ -178,11 +190,11 @@ payableForm.addEventListener("submit", async (event) => {
 
   const formData = new FormData(payableForm);
   const amount = Number(formData.get("amount"));
-  const pendingAmount = Number(formData.get("pendingAmount"));
+  const partialAmount = Number(formData.get("pendingAmount"));
   const status = formData.get("status");
 
-  if (status === "partial" && (pendingAmount <= 0 || pendingAmount >= amount)) {
-    alert("Si el estado es Abono parcial, el Monto pendiente debe ser mayor a 0 y menor que el monto total.");
+  if (status === "partial" && (partialAmount <= 0 || partialAmount >= amount)) {
+    alert("Si el estado es Abono parcial, el Abono debe ser mayor a 0 y menor que el monto total.");
     return;
   }
 
@@ -191,7 +203,7 @@ payableForm.addEventListener("submit", async (event) => {
     vendor: String(formData.get("vendor")).trim(),
     document: String(formData.get("document")).trim(),
     amount,
-    pendingAmount: resolvePendingAmount(amount, pendingAmount, status),
+    pendingAmount: resolvePendingAmount(amount, partialAmount, status),
     issueDate: formData.get("issueDate"),
     dueDate: formData.get("dueDate"),
     status,
@@ -542,7 +554,7 @@ function renderReceivables(receivables) {
           <td>${formatDate(item.dueDate)}</td>
           <td><span class="type-badge ${item.status}">${labelStatus(item.status)}</span></td>
           <td class="amount-positive">${formatCurrency(item.amount)}</td>
-          <td class="amount-positive">${formatCurrency(getOutstandingAmount(item))}</td>
+          <td class="amount-positive">${formatCurrency(getPartialAmount(item))}</td>
           <td>${escapeHtml(item.note || "-")}</td>
           <td class="action-cell">
             <button type="button" class="edit-btn" data-edit-receivable="${item.id}">Modificar</button>
@@ -570,7 +582,7 @@ function renderPayables(payables) {
           <td>${formatDate(item.dueDate)}</td>
           <td><span class="type-badge ${item.status}">${labelStatus(item.status)}</span></td>
           <td class="amount-negative">${formatCurrency(item.amount)}</td>
-          <td class="amount-negative">${formatCurrency(getOutstandingAmount(item))}</td>
+          <td class="amount-negative">${formatCurrency(getPartialAmount(item))}</td>
           <td>${escapeHtml(item.note || "-")}</td>
           <td class="action-cell">
             <button type="button" class="edit-btn" data-edit-payable="${item.id}">Modificar</button>
@@ -1066,8 +1078,9 @@ function fillReceivableForm(receivable) {
   receivableForm.issueDate.value = receivable.issueDate;
   receivableForm.dueDate.value = receivable.dueDate;
   receivableForm.status.value = receivable.status;
-  receivableForm.pendingAmount.value = getOutstandingAmount(receivable);
+  receivableForm.pendingAmount.value = getPartialAmount(receivable) || "";
   receivableForm.note.value = receivable.note || "";
+  togglePartialAmountField(receivableForm, receivablePartialField);
   saveReceivableBtn.textContent = "Guardar cambios";
   cancelReceivableEditBtn.hidden = false;
   receivableForm.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -1078,6 +1091,7 @@ function resetReceivableForm() {
   receivableForm.receivableId.value = "";
   receivableForm.issueDate.value = today();
   receivableForm.dueDate.value = addDays(10);
+  togglePartialAmountField(receivableForm, receivablePartialField);
   saveReceivableBtn.textContent = "Registrar cuenta por cobrar";
   cancelReceivableEditBtn.hidden = true;
 }
@@ -1090,8 +1104,9 @@ function fillPayableForm(payable) {
   payableForm.issueDate.value = payable.issueDate;
   payableForm.dueDate.value = payable.dueDate;
   payableForm.status.value = payable.status;
-  payableForm.pendingAmount.value = getOutstandingAmount(payable);
+  payableForm.pendingAmount.value = getPartialAmount(payable) || "";
   payableForm.note.value = payable.note || "";
+  togglePartialAmountField(payableForm, payablePartialField);
   savePayableBtn.textContent = "Guardar cambios";
   cancelPayableEditBtn.hidden = false;
   payableForm.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -1102,18 +1117,19 @@ function resetPayableForm() {
   payableForm.payableId.value = "";
   payableForm.issueDate.value = today();
   payableForm.dueDate.value = addDays(7);
+  togglePartialAmountField(payableForm, payablePartialField);
   savePayableBtn.textContent = "Registrar factura por pagar";
   cancelPayableEditBtn.hidden = true;
 }
 
-function resolvePendingAmount(totalAmount, pendingAmount, status) {
+function resolvePendingAmount(totalAmount, partialAmount, status) {
   if (status === "paid") {
     return 0;
   }
 
   if (status === "partial") {
-    if (pendingAmount > 0 && pendingAmount <= totalAmount) {
-      return pendingAmount;
+    if (partialAmount > 0 && partialAmount < totalAmount) {
+      return totalAmount - partialAmount;
     }
     return totalAmount;
   }
@@ -1124,12 +1140,26 @@ function resolvePendingAmount(totalAmount, pendingAmount, status) {
 function normalizeLedgerItems(items) {
   return items.map((item) => ({
     ...item,
-    pendingAmount: resolvePendingAmount(
-      Number(item.amount) || 0,
-      Number(item.pendingAmount ?? item.amount) || 0,
-      item.status
-    ),
+    pendingAmount: normalizeOutstandingAmount(item),
   }));
+}
+
+function normalizeOutstandingAmount(item) {
+  const amount = Number(item.amount) || 0;
+
+  if (item.status === "paid") {
+    return 0;
+  }
+
+  if (item.status === "partial") {
+    const pendingAmount = Number(item.pendingAmount);
+    if (pendingAmount >= 0 && pendingAmount < amount) {
+      return pendingAmount;
+    }
+    return amount;
+  }
+
+  return amount;
 }
 
 function getOutstandingAmount(item) {
@@ -1142,6 +1172,22 @@ function getOutstandingAmount(item) {
   }
 
   return Number(item.status === "paid" ? 0 : item.pendingAmount ?? item.amount) || 0;
+}
+
+function getPartialAmount(item) {
+  if (typeof item !== "object" || item === null || item.status !== "partial") {
+    return 0;
+  }
+
+  return Math.max(Number(item.amount || 0) - getOutstandingAmount(item), 0);
+}
+
+function togglePartialAmountField(form, field) {
+  const showField = form.status.value === "partial";
+  field.hidden = !showField;
+  if (!showField) {
+    form.pendingAmount.value = "";
+  }
 }
 
 function calculateIncludedVat(amount) {
@@ -1178,7 +1224,7 @@ function exportToExcel() {
             "Vencimiento",
             "Estado",
             "Monto total",
-            "Monto pendiente",
+            "Abono",
             "Nota",
           ],
           state.data.receivables.map((item) => [
@@ -1188,7 +1234,7 @@ function exportToExcel() {
             formatDate(item.dueDate),
             labelStatus(item.status),
             item.amount,
-            getOutstandingAmount(item),
+            getPartialAmount(item),
             item.note || "",
           ])
         )}
@@ -1201,7 +1247,7 @@ function exportToExcel() {
             "Vencimiento",
             "Estado",
             "Monto total",
-            "Monto pendiente",
+            "Abono",
             "Nota",
           ],
           state.data.payables.map((item) => [
@@ -1211,7 +1257,7 @@ function exportToExcel() {
             formatDate(item.dueDate),
             labelStatus(item.status),
             item.amount,
-            getOutstandingAmount(item),
+            getPartialAmount(item),
             item.note || "",
           ])
         )}
@@ -1322,7 +1368,7 @@ function exportToPdf() {
             "Vencimiento",
             "Estado",
             "Monto total",
-            "Monto pendiente",
+            "Abono",
             "Nota",
           ],
           state.data.receivables.map((item) => [
@@ -1332,7 +1378,7 @@ function exportToPdf() {
             formatDate(item.dueDate),
             labelStatus(item.status),
             formatCurrency(item.amount),
-            formatCurrency(getOutstandingAmount(item)),
+            formatCurrency(getPartialAmount(item)),
             item.note || "",
           ])
         )}
@@ -1346,7 +1392,7 @@ function exportToPdf() {
             "Vencimiento",
             "Estado",
             "Monto total",
-            "Monto pendiente",
+            "Abono",
             "Nota",
           ],
           state.data.payables.map((item) => [
@@ -1356,7 +1402,7 @@ function exportToPdf() {
             formatDate(item.dueDate),
             labelStatus(item.status),
             formatCurrency(item.amount),
-            formatCurrency(getOutstandingAmount(item)),
+            formatCurrency(getPartialAmount(item)),
             item.note || "",
           ])
         )}

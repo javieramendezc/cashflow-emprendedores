@@ -366,6 +366,10 @@ select:focus {
   padding: 0;
 }
 
+.partial-amount-field[hidden] {
+  display: none;
+}
+
 .form-actions,
 .action-cell {
   display: flex;

@@ -365,15 +365,15 @@
                   </select>
                 </label>
               </div>
-              <div class="form-row">
+              <div class="form-row partial-amount-field" id="receivablePartialField" hidden>
                 <label>
-                  Monto pendiente
+                  Abono
                   <input
                     type="number"
                     name="pendingAmount"
                     min="0"
                     step="100"
-                    placeholder="Completar si hay abono parcial"
+                    placeholder="Monto abonado"
                   />
                 </label>
               </div>
@@ -407,7 +407,7 @@
                     <th>Vence</th>
                     <th>Estado</th>
                     <th>Monto total</th>
-                    <th>Monto pendiente</th>
+                    <th>Abono</th>
                     <th>Nota</th>
                     <th>Acción</th>
                   </tr>
@@ -462,15 +462,15 @@
                   </select>
                 </label>
               </div>
-              <div class="form-row">
+              <div class="form-row partial-amount-field" id="payablePartialField" hidden>
                 <label>
-                  Monto pendiente
+                  Abono
                   <input
                     type="number"
                     name="pendingAmount"
                     min="0"
                     step="100"
-                    placeholder="Completar si hay abono parcial"
+                    placeholder="Monto abonado"
                   />
                 </label>
               </div>
@@ -504,7 +504,7 @@
                     <th>Vence</th>
                     <th>Estado</th>
                     <th>Monto total</th>
-                    <th>Monto pendiente</th>
+                    <th>Abono</th>
                     <th>Nota</th>
                     <th>Acción</th>
                   </tr>
