@@ -486,11 +486,7 @@ async function initializeAuth() {
       }
 
       state.session = sessionState;
-
-      if (["INITIAL_SESSION", "SIGNED_IN", "SIGNED_OUT", "PASSWORD_RECOVERY"].includes(event)) {
-        await syncSessionView();
-      }
-
+      await syncSessionView();
       document.body.classList.remove("auth-loading");
     });
 
@@ -1292,21 +1288,15 @@ async function loadData() {
       throw error;
     }
 
-    if (data?.[0]?.payload) {
-      const parsedRemote = normalizeStatePayload(data[0].payload);
-
-      if (!hasStoredBusinessData(parsedRemote) && parsedLocal && hasStoredBusinessData(parsedLocal)) {
-        await saveDataToSupabase(parsedLocal);
-        return parsedLocal;
-      }
-
-      safeSetLocalStorage(storageKey, JSON.stringify(parsedRemote));
-      return parsedRemote;
-    }
-
     if (parsedLocal) {
       await saveDataToSupabase(parsedLocal);
       return parsedLocal;
+    }
+
+    if (data?.[0]?.payload) {
+      const parsedRemote = normalizeStatePayload(data[0].payload);
+      safeSetLocalStorage(storageKey, JSON.stringify(parsedRemote));
+      return parsedRemote;
     }
 
     const seed = cloneSeedState();
@@ -1366,16 +1356,6 @@ function parseStoredPayload(rawValue) {
     console.warn("No se pudo interpretar respaldo local:", error?.message || error);
     return null;
   }
-}
-
-function hasStoredBusinessData(payload) {
-  return Boolean(
-    payload.companyLogo ||
-      payload.cashFloor ||
-      payload.transactions.length ||
-      payload.receivables.length ||
-      payload.payables.length
-  );
 }
 
 
