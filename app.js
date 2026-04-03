@@ -884,6 +884,8 @@ function createForecastWeeks(
       tone: getForecastTone(amount, cashFloor),
     };
   });
+
+  return weeks;
 }
 
 function renderForecast(weeks, cashFloor) {
