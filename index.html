@@ -10,6 +10,7 @@
       href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;700&display=swap"
       rel="stylesheet"
     />
+    <link rel="icon" type="image/png" href="" id="dynamicFavicon" />
     <link rel="stylesheet" href="./styles.css" />
   </head>
   <body>
@@ -56,11 +57,25 @@
     <div class="app-shell" id="appShell" hidden>
       <aside class="sidebar">
         <div class="brand-block">
-          <div class="brand-mark">FC</div>
+          <div class="brand-mark">
+            <img id="brandLogoPreview" alt="Logo de la empresa" hidden />
+            <span id="brandLogoFallback">FC</span>
+          </div>
           <div>
             <p class="eyebrow">Flujo claro</p>
             <h1>Controla tu caja sin hojas sueltas</h1>
           </div>
+        </div>
+
+        <div class="sidebar-section">
+          <p class="section-label">Logo</p>
+          <label class="logo-upload-btn">
+            Subir logo
+            <input type="file" id="companyLogoInput" accept="image/png,image/jpeg,image/webp" />
+          </label>
+          <button type="button" class="ghost-btn session-btn" id="removeLogoBtn">
+            Quitar logo
+          </button>
         </div>
 
         <div class="sidebar-section">

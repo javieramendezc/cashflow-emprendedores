@@ -20,6 +20,7 @@ const categoryMap = {
 };
 
 const seedState = {
+  companyLogo: "",
   transactions: [],
   receivables: [],
   payables: [],
@@ -42,6 +43,11 @@ const authSubmitBtn = document.querySelector("#authSubmitBtn");
 const toggleAuthModeBtn = document.querySelector("#toggleAuthModeBtn");
 const userEmailLabel = document.querySelector("#userEmailLabel");
 const logoutBtn = document.querySelector("#logoutBtn");
+const dynamicFavicon = document.querySelector("#dynamicFavicon");
+const brandLogoPreview = document.querySelector("#brandLogoPreview");
+const brandLogoFallback = document.querySelector("#brandLogoFallback");
+const companyLogoInput = document.querySelector("#companyLogoInput");
+const removeLogoBtn = document.querySelector("#removeLogoBtn");
 const transactionForm = document.querySelector("#transactionForm");
 const receivableForm = document.querySelector("#receivableForm");
 const payableForm = document.querySelector("#payableForm");
@@ -98,6 +104,30 @@ toggleAuthModeBtn.addEventListener("click", () => {
 
 logoutBtn.addEventListener("click", async () => {
   await supabaseClient.auth.signOut();
+});
+
+companyLogoInput.addEventListener("change", async () => {
+  const file = companyLogoInput.files?.[0];
+  if (!file) {
+    return;
+  }
+
+  if (file.size > 500 * 1024) {
+    alert("El logo no puede superar 500 KB.");
+    companyLogoInput.value = "";
+    return;
+  }
+
+  state.data.companyLogo = await readFileAsDataUrl(file);
+  companyLogoInput.value = "";
+  await saveData();
+  applyCompanyLogo();
+});
+
+removeLogoBtn.addEventListener("click", async () => {
+  state.data.companyLogo = "";
+  await saveData();
+  applyCompanyLogo();
 });
 
 receivableForm.status.addEventListener("change", () => {
@@ -486,6 +516,8 @@ function render() {
   const healthPill = document.querySelector("#healthPill");
   healthPill.textContent = health.label;
   healthPill.className = `pill ${health.tone}`;
+
+  applyCompanyLogo();
 
   renderTable(transactions);
   renderReceivables(receivables);
@@ -1007,6 +1039,7 @@ function labelStatus(status) {
 
 function cloneSeedState() {
   return {
+    companyLogo: seedState.companyLogo,
     transactions: [...seedState.transactions].sort(sortByDateDesc),
     receivables: normalizeLedgerItems([...seedState.receivables]).sort(sortByDueDateAsc),
     payables: normalizeLedgerItems([...seedState.payables]).sort(sortByDueDateAsc),
@@ -1015,6 +1048,7 @@ function cloneSeedState() {
 
 function normalizeStatePayload(payload) {
   return {
+    companyLogo: typeof payload?.companyLogo === "string" ? payload.companyLogo : "",
     transactions: (payload?.transactions || []).sort(sortByDateDesc),
     receivables: normalizeLedgerItems(payload?.receivables || []).sort(sortByDueDateAsc),
     payables: normalizeLedgerItems(payload?.payables || []).sort(sortByDueDateAsc),
@@ -1192,6 +1226,42 @@ function togglePartialAmountField(form, field) {
 
 function calculateIncludedVat(amount) {
   return Math.round((Number(amount || 0) * 19) / 119);
+}
+
+function applyCompanyLogo() {
+  const logoData = state.data.companyLogo;
+  const faviconHref = logoData || generateFallbackFavicon();
+
+  dynamicFavicon.href = faviconHref;
+  brandLogoPreview.hidden = !logoData;
+  brandLogoFallback.hidden = Boolean(logoData);
+
+  if (logoData) {
+    brandLogoPreview.src = logoData;
+  } else {
+    brandLogoPreview.removeAttribute("src");
+  }
+}
+
+function generateFallbackFavicon() {
+  const svg = `
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+      <rect width="64" height="64" rx="16" fill="#18261f"/>
+      <text x="50%" y="54%" text-anchor="middle" dominant-baseline="middle"
+        fill="#fff7eb" font-family="Arial, sans-serif" font-size="24" font-weight="700">FC</text>
+    </svg>
+  `;
+
+  return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg.trim())}`;
+}
+
+function readFileAsDataUrl(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result || ""));
+    reader.onerror = () => reject(reader.error);
+    reader.readAsDataURL(file);
+  });
 }
 
 function exportToExcel() {
