@@ -567,7 +567,28 @@ async function handleAuthSubmit() {
 }
 
 async function handleLogout() {
+  if (!state.session?.user) {
+    setAuthMode("signIn");
+    restoreRememberedAccess();
+    await syncSessionView();
+    return;
+  }
+
   logoutBtn.disabled = true;
+  logoutBtn.textContent = "Respaldando...";
+
+  try {
+    const sessionBackup = normalizeStatePayload(state.data);
+    safeSetLocalStorage(getUserStorageKey(), JSON.stringify(sessionBackup));
+    await saveDataToSupabase(sessionBackup);
+  } catch (error) {
+    console.warn("No se pudo respaldar antes de cerrar sesión:", error?.message || error);
+    logoutBtn.disabled = false;
+    logoutBtn.textContent = "Cerrar sesión";
+    alert("No se pudo respaldar tu información. No cerré sesión para evitar pérdida de datos.");
+    return;
+  }
+
   logoutBtn.textContent = "Cerrando...";
 
   state.session = null;
