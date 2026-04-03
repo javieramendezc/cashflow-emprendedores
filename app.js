@@ -1237,7 +1237,7 @@ async function loadData() {
   }
 
   const storageKey = getUserStorageKey();
-  const localBackup = safeGetLocalStorage(storageKey);
+  const localBackup = localStorage.getItem(storageKey);
 
   try {
     const { data, error } = await supabaseClient
@@ -1252,7 +1252,7 @@ async function loadData() {
 
     if (data?.[0]?.payload) {
       const parsedRemote = normalizeStatePayload(data[0].payload);
-      safeSetLocalStorage(storageKey, JSON.stringify(parsedRemote));
+      localStorage.setItem(storageKey, JSON.stringify(parsedRemote));
       return parsedRemote;
     }
 
@@ -1264,7 +1264,7 @@ async function loadData() {
 
     const seed = cloneSeedState();
     await saveDataToSupabase(seed);
-    safeSetLocalStorage(storageKey, JSON.stringify(seed));
+    localStorage.setItem(storageKey, JSON.stringify(seed));
     return seed;
   } catch {
     if (localBackup) {
@@ -1286,29 +1286,12 @@ async function saveData() {
 
   const normalizedData = normalizeStatePayload(state.data);
   state.data = normalizedData;
-  safeSetLocalStorage(getUserStorageKey(), JSON.stringify(normalizedData));
+  localStorage.setItem(getUserStorageKey(), JSON.stringify(normalizedData));
 
   try {
     await saveDataToSupabase(normalizedData);
   } catch (error) {
     console.warn("No se pudo sincronizar con Supabase:", error.message);
-  }
-}
-
-function safeGetLocalStorage(key) {
-  try {
-    return localStorage.getItem(key);
-  } catch (error) {
-    console.warn("No se pudo leer localStorage:", error?.message || error);
-    return null;
-  }
-}
-
-function safeSetLocalStorage(key, value) {
-  try {
-    localStorage.setItem(key, value);
-  } catch (error) {
-    console.warn("No se pudo guardar respaldo local:", error?.message || error);
   }
 }
 
