@@ -512,6 +512,14 @@ cancelPayableEditBtn.addEventListener("click", () => {
 });
 
 resetDataBtn.addEventListener("click", async () => {
+  const confirmReset = window.confirm(
+    "Advertencia: si reinicias en cero, los datos borrados no se podrán rescatar. ¿Quieres continuar?"
+  );
+
+  if (!confirmReset) {
+    return;
+  }
+
   state.data = cloneSeedState();
   state.filterMonth = currentMonth();
   monthFilter.value = state.filterMonth;
