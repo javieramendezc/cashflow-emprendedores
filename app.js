@@ -2,6 +2,8 @@ const STORAGE_KEY = "cashflow-emprendedores-data-v2";
 const SUPABASE_URL = "https://pmrbxgnpdxqkeihcinvj.supabase.co";
 const SUPABASE_PUBLIC_KEY = "sb_publishable_-sACG1yR0TURwqX70-XwTA_1Q9QPJ0w";
 const SUPABASE_STATE_TABLE = "cashflow_user_data";
+const MAX_INVOICE_IMAGE_BYTES = 850 * 1024;
+const INVOICE_IMAGE_MAX_WIDTH = 1400;
 
 const categoryMap = {
   income: ["Ventas", "Servicios", "Inversión", "Otros ingresos"],
@@ -34,6 +36,10 @@ const state = {
   filterMonth: currentMonth(),
   session: null,
   authMode: "signIn",
+  payableInvoiceDraft: {
+    image: "",
+    ocrText: "",
+  },
 };
 
 const authScreen = document.querySelector("#authScreen");
@@ -109,6 +115,11 @@ const savePayableBtn = document.querySelector("#savePayableBtn");
 const cancelPayableEditBtn = document.querySelector("#cancelPayableEditBtn");
 const receivablePartialField = document.querySelector("#receivablePartialField");
 const payablePartialField = document.querySelector("#payablePartialField");
+const invoicePhotoInput = document.querySelector("#invoicePhotoInput");
+const invoicePreview = document.querySelector("#invoicePreview");
+const invoiceReadStatus = document.querySelector("#invoiceReadStatus");
+const readInvoiceBtn = document.querySelector("#readInvoiceBtn");
+const removeInvoicePhotoBtn = document.querySelector("#removeInvoicePhotoBtn");
 const resetDataBtn = document.querySelector("#resetDataBtn");
 
 transactionFields.date.value = today();
@@ -186,6 +197,87 @@ receivableFields.status.addEventListener("change", () => {
 
 payableFields.status.addEventListener("change", () => {
   togglePartialAmountField(payableFields, payablePartialField);
+});
+
+invoicePhotoInput.addEventListener("change", async () => {
+  const file = invoicePhotoInput.files?.[0];
+  if (!file) {
+    return;
+  }
+
+  if (!file.type.startsWith("image/")) {
+    alert("Sube una imagen de la factura en formato JPG, PNG o similar.");
+    invoicePhotoInput.value = "";
+    return;
+  }
+
+  try {
+    setInvoiceReadStatus("Procesando imagen...");
+    state.payableInvoiceDraft.image = await resizeImageToDataUrl(
+      file,
+      INVOICE_IMAGE_MAX_WIDTH,
+      MAX_INVOICE_IMAGE_BYTES
+    );
+    state.payableInvoiceDraft.ocrText = "";
+    invoicePhotoInput.value = "";
+    updateInvoiceAttachmentPreview();
+    setInvoiceReadStatus("Foto adjunta. Presiona “Leer factura” para intentar autocompletar datos.");
+  } catch (error) {
+    alert(error.message || "No se pudo cargar la imagen de la factura.");
+    state.payableInvoiceDraft = { image: "", ocrText: "" };
+    invoicePhotoInput.value = "";
+    updateInvoiceAttachmentPreview();
+    setInvoiceReadStatus("Sube una foto nítida y presiona “Leer factura”.");
+  }
+});
+
+removeInvoicePhotoBtn.addEventListener("click", () => {
+  state.payableInvoiceDraft = { image: "", ocrText: "" };
+  invoicePhotoInput.value = "";
+  updateInvoiceAttachmentPreview();
+  setInvoiceReadStatus("Sube una foto nítida y presiona “Leer factura”.");
+});
+
+readInvoiceBtn.addEventListener("click", async () => {
+  if (!state.payableInvoiceDraft.image) {
+    setInvoiceReadStatus("Primero sube una foto de la factura.");
+    return;
+  }
+
+  if (!window.Tesseract?.recognize) {
+    setInvoiceReadStatus("No se pudo cargar el lector OCR. Revisa tu conexión y vuelve a intentar.");
+    return;
+  }
+
+  readInvoiceBtn.disabled = true;
+  readInvoiceBtn.textContent = "Leyendo...";
+  setInvoiceReadStatus("Leyendo la factura, puede tardar algunos segundos...");
+
+  try {
+    const {
+      data: { text: invoiceText = "" },
+    } = await window.Tesseract.recognize(state.payableInvoiceDraft.image, "spa+eng");
+
+    state.payableInvoiceDraft.ocrText = invoiceText.trim();
+    const extractedData = extractPayableInvoiceData(invoiceText);
+    applyExtractedPayableData(extractedData);
+
+    const filledFields = Object.values(extractedData).filter(Boolean).length;
+    setInvoiceReadStatus(
+      filledFields
+        ? `Lectura lista: completé ${filledFields} dato${filledFields === 1 ? "" : "s"}. Revisa antes de registrar.`
+        : "La lectura terminó, pero no pude detectar datos con confianza. Puedes completar el formulario manualmente."
+    );
+  } catch (error) {
+    setInvoiceReadStatus(
+      `No pude leer la factura automáticamente. Puedes registrarla manualmente. Detalle: ${
+        error.message || "OCR no disponible"
+      }`
+    );
+  } finally {
+    readInvoiceBtn.disabled = false;
+    readInvoiceBtn.textContent = "Leer factura";
+  }
 });
 
 transactionForm.addEventListener("submit", async (event) => {
@@ -290,6 +382,8 @@ payableForm.addEventListener("submit", async (event) => {
     dueDate: formData.get("dueDate"),
     status,
     note: String(formData.get("note") || "").trim(),
+    invoicePhoto: state.payableInvoiceDraft.image,
+    invoiceText: state.payableInvoiceDraft.ocrText,
   };
 
   if (!payable.vendor || !payable.document || !payable.amount || !payable.dueDate) {
@@ -679,7 +773,7 @@ function renderReceivables(receivables) {
 function renderPayables(payables) {
   if (!payables.length) {
     payableTableBody.innerHTML =
-      '<tr><td colspan="8">No hay facturas por pagar registradas.</td></tr>';
+      '<tr><td colspan="9">No hay facturas por pagar registradas.</td></tr>';
     return;
   }
 
@@ -694,6 +788,7 @@ function renderPayables(payables) {
           <td class="amount-negative">${formatCurrency(item.amount)}</td>
           <td class="amount-negative">${formatCurrency(getPartialAmount(item))}</td>
           <td>${escapeHtml(item.note || "-")}</td>
+          <td>${renderPayableInvoiceLink(item)}</td>
           <td class="action-cell">
             <button type="button" class="edit-btn" data-edit-payable="${item.id}">Modificar</button>
             <button type="button" class="delete-btn" data-delete-payable="${item.id}">Eliminar</button>
@@ -1371,6 +1466,16 @@ function fillPayableForm(payable) {
   payableFields.status.value = payable.status;
   payableFields.pendingAmount.value = getPartialAmount(payable) || "";
   payableFields.note.value = payable.note || "";
+  state.payableInvoiceDraft = {
+    image: payable.invoicePhoto || "",
+    ocrText: payable.invoiceText || "",
+  };
+  updateInvoiceAttachmentPreview();
+  setInvoiceReadStatus(
+    payable.invoicePhoto
+      ? "Esta factura ya tiene foto adjunta. Puedes reemplazarla o volver a leerla."
+      : "Sube una foto nítida y presiona “Leer factura”."
+  );
   togglePartialAmountField(payableFields, payablePartialField);
   savePayableBtn.textContent = "Guardar cambios";
   cancelPayableEditBtn.hidden = false;
@@ -1382,6 +1487,10 @@ function resetPayableForm() {
   payableFields.payableId.value = "";
   payableFields.issueDate.value = today();
   payableFields.dueDate.value = addDays(7);
+  state.payableInvoiceDraft = { image: "", ocrText: "" };
+  invoicePhotoInput.value = "";
+  updateInvoiceAttachmentPreview();
+  setInvoiceReadStatus("Sube una foto nítida y presiona “Leer factura”.");
   togglePartialAmountField(payableFields, payablePartialField);
   savePayableBtn.textContent = "Registrar factura por pagar";
   cancelPayableEditBtn.hidden = true;
@@ -1406,6 +1515,8 @@ function normalizeLedgerItems(items) {
   return items.map((item) => ({
     ...item,
     pendingAmount: normalizeOutstandingAmount(item),
+    invoicePhoto: typeof item.invoicePhoto === "string" ? item.invoicePhoto : "",
+    invoiceText: typeof item.invoiceText === "string" ? item.invoiceText : "",
   }));
 }
 
@@ -1466,6 +1577,207 @@ function getNamedFields(form, names) {
     fields[name] = field;
     return fields;
   }, {});
+}
+
+function updateInvoiceAttachmentPreview() {
+  const hasImage = Boolean(state.payableInvoiceDraft.image);
+  invoicePreview.hidden = !hasImage;
+  removeInvoicePhotoBtn.hidden = !hasImage;
+  invoicePreview.src = hasImage ? state.payableInvoiceDraft.image : "";
+}
+
+function setInvoiceReadStatus(message) {
+  invoiceReadStatus.textContent = message;
+}
+
+function renderPayableInvoiceLink(item) {
+  if (!item.invoicePhoto) {
+    return "-";
+  }
+
+  return `<a class="invoice-link" href="${item.invoicePhoto}" target="_blank" rel="noopener noreferrer">Ver foto</a>`;
+}
+
+function applyExtractedPayableData(data) {
+  if (data.vendor) {
+    payableFields.vendor.value = data.vendor;
+  }
+
+  if (data.document) {
+    payableFields.document.value = data.document;
+  }
+
+  if (data.amount) {
+    payableFields.amount.value = data.amount;
+  }
+
+  if (data.issueDate) {
+    payableFields.issueDate.value = data.issueDate;
+  }
+
+  if (data.dueDate) {
+    payableFields.dueDate.value = data.dueDate;
+  }
+}
+
+function extractPayableInvoiceData(rawText) {
+  const lines = rawText
+    .split(/\r?\n/)
+    .map((line) => line.replace(/\s+/g, " ").trim())
+    .filter(Boolean);
+  const fullText = lines.join(" ");
+
+  return {
+    vendor: extractInvoiceVendor(lines),
+    document: extractInvoiceDocument(fullText),
+    amount: extractInvoiceAmount(lines, fullText),
+    issueDate: extractInvoiceDate(fullText, ["emisión", "emision", "fecha"]),
+    dueDate: extractInvoiceDate(fullText, ["vencimiento", "vence", "pago"]),
+  };
+}
+
+function extractInvoiceVendor(lines) {
+  const ignoredWords = [
+    "factura",
+    "rut",
+    "giro",
+    "direccion",
+    "dirección",
+    "fecha",
+    "total",
+    "telefono",
+    "teléfono",
+    "mail",
+    "www",
+    "sii",
+  ];
+
+  const candidate = lines.find((line) => {
+    const cleanLine = line.toLowerCase();
+    return (
+      line.length >= 4 &&
+      line.length <= 60 &&
+      /[a-záéíóúñ]/i.test(line) &&
+      !/\d{2,}/.test(line) &&
+      !ignoredWords.some((word) => cleanLine.includes(word))
+    );
+  });
+
+  return candidate || "";
+}
+
+function extractInvoiceDocument(text) {
+  const patterns = [
+    /factura\s*(?:n[°ºo.]*)?\s*([a-z0-9-]{3,})/i,
+    /(?:folio|n[°ºo.])\s*[:#-]?\s*([a-z0-9-]{3,})/i,
+  ];
+
+  for (const pattern of patterns) {
+    const match = text.match(pattern);
+    if (match?.[1]) {
+      return match[1].toUpperCase();
+    }
+  }
+
+  return "";
+}
+
+function extractInvoiceAmount(lines, text) {
+  const totalLine = lines.find((line) => /total|monto\s*total/i.test(line));
+  const totalValue = totalLine ? parseInvoiceAmount(totalLine) : 0;
+  if (totalValue > 0) {
+    return totalValue;
+  }
+
+  const matches = [...text.matchAll(/\$?\s*((?:\d{1,3}(?:[.,]\d{3})+)|\d{4,})(?:,\d{2})?/g)]
+    .map((match) => parseInvoiceAmount(match[1]))
+    .filter((value) => value > 0);
+
+  return matches.length ? Math.max(...matches) : "";
+}
+
+function extractInvoiceDate(text, keywords) {
+  const normalizedText = text
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+
+  for (const keyword of keywords) {
+    const normalizedKeyword = keyword
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "");
+    const index = normalizedText.indexOf(normalizedKeyword);
+    if (index >= 0) {
+      const nearbyText = text.slice(index, index + 80);
+      const nearbyDate = parseInvoiceDate(nearbyText);
+      if (nearbyDate) {
+        return nearbyDate;
+      }
+    }
+  }
+
+  return parseInvoiceDate(text);
+}
+
+function parseInvoiceDate(text) {
+  const match = text.match(/(\d{1,2})[/-](\d{1,2})[/-](\d{2,4})/);
+  if (!match) {
+    return "";
+  }
+
+  const day = match[1].padStart(2, "0");
+  const month = match[2].padStart(2, "0");
+  const year = match[3].length === 2 ? `20${match[3]}` : match[3];
+
+  if (Number(month) < 1 || Number(month) > 12 || Number(day) < 1 || Number(day) > 31) {
+    return "";
+  }
+
+  return `${year}-${month}-${day}`;
+}
+
+function parseInvoiceAmount(value) {
+  const digitsOnly = String(value).replace(/[^\d]/g, "");
+  return Number(digitsOnly) || 0;
+}
+
+async function resizeImageToDataUrl(file, maxWidth, maxBytes) {
+  const image = await loadImageFromFile(file);
+  const scale = Math.min(1, maxWidth / image.width);
+  const canvas = document.createElement("canvas");
+  canvas.width = Math.max(1, Math.round(image.width * scale));
+  canvas.height = Math.max(1, Math.round(image.height * scale));
+
+  const context = canvas.getContext("2d");
+  context.drawImage(image, 0, 0, canvas.width, canvas.height);
+
+  const qualities = [0.82, 0.72, 0.62, 0.52];
+  let dataUrl = canvas.toDataURL("image/jpeg", qualities[0]);
+
+  for (const quality of qualities) {
+    dataUrl = canvas.toDataURL("image/jpeg", quality);
+    if (estimateDataUrlBytes(dataUrl) <= maxBytes) {
+      return dataUrl;
+    }
+  }
+
+  throw new Error("La imagen sigue siendo muy pesada. Sube una foto más liviana o recortada.");
+}
+
+async function loadImageFromFile(file) {
+  const dataUrl = await readFileAsDataUrl(file);
+  return new Promise((resolve, reject) => {
+    const image = new Image();
+    image.onload = () => resolve(image);
+    image.onerror = () => reject(new Error("No se pudo procesar la imagen de la factura."));
+    image.src = dataUrl;
+  });
+}
+
+function estimateDataUrlBytes(dataUrl) {
+  const base64Data = dataUrl.split(",")[1] || "";
+  return Math.ceil((base64Data.length * 3) / 4);
 }
 
 function calculateIncludedVat(amount) {

@@ -515,6 +515,43 @@
                 />
               </label>
 
+              <div class="invoice-attachment-box">
+                <div class="invoice-attachment-header">
+                  <div>
+                    <p class="section-label">Factura adjunta</p>
+                    <strong>Foto de la factura</strong>
+                  </div>
+                  <button type="button" class="ghost-btn" id="readInvoiceBtn">
+                    Leer factura
+                  </button>
+                </div>
+
+                <div class="invoice-upload-row">
+                  <label class="invoice-upload-btn">
+                    Subir foto
+                    <input
+                      type="file"
+                      name="invoicePhoto"
+                      id="invoicePhotoInput"
+                      accept="image/*"
+                    />
+                  </label>
+                  <button type="button" class="ghost-btn" id="removeInvoicePhotoBtn" hidden>
+                    Quitar foto
+                  </button>
+                </div>
+
+                <p class="invoice-read-status" id="invoiceReadStatus">
+                  Sube una foto nítida y presiona “Leer factura”.
+                </p>
+                <img
+                  class="invoice-preview"
+                  id="invoicePreview"
+                  alt="Vista previa de la factura"
+                  hidden
+                />
+              </div>
+
               <div class="form-actions">
                 <button type="submit" class="primary-btn" id="savePayableBtn">
                   Registrar factura por pagar
@@ -536,6 +573,7 @@
                     <th>Monto total</th>
                     <th>Abono</th>
                     <th>Nota</th>
+                    <th>Adjunto</th>
                     <th>Acción</th>
                   </tr>
                 </thead>
@@ -603,6 +641,7 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
     <script src="./app.js"></script>
   </body>
 </html>
