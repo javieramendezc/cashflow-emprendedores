@@ -1252,15 +1252,6 @@ async function loadData() {
 
     if (data?.[0]?.payload) {
       const parsedRemote = normalizeStatePayload(data[0].payload);
-      if (localBackup) {
-        const parsedLocal = normalizeStatePayload(JSON.parse(localBackup));
-
-        if (!hasStoredBusinessData(parsedRemote) && hasStoredBusinessData(parsedLocal)) {
-          await saveDataToSupabase(parsedLocal);
-          return parsedLocal;
-        }
-      }
-
       safeSetLocalStorage(storageKey, JSON.stringify(parsedRemote));
       return parsedRemote;
     }
@@ -1319,16 +1310,6 @@ function safeSetLocalStorage(key, value) {
   } catch (error) {
     console.warn("No se pudo guardar respaldo local:", error?.message || error);
   }
-}
-
-function hasStoredBusinessData(payload) {
-  return Boolean(
-    payload.companyLogo ||
-      payload.cashFloor ||
-      payload.transactions.length ||
-      payload.receivables.length ||
-      payload.payables.length
-  );
 }
 
 function getHealth(incomeTotal, expenseTotal, balance, cashFloor = 0) {
