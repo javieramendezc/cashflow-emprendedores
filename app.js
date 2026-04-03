@@ -38,10 +38,18 @@ const state = {
 
 const authScreen = document.querySelector("#authScreen");
 const appShell = document.querySelector("#appShell");
+const authTitle = document.querySelector("#authTitle");
+const authCopy = document.querySelector("#authCopy");
 const authForm = document.querySelector("#authForm");
+const authEmailField = document.querySelector("#authEmailField");
+const authPasswordField = document.querySelector("#authPasswordField");
+const authPasswordLabel = document.querySelector("#authPasswordLabel");
+const authEmailInput = authForm.querySelector('[name="email"]');
+const authPasswordInput = authForm.querySelector('[name="password"]');
 const authMessage = document.querySelector("#authMessage");
 const authSubmitBtn = document.querySelector("#authSubmitBtn");
 const toggleAuthModeBtn = document.querySelector("#toggleAuthModeBtn");
+const recoverPasswordBtn = document.querySelector("#recoverPasswordBtn");
 const userEmailLabel = document.querySelector("#userEmailLabel");
 const logoutBtn = document.querySelector("#logoutBtn");
 const dynamicFavicon = document.querySelector("#dynamicFavicon");
@@ -121,6 +129,7 @@ monthFilter.value = state.filterMonth;
 renderCategoryOptions(transactionFields.type.value);
 togglePartialAmountField(receivableFields, receivablePartialField);
 togglePartialAmountField(payableFields, payablePartialField);
+setAuthMode("signIn");
 render();
 initializeAuth();
 
@@ -134,11 +143,12 @@ authForm.addEventListener("submit", async (event) => {
 });
 
 toggleAuthModeBtn.addEventListener("click", () => {
-  state.authMode = state.authMode === "signIn" ? "signUp" : "signIn";
-  authMessage.textContent = "";
-  authMessage.classList.remove("success");
-  authSubmitBtn.textContent = state.authMode === "signIn" ? "Iniciar sesión" : "Crear cuenta";
-  toggleAuthModeBtn.textContent = state.authMode === "signIn" ? "Crear cuenta" : "Ya tengo cuenta";
+  const nextMode = state.authMode === "signIn" ? "signUp" : "signIn";
+  setAuthMode(nextMode);
+});
+
+recoverPasswordBtn.addEventListener("click", () => {
+  setAuthMode("recoverPassword");
 });
 
 logoutBtn.addEventListener("click", async () => {
@@ -442,7 +452,14 @@ async function initializeAuth() {
     await syncSessionView();
   }
 
-  supabaseClient.auth.onAuthStateChange(async (_event, sessionState) => {
+  supabaseClient.auth.onAuthStateChange(async (event, sessionState) => {
+    if (event === "PASSWORD_RECOVERY") {
+      setAuthMode("updatePassword", {
+        message: "Ingresa tu nueva contraseña para completar la recuperación.",
+        tone: "success",
+      });
+    }
+
     state.session = sessionState;
     await syncSessionView();
   });
@@ -457,10 +474,20 @@ async function handleAuthSubmit() {
   authMessage.classList.remove("success");
   authMessage.textContent = "Procesando...";
 
-  const authResponse =
-    state.authMode === "signIn"
-      ? await supabaseClient.auth.signInWithPassword({ email, password })
-      : await supabaseClient.auth.signUp({ email, password });
+  let authResponse;
+
+  if (state.authMode === "recoverPassword") {
+    authResponse = await supabaseClient.auth.resetPasswordForEmail(email, {
+      redirectTo: window.location.origin,
+    });
+  } else if (state.authMode === "updatePassword") {
+    authResponse = await supabaseClient.auth.updateUser({ password });
+  } else {
+    authResponse =
+      state.authMode === "signIn"
+        ? await supabaseClient.auth.signInWithPassword({ email, password })
+        : await supabaseClient.auth.signUp({ email, password });
+  }
 
   authSubmitBtn.disabled = false;
 
@@ -469,13 +496,31 @@ async function handleAuthSubmit() {
     return;
   }
 
+  if (state.authMode === "recoverPassword") {
+    setAuthMode("signIn", {
+      message: "Te enviamos un correo para recuperar tu contraseña.",
+      tone: "success",
+    });
+    authForm.reset();
+    return;
+  }
+
+  if (state.authMode === "updatePassword") {
+    await supabaseClient.auth.signOut();
+    setAuthMode("signIn", {
+      message: "Contraseña actualizada. Ya puedes iniciar sesión.",
+      tone: "success",
+    });
+    authForm.reset();
+    return;
+  }
+
   if (state.authMode === "signUp" && !authResponse.data.session) {
-    authMessage.classList.add("success");
-    authMessage.textContent =
-      "Cuenta creada. Revisa tu correo si Supabase pide confirmación y luego inicia sesión.";
-    state.authMode = "signIn";
-    authSubmitBtn.textContent = "Iniciar sesión";
-    toggleAuthModeBtn.textContent = "Crear cuenta";
+    setAuthMode("signIn", {
+      message:
+        "Cuenta creada. Revisa tu correo si Supabase pide confirmación y luego inicia sesión.",
+      tone: "success",
+    });
     authForm.reset();
     return;
   }
@@ -485,6 +530,12 @@ async function handleAuthSubmit() {
 }
 
 async function syncSessionView() {
+  if (state.authMode === "updatePassword") {
+    appShell.hidden = true;
+    authScreen.hidden = false;
+    return;
+  }
+
   if (!state.session?.user) {
     appShell.hidden = true;
     authScreen.hidden = false;
@@ -511,6 +562,59 @@ async function syncSessionView() {
   resetReceivableForm();
   resetPayableForm();
   render();
+}
+
+function setAuthMode(mode, feedback = {}) {
+  state.authMode = mode;
+  authTitle.textContent = {
+    signIn: "Entra a Flujo Claro",
+    signUp: "Crea tu cuenta",
+    recoverPassword: "Recupera tu contraseña",
+    updatePassword: "Define una nueva contraseña",
+  }[mode];
+  authCopy.textContent = {
+    signIn:
+      "Crea tu cuenta o inicia sesión para guardar tu flujo de caja en la nube y ver solo tu información.",
+    signUp:
+      "Registra un correo y una contraseña para activar tu espacio privado de flujo de caja.",
+    recoverPassword:
+      "Escribe tu correo y te enviaremos un enlace para crear una nueva contraseña.",
+    updatePassword: "Escribe tu nueva contraseña para volver a ingresar a tu cuenta.",
+  }[mode];
+
+  authEmailField.hidden = mode === "updatePassword";
+  authPasswordField.hidden = mode === "recoverPassword";
+  authEmailInput.required = mode !== "updatePassword";
+  authPasswordInput.required = mode !== "recoverPassword";
+  authPasswordInput.autocomplete = mode === "signUp" || mode === "updatePassword"
+    ? "new-password"
+    : "current-password";
+  authPasswordLabel.textContent =
+    mode === "updatePassword" ? "Nueva contraseña" : "Contraseña";
+
+  authSubmitBtn.textContent = {
+    signIn: "Iniciar sesión",
+    signUp: "Crear cuenta",
+    recoverPassword: "Enviar correo de recuperación",
+    updatePassword: "Guardar nueva contraseña",
+  }[mode];
+  toggleAuthModeBtn.textContent = {
+    signIn: "Crear cuenta",
+    signUp: "Ya tengo cuenta",
+    recoverPassword: "Volver al login",
+    updatePassword: "Volver al login",
+  }[mode];
+  toggleAuthModeBtn.hidden = false;
+  recoverPasswordBtn.hidden = mode !== "signIn";
+
+  authMessage.classList.toggle("success", feedback.tone === "success");
+  authMessage.textContent = feedback.message || "";
+
+  if (mode !== "updatePassword") {
+    authEmailInput.focus();
+  } else {
+    authPasswordInput.focus();
+  }
 }
 
 function render() {

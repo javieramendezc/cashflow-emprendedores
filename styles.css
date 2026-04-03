@@ -98,6 +98,22 @@ body::before {
   color: var(--positive);
 }
 
+.auth-link-btn {
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  font-size: 0.9rem;
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 4px;
+  cursor: pointer;
+  justify-self: start;
+}
+
+.auth-link-btn:hover {
+  color: var(--ink);
+}
+
 .session-btn {
   margin-top: 14px;
   width: 100%;
