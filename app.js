@@ -112,7 +112,6 @@ const forecastList = document.querySelector("#forecastList");
 const tipsList = document.querySelector("#tipsList");
 const exportExcelBtn = document.querySelector("#exportExcelBtn");
 const exportPdfBtn = document.querySelector("#exportPdfBtn");
-const exportBackupBtn = document.querySelector("#exportBackupBtn");
 const saveTransactionBtn = document.querySelector("#saveTransactionBtn");
 const cancelTransactionEditBtn = document.querySelector("#cancelTransactionEditBtn");
 const saveReceivableBtn = document.querySelector("#saveReceivableBtn");
@@ -416,10 +415,6 @@ exportExcelBtn.addEventListener("click", () => {
 
 exportPdfBtn.addEventListener("click", () => {
   exportToPdf();
-});
-
-exportBackupBtn.addEventListener("click", () => {
-  exportAccountBackup();
 });
 
 cancelTransactionEditBtn.addEventListener("click", () => {
@@ -1714,39 +1709,6 @@ function readFileAsDataUrl(file) {
     reader.onerror = () => reject(reader.error);
     reader.readAsDataURL(file);
   });
-}
-
-function exportAccountBackup() {
-  const backupPayload = {
-    app: "Flujo Claro",
-    version: 1,
-    exportedAt: new Date().toISOString(),
-    userEmail: state.session?.user?.email || "",
-    data: normalizeStatePayload(state.data),
-  };
-
-  const safeEmail = (backupPayload.userEmail || "cuenta")
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "");
-  const filename = `respaldo-flujo-claro-${safeEmail}-${today()}.json`;
-  const blob = new Blob([JSON.stringify(backupPayload, null, 2)], {
-    type: "application/json;charset=utf-8",
-  });
-
-  downloadBlob(blob, filename);
-}
-
-function downloadBlob(blob, filename) {
-  const downloadUrl = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-
-  link.href = downloadUrl;
-  link.download = filename;
-  document.body.appendChild(link);
-  link.click();
-  link.remove();
-  URL.revokeObjectURL(downloadUrl);
 }
 
 function exportToExcel() {
