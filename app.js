@@ -6,7 +6,8 @@ const MAX_INVOICE_IMAGE_BYTES = 850 * 1024;
 const INVOICE_IMAGE_MAX_WIDTH = 1400;
 const UX_RULES = {
   maxMainBlocksPerScreen: 3,
-  feedbackDurationMs: 2200,
+  feedbackDurationMs: 2400,
+  feedbackExitMs: 220,
   simpleCopyMap: [
     [/\bflujo de caja\b/gi, "plata"],
     [/\bbalance\b/gi, "plata"],
@@ -174,6 +175,7 @@ const confirmResetModalBtn = document.querySelector("#confirmResetModalBtn");
 const uxToast = document.querySelector("#uxToast");
 
 let uxToastTimer = null;
+let uxToastHideTimer = null;
 
 transactionFields.date.value = today();
 receivableFields.issueDate.value = today();
@@ -451,7 +453,8 @@ transactionForm.addEventListener("submit", async (event) => {
 
   if (isEditing) {
     resetTransactionForm();
-    showUXFeedback("Movimiento actualizado.", transaction.type === "income" ? "ok" : "warn");
+    const feedback = createActionFeedback("Movimiento actualizado.", transaction.date.slice(0, 7));
+    showUXFeedback(feedback.message, feedback.tone);
     return;
   }
 
@@ -465,7 +468,11 @@ transactionForm.addEventListener("submit", async (event) => {
   saveTransactionBtn.textContent = "Guardar movimiento";
   cancelTransactionEditBtn.hidden = true;
   movementImpactText.textContent = impactCopy;
-  showUXFeedback(impactCopy, transaction.type === "income" ? "ok" : "warn");
+  const feedback = createActionFeedback(
+    transaction.type === "income" ? "Ingreso guardado." : "Gasto guardado.",
+    transaction.date.slice(0, 7)
+  );
+  showUXFeedback(feedback.message, feedback.tone);
   transactionFields.amount.focus();
 });
 
@@ -511,10 +518,11 @@ receivableForm.addEventListener("submit", async (event) => {
   monthFilter.value = state.filterMonth;
   resetReceivableForm();
   render();
-  showUXFeedback(
+  const receivableFeedback = createActionFeedback(
     isEditing ? "Cuenta por cobrar actualizada." : "Cuenta por cobrar guardada.",
-    "ok"
+    receivable.dueDate.slice(0, 7)
   );
+  showUXFeedback(receivableFeedback.message, receivableFeedback.tone);
 });
 
 payableForm.addEventListener("submit", async (event) => {
@@ -561,10 +569,11 @@ payableForm.addEventListener("submit", async (event) => {
   monthFilter.value = state.filterMonth;
   resetPayableForm();
   render();
-  showUXFeedback(
+  const payableFeedback = createActionFeedback(
     isEditing ? "Factura por pagar actualizada." : "Factura por pagar guardada.",
-    payable.status === "paid" ? "ok" : "warn"
+    payable.dueDate.slice(0, 7)
   );
+  showUXFeedback(payableFeedback.message, payableFeedback.tone);
 });
 
 monthFilter.addEventListener("change", (event) => {
@@ -591,13 +600,20 @@ transactionTableBody.addEventListener("click", async (event) => {
     return;
   }
 
+  const deletedTransaction = state.data.transactions.find(
+    (item) => item.id === button.dataset.deleteTransaction
+  );
   state.data.transactions = state.data.transactions.filter(
     (item) => item.id !== button.dataset.deleteTransaction
   );
   await saveData();
   resetTransactionForm();
   render();
-  showUXFeedback("Movimiento borrado.", "warn");
+  const transactionFeedback = createActionFeedback(
+    "Movimiento borrado.",
+    deletedTransaction?.date?.slice(0, 7) || currentMonth()
+  );
+  showUXFeedback(transactionFeedback.message, transactionFeedback.tone);
 });
 
 receivableTableBody.addEventListener("click", async (event) => {
@@ -619,13 +635,20 @@ receivableTableBody.addEventListener("click", async (event) => {
     return;
   }
 
+  const deletedReceivable = state.data.receivables.find(
+    (item) => item.id === button.dataset.deleteReceivable
+  );
   state.data.receivables = state.data.receivables.filter(
     (item) => item.id !== button.dataset.deleteReceivable
   );
   await saveData();
   resetReceivableForm();
   render();
-  showUXFeedback("Cuenta por cobrar borrada.", "warn");
+  const receivableFeedback = createActionFeedback(
+    "Cuenta por cobrar borrada.",
+    deletedReceivable?.dueDate?.slice(0, 7) || currentMonth()
+  );
+  showUXFeedback(receivableFeedback.message, receivableFeedback.tone);
 });
 
 payableTableBody.addEventListener("click", async (event) => {
@@ -647,13 +670,20 @@ payableTableBody.addEventListener("click", async (event) => {
     return;
   }
 
+  const deletedPayable = state.data.payables.find(
+    (item) => item.id === button.dataset.deletePayable
+  );
   state.data.payables = state.data.payables.filter(
     (item) => item.id !== button.dataset.deletePayable
   );
   await saveData();
   resetPayableForm();
   render();
-  showUXFeedback("Factura por pagar borrada.", "warn");
+  const payableFeedback = createActionFeedback(
+    "Factura por pagar borrada.",
+    deletedPayable?.dueDate?.slice(0, 7) || currentMonth()
+  );
+  showUXFeedback(payableFeedback.message, payableFeedback.tone);
 });
 
 exportExcelBtn.addEventListener("click", () => {
@@ -1088,19 +1118,18 @@ function updateMovementImpactPreview() {
   const sign = transactionFields.type.value === "income" ? 1 : -1;
   const targetMonth = (transactionFields.date.value || today()).slice(0, 7);
   const projectedBalance = estimateProjectedBalanceForCurrentMonth(targetMonth) + amount * sign;
-  movementImpactText.textContent = `Si guardas esto, a fin de mes te quedarían ${formatCurrency(
-    projectedBalance
-  )}.`;
+  movementImpactText.textContent =
+    targetMonth === currentMonth()
+      ? `Si lo guardas, ${createRemainingMoneySentence(projectedBalance, targetMonth, "")}`
+      : `Si lo guardas, quedará registrado para ${formatMonthLabel(targetMonth)}.`;
 }
 
 function createMovementImpactCopy(transaction) {
-  const projectedBalance = estimateProjectedBalanceForCurrentMonth(transaction.date.slice(0, 7));
-
-  if (transaction.type === "income") {
-    return `Ingreso guardado. Ahora podrías cerrar el mes con ${formatCurrency(projectedBalance)}.`;
-  }
-
-  return `Gasto guardado. Ahora te quedan ${formatCurrency(projectedBalance)} estimados para fin de mes.`;
+  const feedback = createActionFeedback(
+    transaction.type === "income" ? "Ingreso guardado." : "Gasto guardado.",
+    transaction.date.slice(0, 7)
+  );
+  return feedback.message;
 }
 
 async function updateCashFloorValue(value) {
@@ -1108,12 +1137,10 @@ async function updateCashFloorValue(value) {
   syncCashFloorInputs(state.data.cashFloor);
   await saveData();
   render();
-  showUXFeedback(
-    state.data.cashFloor
-      ? `Mínimo seguro actualizado a ${formatCurrency(state.data.cashFloor)}.`
-      : "Mínimo seguro desactivado.",
-    state.data.cashFloor ? "ok" : "warn"
-  );
+  const feedback = state.data.cashFloor
+    ? createActionFeedback(`Mínimo seguro listo en ${formatCurrency(state.data.cashFloor)}.`)
+    : { message: "Mínimo seguro desactivado.", tone: "warn" };
+  showUXFeedback(feedback.message, feedback.tone);
 }
 
 function syncCashFloorInputs(value) {
@@ -1124,6 +1151,37 @@ function syncCashFloorInputs(value) {
 
 function estimateProjectedBalanceForCurrentMonth(targetMonth = currentMonth()) {
   return calculateProjectedMonthEndCash(calculateAvailableCashToday(), targetMonth);
+}
+
+function createRemainingMoneySentence(projectedBalance, targetMonth = currentMonth(), prefix = "Ahora") {
+  const intro = prefix ? `${prefix.trim()} ` : "";
+  const periodLabel = targetMonth === currentMonth() ? "este mes" : `en ${formatMonthLabel(targetMonth)}`;
+
+  if (projectedBalance < 0) {
+    return `${intro}te faltan ${formatCurrency(Math.abs(projectedBalance))} ${periodLabel}.`;
+  }
+
+  if (projectedBalance === 0) {
+    return `${intro}quedas justo en ${formatCurrency(0)} ${periodLabel}.`;
+  }
+
+  return `${intro}te quedan ${formatCurrency(projectedBalance)} ${periodLabel}.`;
+}
+
+function createActionFeedback(actionLabel, targetMonth = currentMonth()) {
+  if (targetMonth !== currentMonth()) {
+    return {
+      message: `${actionLabel} Quedó registrado para ${formatMonthLabel(targetMonth)}.`,
+      tone: "ok",
+    };
+  }
+
+  const projectedBalance = estimateProjectedBalanceForCurrentMonth(targetMonth);
+
+  return {
+    message: `${actionLabel} ${createRemainingMoneySentence(projectedBalance, targetMonth)}`,
+    tone: getForecastTone(projectedBalance, Number(state.data.cashFloor) || 0),
+  };
 }
 
 function calculateAvailableCashToday() {
@@ -2163,12 +2221,21 @@ function showUXFeedback(message, tone = "ok") {
   }
 
   clearTimeout(uxToastTimer);
+  clearTimeout(uxToastHideTimer);
   uxToast.hidden = false;
   uxToast.className = `ux-toast ${tone}`;
   uxToast.textContent = message;
+  void uxToast.offsetWidth;
+  uxToast.classList.add("is-visible");
 
   uxToastTimer = window.setTimeout(() => {
-    uxToast.hidden = true;
+    uxToast.classList.remove("is-visible");
+    uxToast.classList.add("is-hiding");
+
+    uxToastHideTimer = window.setTimeout(() => {
+      uxToast.hidden = true;
+      uxToast.className = "ux-toast";
+    }, UX_RULES.feedbackExitMs);
   }, UX_RULES.feedbackDurationMs);
 }
 
