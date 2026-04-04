@@ -100,10 +100,10 @@
             <button type="button" class="nav-link is-active" data-page-target="home">
               Inicio
             </button>
-            <button type="button" class="nav-link" data-page-target="projection">
+            <button type="button" class="nav-link" data-page-target="projection" hidden>
               Proyección
             </button>
-            <button type="button" class="nav-link" data-page-target="detail">
+            <button type="button" class="nav-link" data-page-target="detail" hidden>
               Detalle
             </button>
           </nav>
@@ -179,6 +179,16 @@
               <span>−</span>
               Gasto
             </button>
+          </section>
+
+          <section class="panel feature-unlock-panel" id="featureUnlockPanel" data-ux-block hidden>
+            <div class="panel-header">
+              <div>
+                <p class="section-label" data-ux-copy>Se activa con uso real</p>
+                <h3>Lo siguiente llega solo</h3>
+              </div>
+            </div>
+            <div class="feature-unlock-list" id="featureUnlockList"></div>
           </section>
         </section>
 
@@ -711,11 +721,11 @@
           <span>⌂</span>
           Inicio
         </button>
-        <button type="button" class="bottom-nav-btn" data-page-target="projection">
+        <button type="button" class="bottom-nav-btn" data-page-target="projection" hidden>
           <span>↗</span>
           Proyección
         </button>
-        <button type="button" class="bottom-nav-btn" data-page-target="detail">
+        <button type="button" class="bottom-nav-btn" data-page-target="detail" hidden>
           <span>☰</span>
           Detalle
         </button>

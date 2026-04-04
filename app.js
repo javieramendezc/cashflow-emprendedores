@@ -8,6 +8,11 @@ const UX_RULES = {
   maxMainBlocksPerScreen: 3,
   feedbackDurationMs: 2400,
   feedbackExitMs: 220,
+  progressiveVisibility: {
+    projectionTransactions: 3,
+    detailTransactions: 6,
+    categoriesTransactions: 8,
+  },
   simpleCopyMap: [
     [/\bflujo de caja\b/gi, "plata"],
     [/\bbalance\b/gi, "plata"],
@@ -50,6 +55,7 @@ const state = {
   authMode: "signIn",
   activePage: "home",
   activeDetailTab: "summary",
+  visibility: createInitialVisibilityState(),
   lastMovementImpact: "",
   latestScenarioBalance: 0,
   payableInvoiceDraft: {
@@ -123,6 +129,10 @@ const appPages = [...document.querySelectorAll("[data-app-page]")];
 const navLinks = [...document.querySelectorAll("[data-page-target]")];
 const detailTabButtons = [...document.querySelectorAll("[data-detail-tab]")];
 const detailTabPanels = [...document.querySelectorAll("[data-detail-panel]")];
+const bottomNavigation = document.querySelector(".bottom-navigation");
+const featureUnlockPanel = document.querySelector("#featureUnlockPanel");
+const featureUnlockList = document.querySelector("#featureUnlockList");
+const detailSummaryCopy = document.querySelector("#detailSummaryCopy");
 const homeTodayCash = document.querySelector("#homeTodayCash");
 const homeMonthEndCash = document.querySelector("#homeMonthEndCash");
 const homeMonthEndCard = document.querySelector("#homeMonthEndCard");
@@ -827,6 +837,10 @@ async function syncSessionView() {
 }
 
 function switchPage(pageName) {
+  if (!isPageAccessible(pageName)) {
+    pageName = "home";
+  }
+
   state.activePage = pageName;
 
   appPages.forEach((page) => {
@@ -855,6 +869,10 @@ function getPageTitle(pageName) {
 }
 
 function switchDetailTab(tabName) {
+  if (!isDetailTabAccessible(tabName)) {
+    tabName = "summary";
+  }
+
   state.activeDetailTab = tabName;
 
   detailTabButtons.forEach((tabButton) => {
@@ -1225,6 +1243,8 @@ function calculateProjectedMonthEndCash(currentCash, targetMonth) {
 }
 
 function render() {
+  syncProgressiveVisibility();
+
   const currentMonthKey = currentMonth();
   const transactions = state.data.transactions.filter((item) =>
     item.date.startsWith(state.filterMonth)
@@ -1340,6 +1360,9 @@ function render() {
   text("#adviceText", assistantMessage);
   text("#receivablePill", `${openReceivables.length} pendientes`);
   text("#payablePill", `${openPayables.length} pendientes`);
+  if (detailSummaryCopy) {
+    detailSummaryCopy.textContent = buildDetailSummaryCopy();
+  }
 
   const healthPill = document.querySelector("#healthPill");
   healthPill.textContent = health.label;
@@ -1371,6 +1394,9 @@ function render() {
     cashFloor,
     lowCashWeek
   );
+
+  switchPage(state.activePage);
+  switchDetailTab(state.activeDetailTab);
 }
 
 function renderCategoryOptions(type) {
@@ -2056,6 +2082,23 @@ function cloneSeedState() {
   };
 }
 
+function createInitialVisibilityState() {
+  return {
+    projection: false,
+    detail: false,
+    detailTabs: {
+      summary: true,
+      categories: false,
+      history: false,
+    },
+    hints: [],
+    metrics: {
+      transactionsCount: 0,
+      recurringCount: 0,
+    },
+  };
+}
+
 function normalizeStatePayload(payload) {
   return {
     companyLogo: typeof payload?.companyLogo === "string" ? payload.companyLogo : "",
@@ -2064,6 +2107,199 @@ function normalizeStatePayload(payload) {
     receivables: normalizeLedgerItems(payload?.receivables || []).sort(sortByDueDateAsc),
     payables: normalizeLedgerItems(payload?.payables || []).sort(sortByDueDateAsc),
   };
+}
+
+function getUsageMetrics() {
+  const transactionsCount = state.data.transactions.length;
+  const recurringCount = state.data.transactions.filter((item) => item.recurring).length;
+
+  return {
+    transactionsCount,
+    recurringCount,
+  };
+}
+
+function buildVisibilityHints(visibility) {
+  const { transactionsCount, recurringCount } = visibility.metrics;
+  const hints = [];
+
+  if (!visibility.projection) {
+    const missingTransactions =
+      UX_RULES.progressiveVisibility.projectionTransactions - transactionsCount;
+    hints.push({
+      title: "Proyección",
+      copy:
+        missingTransactions > 0
+          ? `Agrega ${missingTransactions} movimiento${missingTransactions === 1 ? "" : "s"} más y verás cómo cierras el mes.`
+          : "Sigue registrando movimientos para activar tu proyección.",
+      progress: Math.min(
+        100,
+        (transactionsCount / UX_RULES.progressiveVisibility.projectionTransactions) * 100
+      ),
+    });
+  }
+
+  if (!visibility.detail) {
+    const missingTransactions =
+      UX_RULES.progressiveVisibility.detailTransactions - transactionsCount;
+    hints.push({
+      title: "Detalle",
+      copy:
+        recurringCount > 0
+          ? "Tu análisis avanzado se activará al seguir registrando movimientos."
+          : missingTransactions > 0
+            ? `Marca un movimiento como recurrente o agrega ${missingTransactions} más para abrir análisis más profundos.`
+            : "Marca un movimiento como recurrente para abrir análisis más profundos.",
+      progress: Math.min(
+        100,
+        Math.max(
+          (transactionsCount / UX_RULES.progressiveVisibility.detailTransactions) * 100,
+          recurringCount > 0 ? 100 : 0
+        )
+      ),
+    });
+  } else if (!visibility.detailTabs.categories) {
+    const missingTransactions =
+      UX_RULES.progressiveVisibility.categoriesTransactions - transactionsCount;
+    hints.push({
+      title: "Categorías",
+      copy:
+        recurringCount > 0
+          ? "Tus categorías avanzadas se activarán solas con más uso."
+          : missingTransactions > 0
+            ? `Marca un movimiento como recurrente o agrega ${missingTransactions} más para ver análisis por categoría.`
+            : "Marca un movimiento como recurrente para ver análisis por categoría.",
+      progress: Math.min(
+        100,
+        Math.max(
+          (transactionsCount / UX_RULES.progressiveVisibility.categoriesTransactions) * 100,
+          recurringCount > 0 ? 100 : 0
+        )
+      ),
+    });
+  }
+
+  return hints.slice(0, 2);
+}
+
+function syncProgressiveVisibility() {
+  const metrics = getUsageMetrics();
+  const projection =
+    metrics.transactionsCount >= UX_RULES.progressiveVisibility.projectionTransactions;
+  const detail =
+    metrics.transactionsCount >= UX_RULES.progressiveVisibility.detailTransactions ||
+    metrics.recurringCount > 0;
+  const categories =
+    metrics.recurringCount > 0 ||
+    metrics.transactionsCount >= UX_RULES.progressiveVisibility.categoriesTransactions;
+
+  state.visibility = {
+    projection,
+    detail,
+    detailTabs: {
+      summary: detail,
+      history: detail,
+      categories: detail && categories,
+    },
+    metrics,
+    hints: [],
+  };
+
+  state.visibility.hints = buildVisibilityHints(state.visibility);
+  applyProgressiveVisibility();
+}
+
+function isPageAccessible(pageName) {
+  if (pageName === "home") {
+    return true;
+  }
+
+  if (pageName === "projection") {
+    return state.visibility.projection;
+  }
+
+  if (pageName === "detail") {
+    return state.visibility.detail;
+  }
+
+  return true;
+}
+
+function isDetailTabAccessible(tabName) {
+  if (tabName === "summary") {
+    return true;
+  }
+
+  return Boolean(state.visibility.detailTabs?.[tabName]);
+}
+
+function applyProgressiveVisibility() {
+  navLinks.forEach((navLink) => {
+    const pageTarget = navLink.dataset.pageTarget;
+    navLink.hidden = !isPageAccessible(pageTarget);
+  });
+
+  if (bottomNavigation) {
+    const visibleBottomButtons = [...bottomNavigation.querySelectorAll("[data-page-target]")].filter(
+      (button) => !button.hidden
+    ).length;
+    bottomNavigation.style.setProperty("--bottom-nav-count", String(Math.max(1, visibleBottomButtons)));
+  }
+
+  detailTabButtons.forEach((tabButton) => {
+    tabButton.hidden = !isDetailTabAccessible(tabButton.dataset.detailTab);
+  });
+
+  renderFeatureUnlocks();
+
+  if (!isPageAccessible(state.activePage)) {
+    state.activePage = "home";
+  }
+
+  if (!isDetailTabAccessible(state.activeDetailTab)) {
+    state.activeDetailTab = "summary";
+  }
+}
+
+function renderFeatureUnlocks() {
+  if (!featureUnlockPanel || !featureUnlockList) {
+    return;
+  }
+
+  if (!state.visibility.hints.length) {
+    featureUnlockPanel.hidden = true;
+    featureUnlockList.innerHTML = "";
+    return;
+  }
+
+  featureUnlockPanel.hidden = false;
+  featureUnlockList.innerHTML = state.visibility.hints
+    .map(
+      (hint) => `
+        <article class="feature-unlock-item">
+          <div class="feature-unlock-copy">
+            <strong>${escapeHtml(hint.title)}</strong>
+            <p>${escapeHtml(hint.copy)}</p>
+          </div>
+          <div class="feature-unlock-track" aria-hidden="true">
+            <span class="feature-unlock-fill" style="width:${Math.max(8, Math.round(hint.progress))}%"></span>
+          </div>
+        </article>
+      `
+    )
+    .join("");
+}
+
+function buildDetailSummaryCopy() {
+  if (!state.visibility.detail) {
+    return "Sigue registrando movimientos para desbloquear este nivel cuando de verdad te haga falta.";
+  }
+
+  if (!state.visibility.detailTabs.categories) {
+    return "Ya abriste el detalle. Cuando uses movimientos recurrentes o tengas más uso, activaremos categorías y análisis más profundos.";
+  }
+
+  return "Mira ingresos, gastos y compromisos del mes con más contexto.";
 }
 
 function getUserStorageKey() {
