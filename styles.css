@@ -5,10 +5,23 @@
   --ink: #18261f;
   --muted: #5e6d64;
   --line: rgba(24, 38, 31, 0.12);
-  --accent: #ff7a00;
-  --accent-soft: rgba(255, 122, 0, 0.14);
-  --positive: #177245;
-  --negative: #b53a24;
+  /* Financial state tokens (Tailwind-equivalent semantic palette) */
+  --state-positive: #177245;
+  --state-positive-soft: rgba(23, 114, 69, 0.14);
+  --state-positive-surface: rgba(23, 114, 69, 0.18);
+  --state-positive-border: rgba(23, 114, 69, 0.22);
+  --state-risk: #9a6a00;
+  --state-risk-soft: rgba(234, 179, 8, 0.16);
+  --state-risk-surface: rgba(234, 179, 8, 0.22);
+  --state-risk-border: rgba(154, 106, 0, 0.24);
+  --state-critical: #b53a24;
+  --state-critical-soft: rgba(181, 58, 36, 0.12);
+  --state-critical-surface: rgba(181, 58, 36, 0.2);
+  --state-critical-border: rgba(181, 58, 36, 0.24);
+  --accent: var(--state-risk);
+  --accent-soft: var(--state-risk-soft);
+  --positive: var(--state-positive);
+  --negative: var(--state-critical);
   --shadow: 0 24px 60px rgba(49, 42, 26, 0.12);
 }
 
@@ -287,15 +300,15 @@ body::before {
 }
 
 .cash-floor-alert.ok {
-  color: var(--positive);
+  color: var(--state-positive);
 }
 
 .cash-floor-alert.warn {
-  color: #a45a00;
+  color: var(--state-risk);
 }
 
 .cash-floor-alert.risk {
-  color: var(--negative);
+  color: var(--state-critical);
   font-weight: 700;
 }
 
@@ -391,6 +404,45 @@ body::before {
   display: none !important;
 }
 
+.state-text-positive {
+  color: var(--state-positive) !important;
+}
+
+.state-text-risk {
+  color: var(--state-risk) !important;
+}
+
+.state-text-critical {
+  color: var(--state-critical) !important;
+}
+
+.state-indicator-positive {
+  background: var(--state-positive) !important;
+  fill: var(--state-positive) !important;
+}
+
+.state-indicator-risk {
+  background: var(--state-risk) !important;
+  fill: var(--state-risk) !important;
+}
+
+.state-indicator-critical {
+  background: var(--state-critical) !important;
+  fill: var(--state-critical) !important;
+}
+
+.state-border-positive {
+  border-color: var(--state-positive-border) !important;
+}
+
+.state-border-risk {
+  border-color: var(--state-risk-border) !important;
+}
+
+.state-border-critical {
+  border-color: var(--state-critical-border) !important;
+}
+
 .projection-hero-panel {
   display: grid;
   gap: 24px;
@@ -458,17 +510,20 @@ body::before {
 
 .month-end-card.ok,
 .projection-status-card.ok {
-  background: linear-gradient(180deg, rgba(23, 114, 69, 0.18), rgba(252, 250, 246, 0.9));
+  background: linear-gradient(180deg, var(--state-positive-surface), rgba(252, 250, 246, 0.9));
+  border-color: var(--state-positive-border);
 }
 
 .month-end-card.warn,
 .projection-status-card.warn {
-  background: linear-gradient(180deg, rgba(255, 166, 66, 0.22), rgba(252, 250, 246, 0.9));
+  background: linear-gradient(180deg, var(--state-risk-surface), rgba(252, 250, 246, 0.9));
+  border-color: var(--state-risk-border);
 }
 
 .month-end-card.risk,
 .projection-status-card.risk {
-  background: linear-gradient(180deg, rgba(181, 58, 36, 0.2), rgba(252, 250, 246, 0.9));
+  background: linear-gradient(180deg, var(--state-critical-surface), rgba(252, 250, 246, 0.9));
+  border-color: var(--state-critical-border);
 }
 
 .month-end-card.neutral,
@@ -600,15 +655,15 @@ body::before {
 }
 
 .money-curve-dot.ok {
-  fill: var(--positive);
+  fill: var(--state-positive);
 }
 
 .money-curve-dot.warn {
-  fill: #e19a2a;
+  fill: var(--state-risk);
 }
 
 .money-curve-dot.risk {
-  fill: var(--negative);
+  fill: var(--state-critical);
 }
 
 .money-curve-labels {
@@ -630,15 +685,21 @@ body::before {
 }
 
 .scenario-result.ok {
-  color: var(--positive);
+  color: var(--state-positive);
+  border: 1px solid var(--state-positive-border);
+  background: rgba(248, 255, 250, 0.94);
 }
 
 .scenario-result.warn {
-  color: #a45a00;
+  color: var(--state-risk);
+  border: 1px solid var(--state-risk-border);
+  background: rgba(255, 251, 240, 0.96);
 }
 
 .scenario-result.risk {
-  color: var(--negative);
+  color: var(--state-critical);
+  border: 1px solid var(--state-critical-border);
+  background: rgba(255, 247, 245, 0.96);
 }
 
 .detail-tabs {
@@ -1232,33 +1293,33 @@ select:focus {
 }
 
 .ux-toast.ok {
-  border-color: rgba(23, 114, 69, 0.2);
+  border-color: var(--state-positive-border);
   background: rgba(248, 255, 250, 0.96);
-  color: var(--positive);
+  color: var(--state-positive);
 }
 
 .ux-toast.ok::before {
-  background: var(--positive);
+  background: var(--state-positive);
 }
 
 .ux-toast.warn {
-  border-color: rgba(255, 122, 0, 0.2);
+  border-color: var(--state-risk-border);
   background: rgba(255, 250, 243, 0.97);
-  color: #a45a00;
+  color: var(--state-risk);
 }
 
 .ux-toast.warn::before {
-  background: #ff7a00;
+  background: var(--state-risk);
 }
 
 .ux-toast.risk {
-  border-color: rgba(181, 58, 36, 0.24);
+  border-color: var(--state-critical-border);
   background: rgba(255, 247, 245, 0.97);
-  color: var(--negative);
+  color: var(--state-critical);
 }
 
 .ux-toast.risk::before {
-  background: var(--negative);
+  background: var(--state-critical);
 }
 
 .form-actions,
@@ -1333,23 +1394,27 @@ select:focus {
   padding: 8px 14px;
   border-radius: 999px;
   background: var(--accent-soft);
-  color: #8d4b00;
+  border: 1px solid var(--state-risk-border);
+  color: var(--state-risk);
   font-weight: 700;
 }
 
 .pill.ok {
-  background: rgba(23, 114, 69, 0.14);
-  color: var(--positive);
+  background: var(--state-positive-soft);
+  border-color: var(--state-positive-border);
+  color: var(--state-positive);
 }
 
 .pill.warn {
-  background: rgba(255, 122, 0, 0.14);
-  color: #a45a00;
+  background: var(--state-risk-soft);
+  border-color: var(--state-risk-border);
+  color: var(--state-risk);
 }
 
 .pill.risk {
-  background: rgba(181, 58, 36, 0.12);
-  color: var(--negative);
+  background: var(--state-critical-soft);
+  border-color: var(--state-critical-border);
+  color: var(--state-critical);
 }
 
 .pill.neutral {
@@ -1444,19 +1509,19 @@ select:focus {
 }
 
 .flow-column.income {
-  background: linear-gradient(180deg, rgba(23, 114, 69, 0.95), rgba(23, 114, 69, 0.7));
+  background: linear-gradient(180deg, var(--state-positive), rgba(23, 114, 69, 0.7));
 }
 
 .flow-column.expense {
-  background: linear-gradient(180deg, rgba(181, 58, 36, 0.92), rgba(181, 58, 36, 0.68));
+  background: linear-gradient(180deg, var(--state-critical), rgba(181, 58, 36, 0.68));
 }
 
 .flow-column.net.positive {
-  background: linear-gradient(180deg, rgba(255, 122, 0, 0.95), rgba(255, 181, 107, 0.85));
+  background: linear-gradient(180deg, var(--state-positive), rgba(23, 114, 69, 0.58));
 }
 
 .flow-column.net.negative {
-  background: linear-gradient(180deg, rgba(24, 38, 31, 0.95), rgba(49, 88, 70, 0.8));
+  background: linear-gradient(180deg, var(--state-critical), rgba(181, 58, 36, 0.56));
 }
 
 .flow-column span {
@@ -1503,15 +1568,15 @@ select:focus {
 }
 
 .flow-dot.income {
-  background: var(--positive);
+  background: var(--state-positive);
 }
 
 .flow-dot.expense {
-  background: var(--negative);
+  background: var(--state-critical);
 }
 
 .flow-dot.net {
-  background: var(--accent);
+  background: var(--muted);
 }
 
 .breakdown-row,
@@ -1586,39 +1651,44 @@ tbody tr:hover {
   align-items: center;
   padding: 7px 10px;
   border-radius: 999px;
+  border: 1px solid transparent;
   font-size: 0.82rem;
   font-weight: 700;
 }
 
 .type-badge.income {
-  background: rgba(23, 114, 69, 0.12);
-  color: var(--positive);
+  background: var(--state-positive-soft);
+  border-color: var(--state-positive-border);
+  color: var(--state-positive);
 }
 
 .type-badge.expense {
-  background: rgba(181, 58, 36, 0.11);
-  color: var(--negative);
+  background: var(--state-critical-soft);
+  border-color: var(--state-critical-border);
+  color: var(--state-critical);
 }
 
 .type-badge.pending,
 .type-badge.partial,
 .type-badge.scheduled {
-  background: rgba(255, 122, 0, 0.14);
-  color: #a45a00;
+  background: var(--state-risk-soft);
+  border-color: var(--state-risk-border);
+  color: var(--state-risk);
 }
 
 .type-badge.paid {
-  background: rgba(23, 114, 69, 0.12);
-  color: var(--positive);
+  background: var(--state-positive-soft);
+  border-color: var(--state-positive-border);
+  color: var(--state-positive);
 }
 
 .amount-positive {
-  color: var(--positive);
+  color: var(--state-positive);
   font-weight: 700;
 }
 
 .amount-negative {
-  color: var(--negative);
+  color: var(--state-critical);
   font-weight: 700;
 }
 
@@ -1630,8 +1700,8 @@ tbody tr:hover {
 }
 
 .forecast-row.alert {
-  background: rgba(181, 58, 36, 0.08);
-  border-color: rgba(181, 58, 36, 0.18);
+  background: rgba(255, 247, 245, 0.92);
+  border-color: var(--state-critical-border);
 }
 
 .forecast-dot {
@@ -1641,15 +1711,15 @@ tbody tr:hover {
 }
 
 .forecast-dot.ok {
-  background: var(--positive);
+  background: var(--state-positive);
 }
 
 .forecast-dot.warn {
-  background: var(--accent);
+  background: var(--state-risk);
 }
 
 .forecast-dot.risk {
-  background: var(--negative);
+  background: var(--state-critical);
 }
 
 .tips-list {
