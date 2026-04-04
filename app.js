@@ -854,6 +854,10 @@ function openTransactionModal(preferredType = "", options = {}) {
 }
 
 function renderRecentMovements(transactions) {
+  if (!recentMovementList) {
+    return;
+  }
+
   const recentTransactions = transactions.slice(0, 6);
 
   if (!recentTransactions.length) {

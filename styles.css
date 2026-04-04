@@ -391,11 +391,17 @@ body::before {
   display: none !important;
 }
 
-.home-hero-panel,
 .projection-hero-panel {
   display: grid;
   gap: 24px;
   grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.home-hero-panel {
+  display: grid;
+  gap: 24px;
+  grid-template-columns: minmax(360px, 1.35fr) minmax(280px, 0.85fr);
+  align-items: stretch;
 }
 
 .money-main-card,
@@ -428,6 +434,28 @@ body::before {
   line-height: 1.6;
 }
 
+.home-balance-card {
+  grid-row: span 2;
+  min-height: 440px;
+  padding: 40px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  background:
+    radial-gradient(circle at top right, rgba(23, 114, 69, 0.22), transparent 34%),
+    linear-gradient(180deg, rgba(23, 114, 69, 0.12), rgba(252, 250, 246, 0.94));
+}
+
+.home-balance-card strong {
+  font-size: clamp(4rem, 9vw, 6.4rem);
+  max-width: 5ch;
+}
+
+.home-balance-card small {
+  max-width: 220px;
+  font-size: 0.98rem;
+}
+
 .month-end-card.ok,
 .projection-status-card.ok {
   background: linear-gradient(180deg, rgba(23, 114, 69, 0.18), rgba(252, 250, 246, 0.9));
@@ -446,6 +474,11 @@ body::before {
 .month-end-card.neutral,
 .projection-status-card.neutral {
   background: var(--surface);
+}
+
+.month-end-card,
+.assistant-card {
+  min-height: 208px;
 }
 
 .assistant-card h2,
@@ -1686,6 +1719,27 @@ tbody tr:hover {
   .transaction-modal-card {
     padding: 20px;
     border-radius: 26px;
+  }
+
+  .home-hero-panel {
+    grid-template-columns: 1fr;
+    gap: 14px;
+  }
+
+  .home-balance-card {
+    grid-row: auto;
+    min-height: 300px;
+    padding: 28px;
+  }
+
+  .home-balance-card strong {
+    font-size: clamp(3.6rem, 17vw, 4.8rem);
+    max-width: none;
+  }
+
+  .month-end-card,
+  .assistant-card {
+    min-height: auto;
   }
 
   .home-quick-grid {
