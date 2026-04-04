@@ -129,6 +129,7 @@ const homeMonthEndHint = document.querySelector("#homeMonthEndHint");
 const recentMovementList = document.querySelector("#recentMovementList");
 const quickIncomeBtn = document.querySelector("#quickIncomeBtn");
 const quickExpenseBtn = document.querySelector("#quickExpenseBtn");
+const quickTypeButtons = [...document.querySelectorAll("[data-quick-type]")];
 const openTransactionModalBtn = document.querySelector("#openTransactionModalBtn");
 const transactionModal = document.querySelector("#transactionModal");
 const closeTransactionModalBtn = document.querySelector("#closeTransactionModalBtn");
@@ -192,7 +193,18 @@ initializeAuth();
 
 transactionFields.type.addEventListener("change", (event) => {
   renderCategoryOptions(event.target.value);
+  syncTransactionTypeButtons();
   updateMovementImpactPreview();
+});
+
+quickTypeButtons.forEach((typeButton) => {
+  typeButton.addEventListener("click", () => {
+    transactionFields.type.value = typeButton.dataset.quickType;
+    renderCategoryOptions(typeButton.dataset.quickType);
+    syncTransactionTypeButtons();
+    updateMovementImpactPreview();
+    focusTransactionAmount();
+  });
 });
 
 navLinks.forEach((navLink) => {
@@ -849,8 +861,9 @@ function openTransactionModal(preferredType = "", options = {}) {
     cancelTransactionEditBtn.hidden = true;
   }
 
+  syncTransactionTypeButtons();
   applyUXComponentRules({ resetProgressiveDisclosure: !options.preserveForm });
-  transactionFields.amount.focus();
+  focusTransactionAmount();
 }
 
 function renderRecentMovements(transactions) {
@@ -2035,6 +2048,7 @@ function fillTransactionForm(transaction, asTemplate = false) {
     : "";
   saveTransactionBtn.textContent = asTemplate ? "Guardar movimiento" : "Guardar cambios";
   cancelTransactionEditBtn.hidden = asTemplate;
+  syncTransactionTypeButtons();
   openTransactionModal(transaction.type, { preserveForm: true });
 }
 
@@ -2044,12 +2058,31 @@ function resetTransactionForm() {
   transactionFields.date.value = today();
   transactionFields.type.value = "income";
   renderCategoryOptions("income");
+  syncTransactionTypeButtons();
   movementExtraDetails.open = false;
   movementImpactText.textContent = "";
   saveTransactionBtn.textContent = "Guardar movimiento";
   cancelTransactionEditBtn.hidden = true;
   transactionModal.hidden = true;
   applyUXComponentRules();
+}
+
+function syncTransactionTypeButtons() {
+  quickTypeButtons.forEach((typeButton) => {
+    const isActive = typeButton.dataset.quickType === transactionFields.type.value;
+    typeButton.classList.toggle("is-active", isActive);
+    typeButton.setAttribute("aria-pressed", String(isActive));
+  });
+}
+
+function focusTransactionAmount() {
+  transactionFields.amount.focus({ preventScroll: true });
+
+  try {
+    transactionFields.amount.select();
+  } catch {
+    return;
+  }
 }
 
 function applyUXComponentRules(options = {}) {

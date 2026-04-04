@@ -741,7 +741,7 @@
           <input type="hidden" name="transactionId" />
 
           <label class="quick-amount-label">
-            Monto
+            <span class="quick-step-label">1. Monto</span>
             <input
               type="number"
               name="amount"
@@ -749,21 +749,44 @@
               step="any"
               placeholder="0"
               inputmode="decimal"
+              enterkeyhint="done"
+              autocomplete="off"
               class="quick-amount-input"
               required
             />
           </label>
 
-          <label>
-            Tipo
-            <select name="type" class="quick-type-select" required>
+          <section class="quick-type-panel" aria-label="Tipo de movimiento">
+            <p class="quick-step-label">2. Tipo</p>
+            <div class="quick-type-switch">
+              <button
+                type="button"
+                class="quick-type-btn is-active"
+                data-quick-type="income"
+                aria-pressed="true"
+              >
+                + Ingreso
+              </button>
+              <button
+                type="button"
+                class="quick-type-btn"
+                data-quick-type="expense"
+                aria-pressed="false"
+              >
+                − Gasto
+              </button>
+            </div>
+            <select name="type" class="quick-type-select quick-type-native" required tabindex="-1" aria-hidden="true">
               <option value="income">Ingreso</option>
               <option value="expense">Gasto</option>
             </select>
-          </label>
+          </section>
 
           <details class="movement-extra-details" id="movementExtraDetails" data-ux-progressive>
-            <summary>Más detalles</summary>
+            <summary>
+              <span class="quick-step-label">3. Opcionales</span>
+              <strong>Categoría, cuenta y nota</strong>
+            </summary>
 
             <label>
               Concepto
@@ -816,16 +839,18 @@
 
           <p class="movement-impact-text" id="movementImpactText" data-ux-feedback="instant"></p>
 
-          <div class="form-actions">
-            <button type="submit" class="primary-btn" id="saveTransactionBtn">
+          <div class="form-actions transaction-modal-actions">
+            <button type="submit" class="primary-btn transaction-save-btn" id="saveTransactionBtn">
               Guardar movimiento
             </button>
-            <button type="button" class="ghost-btn" id="repeatLastMovementBtn">
-              Repetir último
-            </button>
-            <button type="button" class="ghost-btn" id="cancelTransactionEditBtn" hidden>
-              Cancelar edición
-            </button>
+            <div class="transaction-secondary-actions">
+              <button type="button" class="ghost-btn" id="repeatLastMovementBtn">
+                Repetir último
+              </button>
+              <button type="button" class="ghost-btn" id="cancelTransactionEditBtn" hidden>
+                Cancelar edición
+              </button>
+            </div>
           </div>
         </form>
       </div>
