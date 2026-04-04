@@ -4,6 +4,17 @@ const SUPABASE_PUBLIC_KEY = "sb_publishable_-sACG1yR0TURwqX70-XwTA_1Q9QPJ0w";
 const SUPABASE_STATE_TABLE = "cashflow_user_data";
 const MAX_INVOICE_IMAGE_BYTES = 850 * 1024;
 const INVOICE_IMAGE_MAX_WIDTH = 1400;
+const UX_RULES = {
+  maxMainBlocksPerScreen: 3,
+  feedbackDurationMs: 2200,
+  simpleCopyMap: [
+    [/\bflujo de caja\b/gi, "plata"],
+    [/\bbalance\b/gi, "plata"],
+    [/\bsaldo\b/gi, "plata"],
+    [/\begresos\b/gi, "gastos"],
+    [/\begreso\b/gi, "gasto"],
+  ],
+};
 
 const categoryMap = {
   income: ["Ventas", "Servicios", "Inversión", "Otros ingresos"],
@@ -153,6 +164,9 @@ const resetDataBtn = document.querySelector("#resetDataBtn");
 const resetConfirmModal = document.querySelector("#resetConfirmModal");
 const cancelResetModalBtn = document.querySelector("#cancelResetModalBtn");
 const confirmResetModalBtn = document.querySelector("#confirmResetModalBtn");
+const uxToast = document.querySelector("#uxToast");
+
+let uxToastTimer = null;
 
 transactionFields.date.value = today();
 receivableFields.issueDate.value = today();
@@ -166,6 +180,7 @@ togglePartialAmountField(receivableFields, receivablePartialField);
 togglePartialAmountField(payableFields, payablePartialField);
 switchPage(state.activePage);
 switchDetailTab(state.activeDetailTab);
+applyUXComponentRules({ resetProgressiveDisclosure: true });
 render();
 initializeAuth();
 
@@ -264,12 +279,14 @@ companyLogoInput.addEventListener("change", async () => {
   companyLogoInput.value = "";
   await saveData();
   applyCompanyLogo();
+  showUXFeedback("Logo actualizado.", "ok");
 });
 
 removeLogoBtn.addEventListener("click", async () => {
   state.data.companyLogo = "";
   await saveData();
   applyCompanyLogo();
+  showUXFeedback("Logo quitado.", "warn");
 });
 
 cashFloorInput.addEventListener("change", async (event) => {
@@ -411,6 +428,7 @@ transactionForm.addEventListener("submit", async (event) => {
 
   if (isEditing) {
     resetTransactionForm();
+    showUXFeedback("Movimiento actualizado.", transaction.type === "income" ? "ok" : "warn");
     return;
   }
 
@@ -424,6 +442,7 @@ transactionForm.addEventListener("submit", async (event) => {
   saveTransactionBtn.textContent = "Guardar movimiento";
   cancelTransactionEditBtn.hidden = true;
   movementImpactText.textContent = impactCopy;
+  showUXFeedback(impactCopy, transaction.type === "income" ? "ok" : "warn");
   transactionFields.amount.focus();
 });
 
@@ -469,6 +488,10 @@ receivableForm.addEventListener("submit", async (event) => {
   monthFilter.value = state.filterMonth;
   resetReceivableForm();
   render();
+  showUXFeedback(
+    isEditing ? "Cuenta por cobrar actualizada." : "Cuenta por cobrar guardada.",
+    "ok"
+  );
 });
 
 payableForm.addEventListener("submit", async (event) => {
@@ -515,6 +538,10 @@ payableForm.addEventListener("submit", async (event) => {
   monthFilter.value = state.filterMonth;
   resetPayableForm();
   render();
+  showUXFeedback(
+    isEditing ? "Factura por pagar actualizada." : "Factura por pagar guardada.",
+    payable.status === "paid" ? "ok" : "warn"
+  );
 });
 
 monthFilter.addEventListener("change", (event) => {
@@ -547,6 +574,7 @@ transactionTableBody.addEventListener("click", async (event) => {
   await saveData();
   resetTransactionForm();
   render();
+  showUXFeedback("Movimiento borrado.", "warn");
 });
 
 receivableTableBody.addEventListener("click", async (event) => {
@@ -574,6 +602,7 @@ receivableTableBody.addEventListener("click", async (event) => {
   await saveData();
   resetReceivableForm();
   render();
+  showUXFeedback("Cuenta por cobrar borrada.", "warn");
 });
 
 payableTableBody.addEventListener("click", async (event) => {
@@ -601,6 +630,7 @@ payableTableBody.addEventListener("click", async (event) => {
   await saveData();
   resetPayableForm();
   render();
+  showUXFeedback("Factura por pagar borrada.", "warn");
 });
 
 exportExcelBtn.addEventListener("click", () => {
@@ -652,6 +682,7 @@ confirmResetModalBtn.addEventListener("click", async () => {
   confirmResetModalBtn.disabled = false;
   confirmResetModalBtn.textContent = "Aceptar borrado";
   render();
+  showUXFeedback("Todo quedó en cero.", "risk");
 });
 
 async function initializeAuth() {
@@ -754,6 +785,8 @@ function switchPage(pageName) {
   navLinks.forEach((navLink) => {
     navLink.classList.toggle("is-active", navLink.dataset.pageTarget === pageName);
   });
+
+  applyUXComponentRules();
 }
 
 function switchDetailTab(tabName) {
@@ -768,6 +801,8 @@ function switchDetailTab(tabName) {
     panel.hidden = !isActive;
     panel.classList.toggle("is-active", isActive);
   });
+
+  applyUXComponentRules();
 }
 
 function openTransactionModal(preferredType = "", options = {}) {
@@ -791,6 +826,7 @@ function openTransactionModal(preferredType = "", options = {}) {
     cancelTransactionEditBtn.hidden = true;
   }
 
+  applyUXComponentRules({ resetProgressiveDisclosure: !options.preserveForm });
   transactionFields.amount.focus();
 }
 
@@ -977,7 +1013,7 @@ function buildProjectionAlertCopy(hasAnyData, fallbackDescription, criticalCashD
   }
 
   if (criticalCashDate) {
-    return `Día ${Number(criticalCashDate.slice(8, 10))}: te quedas bajo tu caja mínima de ${formatCurrency(cashFloor)}.`;
+    return `Día ${Number(criticalCashDate.slice(8, 10))}: te quedas bajo tu mínimo seguro de ${formatCurrency(cashFloor)}.`;
   }
 
   return fallbackDescription;
@@ -1511,30 +1547,30 @@ function renderForecast(weeks, cashFloor) {
 function renderCashFloorStatus(balance, cashFloor, lowCashWeek, hasAnyData) {
   if (!cashFloor) {
     cashFloorAlert.className = "cash-floor-alert";
-    cashFloorAlert.textContent = "Define tu caja mínima para activar alertas.";
+    cashFloorAlert.textContent = "Define tu mínimo seguro para activar alertas.";
     return;
   }
 
   if (!hasAnyData) {
     cashFloorAlert.className = "cash-floor-alert warn";
-    cashFloorAlert.textContent = "Cuando cargues movimientos, te avisaré si bajas de tu caja mínima.";
+    cashFloorAlert.textContent = "Cuando cargues movimientos, te avisaré si bajas de tu mínimo seguro.";
     return;
   }
 
   if (balance < cashFloor) {
     cashFloorAlert.className = "cash-floor-alert risk";
-    cashFloorAlert.textContent = `Alerta: la plata proyectada baja de tu caja mínima de ${formatCurrency(cashFloor)}.`;
+    cashFloorAlert.textContent = `Alerta: la plata proyectada baja de tu mínimo seguro de ${formatCurrency(cashFloor)}.`;
     return;
   }
 
   if (lowCashWeek) {
     cashFloorAlert.className = "cash-floor-alert warn";
-    cashFloorAlert.textContent = `Alerta: ${lowCashWeek.label} baja a ${formatCurrency(lowCashWeek.amount)}, bajo tu mínimo.`;
+    cashFloorAlert.textContent = `Alerta: ${lowCashWeek.label} baja a ${formatCurrency(lowCashWeek.amount)}, bajo tu mínimo seguro.`;
     return;
   }
 
   cashFloorAlert.className = "cash-floor-alert ok";
-  cashFloorAlert.textContent = `Tu proyección se mantiene sobre tu caja mínima de ${formatCurrency(cashFloor)}.`;
+  cashFloorAlert.textContent = `Tu proyección se mantiene sobre tu mínimo seguro de ${formatCurrency(cashFloor)}.`;
 }
 
 function renderTips(
@@ -1557,11 +1593,11 @@ function renderTips(
 
   if (cashFloor > 0 && balance < cashFloor) {
     tips.push(
-      `Tu plata proyectada está bajo tu caja mínima de ${formatCurrency(cashFloor)}. Prioriza cobrar pendientes o frenar pagos no urgentes.`
+      `Tu plata proyectada está bajo tu mínimo seguro de ${formatCurrency(cashFloor)}. Prioriza cobrar pendientes o frenar pagos no urgentes.`
     );
   } else if (lowCashWeek) {
     tips.push(
-      `${lowCashWeek.label} bajarías a ${formatCurrency(lowCashWeek.amount)}, bajo tu caja mínima de ${formatCurrency(cashFloor)}. Ajusta pagos o refuerza cobranza antes de esa semana.`
+      `${lowCashWeek.label} bajarías a ${formatCurrency(lowCashWeek.amount)}, bajo tu mínimo seguro de ${formatCurrency(cashFloor)}. Ajusta pagos o refuerza cobranza antes de esa semana.`
     );
   }
 
@@ -1782,10 +1818,10 @@ function createAdvice(
   }
 
   if (recurringCount > 0) {
-    return `Puedes gastar hasta ${formatCurrency(weeklySpend)} esta semana sin bajar tu caja mínima.`;
+    return `Puedes gastar hasta ${formatCurrency(weeklySpend)} esta semana sin bajar tu mínimo seguro.`;
   }
 
-  return `Vas bien. Puedes invertir ${formatCurrency(weeklySpend)} sin quedar bajo tu caja mínima.`;
+  return `Vas bien. Puedes invertir ${formatCurrency(weeklySpend)} sin quedar bajo tu mínimo seguro.`;
 }
 
 function sum(items) {
@@ -1966,6 +2002,94 @@ function resetTransactionForm() {
   saveTransactionBtn.textContent = "Guardar movimiento";
   cancelTransactionEditBtn.hidden = true;
   transactionModal.hidden = true;
+  applyUXComponentRules();
+}
+
+function applyUXComponentRules(options = {}) {
+  simplifyUXCopy();
+  enforcePrimaryFocus();
+  enforceMainBlockLimit();
+
+  if (options.resetProgressiveDisclosure) {
+    resetProgressiveComponents();
+  }
+}
+
+function simplifyUXCopy() {
+  document.querySelectorAll("[data-ux-copy]").forEach((copyNode) => {
+    UX_RULES.simpleCopyMap.forEach(([pattern, replacement]) => {
+      copyNode.textContent = copyNode.textContent.replace(pattern, replacement);
+    });
+  });
+}
+
+function enforcePrimaryFocus() {
+  const activePage = appPages.find((page) => !page.hidden);
+  if (!activePage) {
+    return;
+  }
+
+  const focusBlocks = [...activePage.querySelectorAll("[data-ux-focus]")].filter(isElementVisible);
+  const firstPrimary = focusBlocks.find((block) => block.dataset.uxFocus === "primary");
+
+  focusBlocks.forEach((block) => {
+    block.classList.remove("ux-focus-primary", "ux-focus-secondary");
+    block.classList.add(
+      firstPrimary && block === firstPrimary ? "ux-focus-primary" : "ux-focus-secondary"
+    );
+  });
+}
+
+function enforceMainBlockLimit() {
+  const activePage = appPages.find((page) => !page.hidden);
+  if (!activePage) {
+    return;
+  }
+
+  const visibleBlocks = [...activePage.querySelectorAll("[data-ux-block]")].filter(
+    isElementVisible
+  );
+
+  visibleBlocks.forEach((block, index) => {
+    block.classList.toggle(
+      "ux-over-budget-hidden",
+      index >= UX_RULES.maxMainBlocksPerScreen
+    );
+  });
+}
+
+function resetProgressiveComponents() {
+  document.querySelectorAll("[data-ux-progressive]").forEach((element) => {
+    if (element.tagName === "DETAILS") {
+      element.open = false;
+      return;
+    }
+
+    if (element.dataset.detailPanel && element.classList.contains("is-active")) {
+      return;
+    }
+
+    element.hidden = true;
+  });
+}
+
+function isElementVisible(element) {
+  return !element.hidden && !element.closest("[hidden]");
+}
+
+function showUXFeedback(message, tone = "ok") {
+  if (!uxToast || !message) {
+    return;
+  }
+
+  clearTimeout(uxToastTimer);
+  uxToast.hidden = false;
+  uxToast.className = `ux-toast ${tone}`;
+  uxToast.textContent = message;
+
+  uxToastTimer = window.setTimeout(() => {
+    uxToast.hidden = true;
+  }, UX_RULES.feedbackDurationMs);
 }
 
 function fillReceivableForm(receivable) {

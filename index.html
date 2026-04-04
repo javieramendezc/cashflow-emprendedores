@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Flujo Claro | Gestión de caja para emprendedores</title>
+    <title>Flujo Claro | Tu plata clara</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -16,9 +16,9 @@
   <body>
     <section class="auth-screen" id="authScreen">
       <div class="auth-card">
-        <p class="eyebrow">Acceso privado</p>
+          <p class="eyebrow" data-ux-copy>Acceso privado</p>
         <h1>Entra a Flujo Claro</h1>
-        <p class="auth-copy">
+          <p class="auth-copy" data-ux-copy>
           Crea tu cuenta o inicia sesión para guardar tu plata en la nube y ver
           solo tu información.
         </p>
@@ -62,13 +62,13 @@
             <span id="brandLogoFallback">FC</span>
           </button>
           <div>
-            <p class="eyebrow">Flujo claro</p>
+            <p class="eyebrow" data-ux-copy>Flujo claro</p>
             <h1>Tu plata clara en segundos</h1>
           </div>
         </div>
 
-        <div class="sidebar-section" id="logoSettingsPanel" hidden>
-          <p class="section-label">Logo</p>
+        <div class="sidebar-section" id="logoSettingsPanel" data-ux-progressive hidden>
+          <p class="section-label" data-ux-copy>Logo</p>
           <label class="logo-upload-btn">
             Subir logo
             <input type="file" id="companyLogoInput" accept="image/png,image/jpeg,image/webp" />
@@ -79,7 +79,7 @@
         </div>
 
         <div class="sidebar-section">
-          <p class="section-label">Menú</p>
+          <p class="section-label" data-ux-copy>Menú</p>
           <nav class="quick-links main-nav">
             <button type="button" class="nav-link is-active" data-page-target="home">
               Inicio
@@ -94,12 +94,12 @@
         </div>
 
         <div class="sidebar-section">
-          <p class="section-label">Plata hoy</p>
+          <p class="section-label" data-ux-copy>Plata hoy</p>
           <div class="cash-floor-card">
             <strong class="sidebar-live-cash" id="sidebarBalance">$0</strong>
             <small id="sidebarHealth">Sin datos aún</small>
             <label>
-              Caja mínima
+              Mínimo seguro
               <input
                 type="number"
                 id="cashFloorInput"
@@ -109,13 +109,13 @@
               />
             </label>
             <small class="cash-floor-alert" id="cashFloorAlert">
-              Define tu caja mínima para activar alertas.
+              Define tu mínimo seguro para activar alertas.
             </small>
           </div>
         </div>
 
         <div class="sidebar-section sidebar-note">
-          <p class="section-label">Sesión</p>
+          <p class="section-label" data-ux-copy>Sesión</p>
           <p id="userEmailLabel">-</p>
           <button type="button" class="ghost-btn session-btn" id="logoutBtn">
             Cerrar sesión
@@ -125,27 +125,27 @@
 
       <main class="dashboard">
         <section class="app-page is-active" id="homePage" data-app-page="home">
-          <section class="home-hero-panel">
-            <article class="money-main-card">
-              <p class="section-label">Hoy tienes</p>
+          <section class="home-hero-panel" data-ux-block data-ux-block-group="home">
+            <article class="money-main-card" data-ux-focus="primary">
+              <p class="section-label" data-ux-copy>Hoy tienes</p>
               <strong id="homeTodayCash">$0</strong>
               <small id="homeTodayHint">Tu plata disponible ahora.</small>
             </article>
 
-            <article class="money-main-card month-end-card" id="homeMonthEndCard">
-              <p class="section-label">A fin de mes tendrás</p>
+            <article class="money-main-card month-end-card" id="homeMonthEndCard" data-ux-focus="secondary">
+              <p class="section-label" data-ux-copy>A fin de mes tendrás</p>
               <strong id="homeMonthEndCash">$0</strong>
               <small id="homeMonthEndHint">Actualizado con cobros y pagos del mes.</small>
             </article>
 
-            <article class="assistant-card">
-              <p class="section-label">Asistente financiero</p>
+            <article class="assistant-card" data-ux-focus="secondary">
+              <p class="section-label" data-ux-copy>Asistente financiero</p>
               <h2>Recomendación de hoy</h2>
               <p id="adviceText">Agrega tu primer ingreso o gasto para ver recomendaciones claras.</p>
             </article>
           </section>
 
-          <section class="home-quick-grid">
+          <section class="home-quick-grid" data-ux-block>
             <button type="button" class="quick-action-card income" id="quickIncomeBtn">
               <span>+</span>
               Ingreso
@@ -156,10 +156,10 @@
             </button>
           </section>
 
-          <section class="panel">
+          <section class="panel" data-ux-block>
             <div class="panel-header">
               <div>
-                <p class="section-label">Últimos movimientos</p>
+                <p class="section-label" data-ux-copy>Últimos movimientos</p>
                 <h3>Lo último que pasó con tu plata</h3>
               </div>
             </div>
@@ -168,35 +168,35 @@
         </section>
 
         <section class="app-page" id="projectionPage" data-app-page="projection" hidden>
-          <section class="projection-hero-panel">
-            <article class="projection-status-card" id="projectionStatusCard">
-              <p class="section-label">A fin de mes tendrás</p>
+          <section class="projection-hero-panel" data-ux-block data-ux-block-group="projection">
+            <article class="projection-status-card" id="projectionStatusCard" data-ux-focus="primary">
+              <p class="section-label" data-ux-copy>A fin de mes tendrás</p>
               <strong id="projectionMonthEndValue">$0</strong>
               <p id="projectionAlertText">Aún no hay movimientos para proyectar.</p>
             </article>
 
-            <article class="projection-assistant-card">
-              <p class="section-label">Asistente financiero</p>
+            <article class="projection-assistant-card" data-ux-focus="secondary">
+              <p class="section-label" data-ux-copy>Asistente financiero</p>
               <h2>¿Te alcanza?</h2>
               <ul id="tipsList" class="tips-list"></ul>
             </article>
           </section>
 
-          <section class="panel">
+          <section class="panel" data-ux-block>
             <div class="panel-header">
               <div>
-                <p class="section-label">Hoy → fin de mes</p>
+                <p class="section-label" data-ux-copy>Hoy → fin de mes</p>
                 <h3>Curva de dinero</h3>
               </div>
             </div>
             <div class="money-curve-chart" id="moneyCurveChart"></div>
           </section>
 
-          <section class="forecast-grid">
+          <section class="forecast-grid" data-ux-block>
             <section class="panel forecast-panel">
               <div class="panel-header">
                 <div>
-                  <p class="section-label">Alerta por semanas</p>
+                  <p class="section-label" data-ux-copy>Alerta por semanas</p>
                   <h3>Zona crítica</h3>
                 </div>
               </div>
@@ -206,7 +206,7 @@
             <section class="panel simulator-panel">
               <div class="panel-header">
                 <div>
-                  <p class="section-label">Simulador</p>
+                  <p class="section-label" data-ux-copy>Simulador</p>
                   <h3>¿Qué pasa si...?</h3>
                 </div>
               </div>
@@ -226,7 +226,7 @@
               </div>
 
               <button type="button" class="primary-btn" id="runScenarioBtn">Probar escenario</button>
-              <p class="scenario-result" id="scenarioResultText">
+              <p class="scenario-result" id="scenarioResultText" data-ux-feedback="instant">
                 Simula una venta o un gasto y mira altiro el impacto.
               </p>
             </section>
@@ -234,10 +234,10 @@
         </section>
 
         <section class="app-page" id="detailPage" data-app-page="detail" hidden>
-          <section class="panel">
+          <section class="panel" data-ux-block data-ux-focus="primary">
             <div class="panel-header panel-header-split">
               <div>
-                <p class="section-label">Modo avanzado</p>
+                <p class="section-label" data-ux-copy>Modo avanzado</p>
                 <h3>Detalle</h3>
               </div>
               <div class="detail-tabs">
@@ -255,9 +255,9 @@
           </section>
 
           <section class="detail-tab-panel is-active" data-detail-panel="summary">
-            <section class="hero-panel">
+            <section class="hero-panel" data-ux-block data-ux-focus="secondary">
               <div class="hero-copy">
-                <p class="eyebrow">Resumen de plata</p>
+                <p class="eyebrow" data-ux-copy>Resumen de plata</p>
                 <h2>Una vista más completa sin saturar el inicio.</h2>
                 <p id="detailSummaryCopy">
                   Mira ingresos, gastos y compromisos del mes con más contexto.
@@ -288,10 +288,10 @@
               </div>
             </section>
 
-            <section class="panel insights-panel">
+            <section class="panel insights-panel" data-ux-block data-ux-focus="secondary">
               <div class="panel-header">
                 <div>
-                  <p class="section-label">Lectura rápida</p>
+                  <p class="section-label" data-ux-copy>Lectura rápida</p>
                   <h3>Señales importantes</h3>
                 </div>
                 <span class="pill" id="healthPill">Sin datos</span>
@@ -318,7 +318,7 @@
             </section>
           </section>
 
-          <section class="detail-tab-panel" data-detail-panel="categories" hidden>
+          <section class="detail-tab-panel" data-detail-panel="categories" data-ux-progressive hidden>
             <section class="workspace-grid">
               <section class="panel">
                 <div class="panel-header">
@@ -383,7 +383,7 @@
             </section>
           </section>
 
-          <section class="detail-tab-panel" data-detail-panel="history" hidden>
+          <section class="detail-tab-panel" data-detail-panel="history" data-ux-progressive hidden>
             <section class="panel transaction-panel" id="transactions">
               <div class="panel-header panel-header-split">
                 <div>
@@ -701,7 +701,7 @@
             </select>
           </label>
 
-          <details class="movement-extra-details" id="movementExtraDetails">
+          <details class="movement-extra-details" id="movementExtraDetails" data-ux-progressive>
             <summary>Más detalles</summary>
 
             <label>
@@ -753,7 +753,7 @@
             </div>
           </details>
 
-          <p class="movement-impact-text" id="movementImpactText"></p>
+          <p class="movement-impact-text" id="movementImpactText" data-ux-feedback="instant"></p>
 
           <div class="form-actions">
             <button type="submit" class="primary-btn" id="saveTransactionBtn">
@@ -769,6 +769,8 @@
         </form>
       </div>
     </div>
+
+    <div class="ux-toast" id="uxToast" data-ux-feedback="instant" hidden></div>
 
     <div class="reset-modal" id="resetConfirmModal" hidden>
       <div class="reset-modal-card" role="dialog" aria-modal="true" aria-labelledby="resetModalTitle">
