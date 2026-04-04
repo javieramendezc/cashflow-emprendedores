@@ -63,16 +63,22 @@ const authForm = document.querySelector("#authForm");
 const authMessage = document.querySelector("#authMessage");
 const authSubmitBtn = document.querySelector("#authSubmitBtn");
 const toggleAuthModeBtn = document.querySelector("#toggleAuthModeBtn");
+const appHeaderScreenTitle = document.querySelector("#appHeaderScreenTitle");
+const appHeaderCashValue = document.querySelector("#appHeaderCashValue");
 const userEmailLabel = document.querySelector("#userEmailLabel");
 const logoutBtn = document.querySelector("#logoutBtn");
+const mobileLogoutBtn = document.querySelector("#mobileLogoutBtn");
 const dynamicFavicon = document.querySelector("#dynamicFavicon");
 const logoSettingsToggle = document.querySelector("#logoSettingsToggle");
 const logoSettingsPanel = document.querySelector("#logoSettingsPanel");
 const brandLogoPreview = document.querySelector("#brandLogoPreview");
 const brandLogoFallback = document.querySelector("#brandLogoFallback");
+const mobileBrandLogoPreview = document.querySelector("#mobileBrandLogoPreview");
+const mobileBrandLogoFallback = document.querySelector("#mobileBrandLogoFallback");
 const companyLogoInput = document.querySelector("#companyLogoInput");
 const removeLogoBtn = document.querySelector("#removeLogoBtn");
 const cashFloorInput = document.querySelector("#cashFloorInput");
+const projectionCashFloorInput = document.querySelector("#projectionCashFloorInput");
 const cashFloorAlert = document.querySelector("#cashFloorAlert");
 const transactionForm = document.querySelector("#transactionForm");
 const receivableForm = document.querySelector("#receivableForm");
@@ -218,6 +224,10 @@ logoutBtn.addEventListener("click", async () => {
   await supabaseClient.auth.signOut();
 });
 
+mobileLogoutBtn.addEventListener("click", async () => {
+  await supabaseClient.auth.signOut();
+});
+
 quickIncomeBtn.addEventListener("click", () => {
   openTransactionModal("income");
 });
@@ -290,10 +300,11 @@ removeLogoBtn.addEventListener("click", async () => {
 });
 
 cashFloorInput.addEventListener("change", async (event) => {
-  state.data.cashFloor = Math.max(0, Number(event.target.value) || 0);
-  cashFloorInput.value = state.data.cashFloor || "";
-  await saveData();
-  render();
+  await updateCashFloorValue(event.target.value);
+});
+
+projectionCashFloorInput.addEventListener("change", async (event) => {
+  await updateCashFloorValue(event.target.value);
 });
 
 receivableFields.status.addEventListener("change", () => {
@@ -673,7 +684,7 @@ confirmResetModalBtn.addEventListener("click", async () => {
   state.data = cloneSeedState();
   state.filterMonth = currentMonth();
   monthFilter.value = state.filterMonth;
-  cashFloorInput.value = "";
+  syncCashFloorInputs("");
   await saveData();
   resetTransactionForm();
   resetReceivableForm();
@@ -750,7 +761,7 @@ async function syncSessionView() {
     state.data = cloneSeedState();
     state.filterMonth = currentMonth();
     monthFilter.value = state.filterMonth;
-    cashFloorInput.value = "";
+    syncCashFloorInputs("");
     resetTransactionForm();
     resetReceivableForm();
     resetPayableForm();
@@ -766,7 +777,7 @@ async function syncSessionView() {
   state.data = await loadData();
   state.filterMonth = currentMonth();
   monthFilter.value = state.filterMonth;
-  cashFloorInput.value = state.data.cashFloor || "";
+  syncCashFloorInputs(state.data.cashFloor);
   resetTransactionForm();
   resetReceivableForm();
   resetPayableForm();
@@ -786,7 +797,19 @@ function switchPage(pageName) {
     navLink.classList.toggle("is-active", navLink.dataset.pageTarget === pageName);
   });
 
+  appHeaderScreenTitle.textContent = getPageTitle(pageName);
+
   applyUXComponentRules();
+}
+
+function getPageTitle(pageName) {
+  const titles = {
+    home: "Inicio",
+    projection: "Proyección",
+    detail: "Detalle",
+  };
+
+  return titles[pageName] || "Inicio";
 }
 
 function switchDetailTab(tabName) {
@@ -1063,6 +1086,25 @@ function createMovementImpactCopy(transaction) {
   return `Gasto guardado. Ahora te quedan ${formatCurrency(projectedBalance)} estimados para fin de mes.`;
 }
 
+async function updateCashFloorValue(value) {
+  state.data.cashFloor = Math.max(0, Number(value) || 0);
+  syncCashFloorInputs(state.data.cashFloor);
+  await saveData();
+  render();
+  showUXFeedback(
+    state.data.cashFloor
+      ? `Mínimo seguro actualizado a ${formatCurrency(state.data.cashFloor)}.`
+      : "Mínimo seguro desactivado.",
+    state.data.cashFloor ? "ok" : "warn"
+  );
+}
+
+function syncCashFloorInputs(value) {
+  const safeValue = Number(value) || "";
+  cashFloorInput.value = safeValue;
+  projectionCashFloorInput.value = safeValue;
+}
+
 function estimateProjectedBalanceForCurrentMonth(targetMonth = currentMonth()) {
   return calculateProjectedMonthEndCash(calculateAvailableCashToday(), targetMonth);
 }
@@ -1207,6 +1249,7 @@ function render() {
   text("#monthlyVatCreditTotal", formatCurrency(monthlyVatCreditTotal));
   text("#netTotal", formatCurrency(liveIncomeTotal - liveExpenseTotal));
   text("#sidebarBalance", formatCurrency(currentBalance));
+  text("#appHeaderCashValue", formatCurrency(currentBalance));
   text("#sidebarHealth", health.description);
   text("#homeTodayCash", formatCurrency(currentBalance));
   text("#homeMonthEndCash", formatCurrency(projectedBalance));
@@ -2453,11 +2496,15 @@ function applyCompanyLogo() {
   dynamicFavicon.href = faviconHref;
   brandLogoPreview.hidden = !logoData;
   brandLogoFallback.hidden = Boolean(logoData);
+  mobileBrandLogoPreview.hidden = !logoData;
+  mobileBrandLogoFallback.hidden = Boolean(logoData);
 
   if (logoData) {
     brandLogoPreview.src = logoData;
+    mobileBrandLogoPreview.src = logoData;
   } else {
     brandLogoPreview.removeAttribute("src");
+    mobileBrandLogoPreview.removeAttribute("src");
   }
 }
 

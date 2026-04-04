@@ -54,8 +54,24 @@
       </div>
     </section>
 
-    <div class="app-shell" id="appShell" hidden>
-      <aside class="sidebar">
+    <div class="app-shell app-layout" id="appShell" data-component="AppLayout" hidden>
+      <header class="app-header-minimal" data-component="AppHeader">
+        <div class="app-header-brand">
+          <span class="app-header-mark">
+            <img id="mobileBrandLogoPreview" alt="Logo de la empresa" hidden />
+            <span id="mobileBrandLogoFallback">FC</span>
+          </span>
+          <div>
+            <p class="section-label" data-ux-copy id="appHeaderScreenTitle">Inicio</p>
+            <strong id="appHeaderCashValue">$0</strong>
+          </div>
+        </div>
+        <button type="button" class="header-logout-btn" id="mobileLogoutBtn">
+          Salir
+        </button>
+      </header>
+
+      <aside class="sidebar" data-component="DesktopSidebar">
         <div class="brand-block">
           <button type="button" class="brand-mark" id="logoSettingsToggle">
             <img id="brandLogoPreview" alt="Logo de la empresa" hidden />
@@ -124,7 +140,12 @@
       </aside>
 
       <main class="dashboard">
-        <section class="app-page is-active" id="homePage" data-app-page="home">
+        <section
+          class="app-page is-active"
+          id="homePage"
+          data-app-page="home"
+          data-component="HomeScreen"
+        >
           <section class="home-hero-panel" data-ux-block data-ux-block-group="home">
             <article class="money-main-card" data-ux-focus="primary">
               <p class="section-label" data-ux-copy>Hoy tienes</p>
@@ -138,7 +159,11 @@
               <small id="homeMonthEndHint">Actualizado con cobros y pagos del mes.</small>
             </article>
 
-            <article class="assistant-card" data-ux-focus="secondary">
+            <article
+              class="assistant-card"
+              data-ux-focus="secondary"
+              data-component="InsightsPanel"
+            >
               <p class="section-label" data-ux-copy>Asistente financiero</p>
               <h2>Recomendación de hoy</h2>
               <p id="adviceText">Agrega tu primer ingreso o gasto para ver recomendaciones claras.</p>
@@ -167,7 +192,13 @@
           </section>
         </section>
 
-        <section class="app-page" id="projectionPage" data-app-page="projection" hidden>
+        <section
+          class="app-page"
+          id="projectionPage"
+          data-app-page="projection"
+          data-component="ProjectionScreen"
+          hidden
+        >
           <section class="projection-hero-panel" data-ux-block data-ux-block-group="projection">
             <article class="projection-status-card" id="projectionStatusCard" data-ux-focus="primary">
               <p class="section-label" data-ux-copy>A fin de mes tendrás</p>
@@ -175,7 +206,11 @@
               <p id="projectionAlertText">Aún no hay movimientos para proyectar.</p>
             </article>
 
-            <article class="projection-assistant-card" data-ux-focus="secondary">
+            <article
+              class="projection-assistant-card"
+              data-ux-focus="secondary"
+              data-component="InsightsPanel"
+            >
               <p class="section-label" data-ux-copy>Asistente financiero</p>
               <h2>¿Te alcanza?</h2>
               <ul id="tipsList" class="tips-list"></ul>
@@ -224,6 +259,17 @@
                   <input type="number" id="scenarioAmount" min="0" step="any" placeholder="200000" />
                 </label>
               </div>
+
+              <label class="projection-floor-label">
+                Mínimo seguro
+                <input
+                  type="number"
+                  id="projectionCashFloorInput"
+                  min="0"
+                  step="any"
+                  placeholder="Ej. 200000"
+                />
+              </label>
 
               <button type="button" class="primary-btn" id="runScenarioBtn">Probar escenario</button>
               <p class="scenario-result" id="scenarioResultText" data-ux-feedback="instant">
@@ -288,7 +334,12 @@
               </div>
             </section>
 
-            <section class="panel insights-panel" data-ux-block data-ux-focus="secondary">
+            <section
+              class="panel insights-panel"
+              data-ux-block
+              data-ux-focus="secondary"
+              data-component="InsightsPanel"
+            >
               <div class="panel-header">
                 <div>
                   <p class="section-label" data-ux-copy>Lectura rápida</p>
@@ -664,9 +715,29 @@
       </main>
 
       <button type="button" class="floating-add-btn" id="openTransactionModalBtn">+</button>
+
+      <nav class="bottom-navigation" data-component="BottomNavigation">
+        <button type="button" class="bottom-nav-btn is-active" data-page-target="home">
+          <span>⌂</span>
+          Inicio
+        </button>
+        <button type="button" class="bottom-nav-btn" data-page-target="projection">
+          <span>↗</span>
+          Proyección
+        </button>
+        <button type="button" class="bottom-nav-btn" data-page-target="detail">
+          <span>☰</span>
+          Detalle
+        </button>
+      </nav>
     </div>
 
-    <div class="transaction-modal" id="transactionModal" hidden>
+    <div
+      class="transaction-modal"
+      id="transactionModal"
+      data-component="AddTransactionModal"
+      hidden
+    >
       <div class="transaction-modal-card" role="dialog" aria-modal="true" aria-labelledby="movementModalTitle">
         <div class="transaction-modal-header">
           <div>
