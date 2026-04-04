@@ -36,6 +36,10 @@ const state = {
   filterMonth: currentMonth(),
   session: null,
   authMode: "signIn",
+  activePage: "home",
+  activeDetailTab: "summary",
+  lastMovementImpact: "",
+  latestScenarioBalance: 0,
   payableInvoiceDraft: {
     image: "",
     ocrText: "",
@@ -97,6 +101,31 @@ const payableFields = getNamedFields(payableForm, [
 ]);
 const categorySelect = transactionForm.querySelector('[name="category"]');
 const monthFilter = document.querySelector("#monthFilter");
+const appPages = [...document.querySelectorAll("[data-app-page]")];
+const navLinks = [...document.querySelectorAll("[data-page-target]")];
+const detailTabButtons = [...document.querySelectorAll("[data-detail-tab]")];
+const detailTabPanels = [...document.querySelectorAll("[data-detail-panel]")];
+const homeTodayCash = document.querySelector("#homeTodayCash");
+const homeMonthEndCash = document.querySelector("#homeMonthEndCash");
+const homeMonthEndCard = document.querySelector("#homeMonthEndCard");
+const homeMonthEndHint = document.querySelector("#homeMonthEndHint");
+const recentMovementList = document.querySelector("#recentMovementList");
+const quickIncomeBtn = document.querySelector("#quickIncomeBtn");
+const quickExpenseBtn = document.querySelector("#quickExpenseBtn");
+const openTransactionModalBtn = document.querySelector("#openTransactionModalBtn");
+const transactionModal = document.querySelector("#transactionModal");
+const closeTransactionModalBtn = document.querySelector("#closeTransactionModalBtn");
+const repeatLastMovementBtn = document.querySelector("#repeatLastMovementBtn");
+const movementExtraDetails = document.querySelector("#movementExtraDetails");
+const movementImpactText = document.querySelector("#movementImpactText");
+const projectionStatusCard = document.querySelector("#projectionStatusCard");
+const projectionMonthEndValue = document.querySelector("#projectionMonthEndValue");
+const projectionAlertText = document.querySelector("#projectionAlertText");
+const moneyCurveChart = document.querySelector("#moneyCurveChart");
+const scenarioType = document.querySelector("#scenarioType");
+const scenarioAmount = document.querySelector("#scenarioAmount");
+const runScenarioBtn = document.querySelector("#runScenarioBtn");
+const scenarioResultText = document.querySelector("#scenarioResultText");
 const transactionTableBody = document.querySelector("#transactionTableBody");
 const receivableTableBody = document.querySelector("#receivableTableBody");
 const payableTableBody = document.querySelector("#payableTableBody");
@@ -135,11 +164,26 @@ monthFilter.value = state.filterMonth;
 renderCategoryOptions(transactionFields.type.value);
 togglePartialAmountField(receivableFields, receivablePartialField);
 togglePartialAmountField(payableFields, payablePartialField);
+switchPage(state.activePage);
+switchDetailTab(state.activeDetailTab);
 render();
 initializeAuth();
 
 transactionFields.type.addEventListener("change", (event) => {
   renderCategoryOptions(event.target.value);
+  updateMovementImpactPreview();
+});
+
+navLinks.forEach((navLink) => {
+  navLink.addEventListener("click", () => {
+    switchPage(navLink.dataset.pageTarget);
+  });
+});
+
+detailTabButtons.forEach((tabButton) => {
+  tabButton.addEventListener("click", () => {
+    switchDetailTab(tabButton.dataset.detailTab);
+  });
 });
 
 authForm.addEventListener("submit", async (event) => {
@@ -157,6 +201,47 @@ toggleAuthModeBtn.addEventListener("click", () => {
 
 logoutBtn.addEventListener("click", async () => {
   await supabaseClient.auth.signOut();
+});
+
+quickIncomeBtn.addEventListener("click", () => {
+  openTransactionModal("income");
+});
+
+quickExpenseBtn.addEventListener("click", () => {
+  openTransactionModal("expense");
+});
+
+openTransactionModalBtn.addEventListener("click", () => {
+  openTransactionModal();
+});
+
+closeTransactionModalBtn.addEventListener("click", () => {
+  resetTransactionForm();
+});
+
+transactionModal.addEventListener("click", (event) => {
+  if (event.target === transactionModal) {
+    resetTransactionForm();
+  }
+});
+
+repeatLastMovementBtn.addEventListener("click", () => {
+  const lastTransaction = state.data.transactions[0];
+
+  if (!lastTransaction) {
+    movementImpactText.textContent = "Todavía no hay un movimiento anterior para repetir.";
+    return;
+  }
+
+  fillTransactionForm({ ...lastTransaction, id: "" }, true);
+});
+
+transactionFields.amount.addEventListener("input", () => {
+  updateMovementImpactPreview();
+});
+
+runScenarioBtn.addEventListener("click", () => {
+  renderScenarioResult();
 });
 
 logoSettingsToggle.addEventListener("click", () => {
@@ -287,19 +372,24 @@ transactionForm.addEventListener("submit", async (event) => {
   event.preventDefault();
 
   const formData = new FormData(transactionForm);
+  const movementType = formData.get("type");
+  const movementCategory =
+    formData.get("category") || categoryMap[movementType]?.[0] || "Sin categoría";
   const transaction = {
     id: formData.get("transactionId") || crypto.randomUUID(),
-    type: formData.get("type"),
-    description: String(formData.get("description")).trim(),
+    type: movementType,
+    description:
+      String(formData.get("description") || "").trim() ||
+      `${movementType === "income" ? "Ingreso" : "Gasto"} · ${movementCategory}`,
     note: String(formData.get("note") || "").trim(),
     amount: Number(formData.get("amount")),
     date: formData.get("date"),
-    category: formData.get("category"),
-    channel: formData.get("channel"),
+    category: movementCategory,
+    channel: formData.get("channel") || "Transferencia",
     recurring: formData.get("recurring") === "on",
   };
 
-  if (!transaction.description || !transaction.amount || !transaction.date) {
+  if (!transaction.amount || !transaction.date) {
     return;
   }
 
@@ -314,8 +404,27 @@ transactionForm.addEventListener("submit", async (event) => {
   await saveData();
   state.filterMonth = transaction.date.slice(0, 7);
   monthFilter.value = state.filterMonth;
-  resetTransactionForm();
   render();
+
+  const impactCopy = createMovementImpactCopy(transaction);
+  state.lastMovementImpact = impactCopy;
+
+  if (isEditing) {
+    resetTransactionForm();
+    return;
+  }
+
+  transactionFields.transactionId.value = "";
+  transactionFields.amount.value = "";
+  transactionFields.description.value = "";
+  transactionFields.note.value = "";
+  transactionFields.date.value = today();
+  transactionFields.recurring.checked = false;
+  movementExtraDetails.open = false;
+  saveTransactionBtn.textContent = "Guardar movimiento";
+  cancelTransactionEditBtn.hidden = true;
+  movementImpactText.textContent = impactCopy;
+  transactionFields.amount.focus();
 });
 
 receivableForm.addEventListener("submit", async (event) => {
@@ -602,6 +711,8 @@ async function handleAuthSubmit() {
 
 async function syncSessionView() {
   if (!state.session?.user) {
+    switchPage("home");
+    switchDetailTab("summary");
     appShell.hidden = true;
     authScreen.hidden = false;
     userEmailLabel.textContent = "-";
@@ -619,6 +730,8 @@ async function syncSessionView() {
   userEmailLabel.textContent = state.session.user.email || "-";
   authScreen.hidden = true;
   appShell.hidden = false;
+  switchPage("home");
+  switchDetailTab("summary");
   state.data = await loadData();
   state.filterMonth = currentMonth();
   monthFilter.value = state.filterMonth;
@@ -629,7 +742,337 @@ async function syncSessionView() {
   render();
 }
 
+function switchPage(pageName) {
+  state.activePage = pageName;
+
+  appPages.forEach((page) => {
+    const isActive = page.dataset.appPage === pageName;
+    page.hidden = !isActive;
+    page.classList.toggle("is-active", isActive);
+  });
+
+  navLinks.forEach((navLink) => {
+    navLink.classList.toggle("is-active", navLink.dataset.pageTarget === pageName);
+  });
+}
+
+function switchDetailTab(tabName) {
+  state.activeDetailTab = tabName;
+
+  detailTabButtons.forEach((tabButton) => {
+    tabButton.classList.toggle("is-active", tabButton.dataset.detailTab === tabName);
+  });
+
+  detailTabPanels.forEach((panel) => {
+    const isActive = panel.dataset.detailPanel === tabName;
+    panel.hidden = !isActive;
+    panel.classList.toggle("is-active", isActive);
+  });
+}
+
+function openTransactionModal(preferredType = "", options = {}) {
+  transactionModal.hidden = false;
+
+  if (!options.preserveForm && preferredType) {
+    transactionFields.type.value = preferredType;
+    renderCategoryOptions(preferredType);
+  }
+
+  if (!options.preserveForm) {
+    transactionFields.amount.value = "";
+    transactionFields.description.value = "";
+    transactionFields.note.value = "";
+    transactionFields.date.value = today();
+    transactionFields.transactionId.value = "";
+    transactionFields.recurring.checked = false;
+    movementExtraDetails.open = false;
+    movementImpactText.textContent = "";
+    saveTransactionBtn.textContent = "Guardar movimiento";
+    cancelTransactionEditBtn.hidden = true;
+  }
+
+  transactionFields.amount.focus();
+}
+
+function renderRecentMovements(transactions) {
+  const recentTransactions = transactions.slice(0, 6);
+
+  if (!recentTransactions.length) {
+    recentMovementList.innerHTML =
+      '<div class="recent-empty">Aún no hay movimientos. Toca + para agregar el primero.</div>';
+    return;
+  }
+
+  recentMovementList.innerHTML = recentTransactions
+    .map((item) => {
+      const sign = item.type === "income" ? "+" : "-";
+      const toneClass = item.type === "income" ? "income" : "expense";
+
+      return `
+        <article class="recent-movement-row">
+          <div class="recent-movement-copy">
+            <strong>${escapeHtml(item.description)}</strong>
+            <small>${formatDate(item.date)} · ${escapeHtml(item.channel || "Sin cuenta")}</small>
+          </div>
+          <span class="recent-movement-amount ${toneClass}">${sign}${formatCurrency(item.amount)}</span>
+        </article>
+      `;
+    })
+    .join("");
+}
+
+function renderMoneyCurveChart(currentBalance, cashFloor) {
+  const points = buildMoneyCurvePoints(currentBalance, cashFloor);
+  const width = 640;
+  const height = 220;
+  const values = points.map((point) => point.amount);
+  const minAmount = Math.min(...values, cashFloor || 0);
+  const maxAmount = Math.max(...values, cashFloor || 0, 1);
+  const range = Math.max(maxAmount - minAmount, 1);
+  const stepX = points.length > 1 ? width / (points.length - 1) : width;
+
+  const svgPoints = points
+    .map((point, index) => {
+      const x = index * stepX;
+      const y = height - ((point.amount - minAmount) / range) * 160 - 30;
+      return `${x},${y}`;
+    })
+    .join(" ");
+
+  const minLineY = cashFloor
+    ? height - ((cashFloor - minAmount) / range) * 160 - 30
+    : null;
+
+  moneyCurveChart.innerHTML = `
+    <svg viewBox="0 0 ${width} ${height}" class="money-curve-svg" aria-label="Curva de dinero">
+      ${
+        minLineY
+          ? `<line x1="0" y1="${minLineY}" x2="${width}" y2="${minLineY}" class="money-floor-line" />`
+          : ""
+      }
+      <polyline points="${svgPoints}" class="money-curve-line"></polyline>
+      ${points
+        .map((point, index) => {
+          const x = index * stepX;
+          const y = height - ((point.amount - minAmount) / range) * 160 - 30;
+          return `<circle cx="${x}" cy="${y}" r="7" class="money-curve-dot ${point.tone}"></circle>`;
+        })
+        .join("")}
+    </svg>
+    <div class="money-curve-labels">
+      <span>Hoy</span>
+      <span>${points[points.length - 1]?.label || "Fin de mes"}</span>
+    </div>
+  `;
+}
+
+function buildMoneyCurvePoints(currentBalance, cashFloor) {
+  const baseDate = new Date(`${today()}T12:00:00`);
+  const endDate = new Date(baseDate.getFullYear(), baseDate.getMonth() + 1, 0, 12, 0, 0);
+  const points = [
+    {
+      label: formatDate(toISODate(baseDate)),
+      amount: Math.round(currentBalance),
+      tone: getForecastTone(currentBalance, cashFloor),
+    },
+  ];
+  let rollingAmount = currentBalance;
+  const todayIso = toISODate(baseDate);
+
+  state.data.receivables
+    .filter((item) => item.status !== "paid" && item.dueDate === todayIso)
+    .forEach((item) => {
+      rollingAmount += getOutstandingAmount(item);
+    });
+
+  state.data.payables
+    .filter((item) => item.status !== "paid" && item.dueDate === todayIso)
+    .forEach((item) => {
+      rollingAmount -= getOutstandingAmount(item);
+    });
+
+  const cursorDate = new Date(baseDate);
+  cursorDate.setDate(cursorDate.getDate() + 1);
+
+  for (let date = cursorDate; date <= endDate; date.setDate(date.getDate() + 1)) {
+    const isoDate = toISODate(date);
+
+    state.data.transactions
+      .filter((item) => item.date === isoDate)
+      .forEach((item) => {
+        rollingAmount += item.type === "income" ? item.amount : -item.amount;
+      });
+
+    state.data.receivables
+      .filter((item) => item.status !== "paid" && item.dueDate === isoDate)
+      .forEach((item) => {
+        rollingAmount += getOutstandingAmount(item);
+      });
+
+    state.data.payables
+      .filter((item) => item.status !== "paid" && item.dueDate === isoDate)
+      .forEach((item) => {
+        rollingAmount -= getOutstandingAmount(item);
+      });
+
+    const isKeyPoint =
+      date.getTime() === endDate.getTime() ||
+      date.getDate() % 5 === 0;
+
+    if (isKeyPoint) {
+      points.push({
+        label: formatDate(isoDate),
+        amount: Math.round(rollingAmount),
+        tone: getForecastTone(rollingAmount, cashFloor),
+      });
+    }
+  }
+
+  return points.length ? points : [{ label: "Hoy", amount: currentBalance, tone: "warn" }];
+}
+
+function findCriticalCashDate(currentBalance, cashFloor) {
+  if (!cashFloor) {
+    return "";
+  }
+
+  const baseDate = new Date(`${today()}T12:00:00`);
+  const endDate = new Date(baseDate.getFullYear(), baseDate.getMonth() + 1, 0, 12, 0, 0);
+  let rollingAmount = currentBalance;
+
+  for (let date = new Date(baseDate); date <= endDate; date.setDate(date.getDate() + 1)) {
+    const isoDate = toISODate(date);
+
+    if (isoDate > today()) {
+      state.data.transactions
+        .filter((item) => item.date === isoDate)
+        .forEach((item) => {
+          rollingAmount += item.type === "income" ? item.amount : -item.amount;
+        });
+    }
+
+    state.data.receivables
+      .filter((item) => item.status !== "paid" && item.dueDate === isoDate)
+      .forEach((item) => {
+        rollingAmount += getOutstandingAmount(item);
+      });
+
+    state.data.payables
+      .filter((item) => item.status !== "paid" && item.dueDate === isoDate)
+      .forEach((item) => {
+        rollingAmount -= getOutstandingAmount(item);
+      });
+
+    if (rollingAmount < cashFloor) {
+      return isoDate;
+    }
+  }
+
+  return "";
+}
+
+function buildProjectionAlertCopy(hasAnyData, fallbackDescription, criticalCashDate, cashFloor) {
+  if (!hasAnyData) {
+    return "Aún no hay movimientos para proyectar.";
+  }
+
+  if (criticalCashDate) {
+    return `Día ${Number(criticalCashDate.slice(8, 10))}: te quedas bajo tu caja mínima de ${formatCurrency(cashFloor)}.`;
+  }
+
+  return fallbackDescription;
+}
+
+function renderScenarioResult() {
+  const scenarioDelta = Number(scenarioAmount.value) || 0;
+  if (!scenarioDelta) {
+    scenarioResultText.className = "scenario-result";
+    scenarioResultText.textContent = "Ingresa un monto para simular una venta o un gasto.";
+    return;
+  }
+
+  const sign = scenarioType.value === "income" ? 1 : -1;
+  const simulatedBalance = state.latestScenarioBalance + scenarioDelta * sign;
+  const tone = getForecastTone(simulatedBalance, Number(state.data.cashFloor) || 0);
+  const scenarioLabel = scenarioType.value === "income" ? "Si vendes" : "Si gastas";
+
+  scenarioResultText.className = `scenario-result ${tone}`;
+  scenarioResultText.textContent = `${scenarioLabel} ${formatCurrency(
+    scenarioDelta
+  )}, a fin de mes quedarías con ${formatCurrency(simulatedBalance)}.`;
+}
+
+function updateMovementImpactPreview() {
+  const amount = Number(transactionFields.amount.value) || 0;
+  if (!amount) {
+    movementImpactText.textContent = state.lastMovementImpact || "";
+    return;
+  }
+
+  const sign = transactionFields.type.value === "income" ? 1 : -1;
+  const targetMonth = (transactionFields.date.value || today()).slice(0, 7);
+  const projectedBalance = estimateProjectedBalanceForCurrentMonth(targetMonth) + amount * sign;
+  movementImpactText.textContent = `Si guardas esto, a fin de mes te quedarían ${formatCurrency(
+    projectedBalance
+  )}.`;
+}
+
+function createMovementImpactCopy(transaction) {
+  const projectedBalance = estimateProjectedBalanceForCurrentMonth(transaction.date.slice(0, 7));
+
+  if (transaction.type === "income") {
+    return `Ingreso guardado. Ahora podrías cerrar el mes con ${formatCurrency(projectedBalance)}.`;
+  }
+
+  return `Gasto guardado. Ahora te quedan ${formatCurrency(projectedBalance)} estimados para fin de mes.`;
+}
+
+function estimateProjectedBalanceForCurrentMonth(targetMonth = currentMonth()) {
+  return calculateProjectedMonthEndCash(calculateAvailableCashToday(), targetMonth);
+}
+
+function calculateAvailableCashToday() {
+  const todayIso = today();
+
+  return state.data.transactions.reduce((total, item) => {
+    if (item.date > todayIso) {
+      return total;
+    }
+
+    return total + (item.type === "income" ? item.amount : -item.amount);
+  }, 0);
+}
+
+function calculateProjectedMonthEndCash(currentCash, targetMonth) {
+  const todayIso = today();
+  const futureTransactions = state.data.transactions
+    .filter((item) => item.date > todayIso && item.date.startsWith(targetMonth))
+    .reduce(
+      (total, item) => total + (item.type === "income" ? item.amount : -item.amount),
+      0
+    );
+  const futureReceivables = state.data.receivables
+    .filter(
+      (item) =>
+        item.status !== "paid" &&
+        item.dueDate >= todayIso &&
+        item.dueDate.startsWith(targetMonth)
+    )
+    .reduce((total, item) => total + getOutstandingAmount(item), 0);
+  const futurePayables = state.data.payables
+    .filter(
+      (item) =>
+        item.status !== "paid" &&
+        item.dueDate >= todayIso &&
+        item.dueDate.startsWith(targetMonth)
+    )
+    .reduce((total, item) => total + getOutstandingAmount(item), 0);
+
+  return currentCash + futureTransactions + futureReceivables - futurePayables;
+}
+
 function render() {
+  const currentMonthKey = currentMonth();
   const transactions = state.data.transactions.filter((item) =>
     item.date.startsWith(state.filterMonth)
   );
@@ -639,30 +1082,48 @@ function render() {
   const payables = state.data.payables.filter((item) =>
     item.dueDate.startsWith(state.filterMonth)
   );
+  const liveTransactions = state.data.transactions.filter((item) =>
+    item.date.startsWith(currentMonthKey)
+  );
+  const liveReceivables = state.data.receivables.filter((item) =>
+    item.dueDate.startsWith(currentMonthKey)
+  );
+  const livePayables = state.data.payables.filter((item) =>
+    item.dueDate.startsWith(currentMonthKey)
+  );
   const cashFloor = Number(state.data.cashFloor) || 0;
 
   const incomes = transactions.filter((item) => item.type === "income");
-  const salesIncomes = incomes.filter((item) => item.category === "Ventas");
   const expenses = transactions.filter((item) => item.type === "expense");
   const openReceivables = receivables.filter((item) => item.status !== "paid");
   const openPayables = payables.filter((item) => item.status !== "paid");
+  const liveIncomes = liveTransactions.filter((item) => item.type === "income");
+  const liveSalesIncomes = liveIncomes.filter((item) => item.category === "Ventas");
+  const liveExpenses = liveTransactions.filter((item) => item.type === "expense");
+  const liveOpenReceivables = liveReceivables.filter((item) => item.status !== "paid");
+  const liveOpenPayables = livePayables.filter((item) => item.status !== "paid");
 
   const incomeTotal = sum(incomes);
-  const monthlyVatTotal = calculateIncludedVat(sum(salesIncomes));
+  const liveIncomeTotal = sum(liveIncomes);
+  const monthlyVatTotal = calculateIncludedVat(sum(liveSalesIncomes));
   const monthlyVatCreditTotal = calculateIncludedVat(
-    payables.reduce((total, item) => total + Number(item.amount || 0), 0)
+    livePayables.reduce((total, item) => total + Number(item.amount || 0), 0)
   );
   const expenseTotal = sum(expenses);
+  const liveExpenseTotal = sum(liveExpenses);
   const receivableTotal = sum(openReceivables);
   const payableTotal = sum(openPayables);
+  const liveReceivableTotal = sum(liveOpenReceivables);
+  const livePayableTotal = sum(liveOpenPayables);
   const netTotal = incomeTotal - expenseTotal;
-  const currentBalance = sum(
-    state.data.transactions.map((item) => (item.type === "income" ? item.amount : -item.amount))
-  );
-  const projectedBalance = currentBalance + receivableTotal - payableTotal;
+  const currentBalance = calculateAvailableCashToday();
+  const projectedBalance = calculateProjectedMonthEndCash(currentBalance, currentMonthKey);
   const recurring = transactions.filter((item) => item.recurring);
-  const averageIncome = incomes.length ? Math.round(incomeTotal / incomes.length) : 0;
-  const topCategory = findTopExpenseCategory(expenses);
+  const liveRecurring = liveTransactions.filter((item) => item.recurring);
+  const averageIncome = liveIncomes.length
+    ? Math.round(liveIncomeTotal / liveIncomes.length)
+    : 0;
+  const liveTopCategory = findTopExpenseCategory(liveExpenses);
   const hasAnyData =
     state.data.transactions.length > 0 ||
     state.data.receivables.length > 0 ||
@@ -671,59 +1132,87 @@ function render() {
     state.data.payables.filter((item) => item.status !== "paid" && daysUntil(item.dueDate) <= 30)
   );
   const forecastWeeks = createForecastWeeks(
-    projectedBalance,
-    recurring,
-    incomes,
-    expenses,
-    receivableTotal,
-    payableTotal,
+    currentBalance,
+    liveRecurring,
+    liveIncomes,
+    liveExpenses,
+    liveReceivableTotal,
+    livePayableTotal,
     cashFloor
   );
   const lowCashWeek = cashFloor
     ? forecastWeeks.find((week) => week.amount < cashFloor)
     : null;
-  const health = getHealth(incomeTotal, expenseTotal, projectedBalance, cashFloor);
+  const criticalCashDate = findCriticalCashDate(currentBalance, cashFloor);
+  const health = hasAnyData
+    ? getHealth(liveIncomeTotal, liveExpenseTotal, projectedBalance, cashFloor)
+    : {
+        label: "Sin datos",
+        tone: "neutral",
+        description: "Agrega tu primer movimiento para ver si te alcanza este mes.",
+      };
+  const assistantMessage = createAdvice(
+    liveIncomeTotal - liveExpenseTotal,
+    liveRecurring.length,
+    liveTopCategory,
+    liveReceivableTotal,
+    livePayableTotal,
+    hasAnyData,
+    projectedBalance,
+    cashFloor,
+    lowCashWeek
+  );
 
-  text("#incomeTotal", formatCurrency(incomeTotal));
-  text("#expenseTotal", formatCurrency(expenseTotal));
-  text("#receivableTotal", formatCurrency(receivableTotal));
-  text("#payableTotal", formatCurrency(payableTotal));
+  text("#incomeTotal", formatCurrency(liveIncomeTotal));
+  text("#expenseTotal", formatCurrency(liveExpenseTotal));
+  text("#receivableTotal", formatCurrency(liveReceivableTotal));
+  text("#payableTotal", formatCurrency(livePayableTotal));
   text("#monthlyVatTotal", formatCurrency(monthlyVatTotal));
   text("#monthlyVatCreditTotal", formatCurrency(monthlyVatCreditTotal));
-  text("#netTotal", formatCurrency(netTotal));
-  text("#sidebarBalance", formatCurrency(projectedBalance));
+  text("#netTotal", formatCurrency(liveIncomeTotal - liveExpenseTotal));
+  text("#sidebarBalance", formatCurrency(currentBalance));
   text("#sidebarHealth", health.description);
-  text("#recurringCount", `${recurring.length} movimientos`);
-  text("#avgIncome", formatCurrency(averageIncome));
-  text("#topCategory", topCategory);
-  text("#nextCommitment", formatCurrency(nextCommitment));
+  text("#homeTodayCash", formatCurrency(currentBalance));
+  text("#homeMonthEndCash", formatCurrency(projectedBalance));
+  text("#projectionMonthEndValue", formatCurrency(projectedBalance));
   text(
-    "#adviceText",
-    createAdvice(netTotal, recurring.length, topCategory, receivableTotal, payableTotal, hasAnyData)
+    "#projectionAlertText",
+    buildProjectionAlertCopy(hasAnyData, health.description, criticalCashDate, cashFloor)
   );
+  text("#recurringCount", `${liveRecurring.length} movimientos`);
+  text("#avgIncome", formatCurrency(averageIncome));
+  text("#topCategory", liveTopCategory);
+  text("#nextCommitment", formatCurrency(nextCommitment));
+  text("#adviceText", assistantMessage);
   text("#receivablePill", `${openReceivables.length} pendientes`);
   text("#payablePill", `${openPayables.length} pendientes`);
 
   const healthPill = document.querySelector("#healthPill");
   healthPill.textContent = health.label;
   healthPill.className = `pill ${health.tone}`;
+  homeMonthEndCard.className = `money-main-card month-end-card ${health.tone}`;
+  homeMonthEndHint.textContent = health.description;
+  projectionStatusCard.className = `projection-status-card ${health.tone}`;
+  state.latestScenarioBalance = projectedBalance;
 
   applyCompanyLogo();
 
+  renderRecentMovements(state.data.transactions);
   renderTable(transactions);
   renderReceivables(receivables);
   renderPayables(payables);
+  renderMoneyCurveChart(currentBalance, cashFloor);
   renderMonthlySummary();
-  renderBreakdown(expenses);
+  renderBreakdown(liveExpenses);
   renderForecast(forecastWeeks, cashFloor);
   renderCashFloorStatus(projectedBalance, cashFloor, lowCashWeek, hasAnyData);
   renderTips(
-    incomeTotal,
-    expenseTotal,
-    recurring,
+    liveIncomeTotal,
+    liveExpenseTotal,
+    liveRecurring,
     projectedBalance,
-    openReceivables,
-    openPayables,
+    liveOpenReceivables,
+    liveOpenPayables,
     hasAnyData,
     cashFloor,
     lowCashWeek
@@ -752,7 +1241,7 @@ function renderTable(transactions) {
           <td>${item.category}</td>
           <td>${item.channel}</td>
           <td>${escapeHtml(item.note || "-")}</td>
-          <td><span class="type-badge ${item.type}">${item.type === "income" ? "Ingreso" : "Egreso"}</span></td>
+          <td><span class="type-badge ${item.type}">${item.type === "income" ? "Ingreso" : "Gasto"}</span></td>
           <td class="${item.type === "income" ? "amount-positive" : "amount-negative"}">${item.type === "income" ? "+" : "-"}${formatCurrency(item.amount)}</td>
           <td class="action-cell">
             <button type="button" class="edit-btn" data-edit-transaction="${item.id}">Modificar</button>
@@ -931,7 +1420,7 @@ function renderMonthlyFlowChart(rows) {
             <strong>${formatMonthLabel(item.month)}</strong>
             <div class="flow-legend">
               <span class="flow-legend-item"><i class="flow-dot income"></i>Ingresos</span>
-              <span class="flow-legend-item"><i class="flow-dot expense"></i>Egresos</span>
+              <span class="flow-legend-item"><i class="flow-dot expense"></i>Gastos</span>
               <span class="flow-legend-item"><i class="flow-dot net"></i>Neto</span>
             </div>
           </div>
@@ -1034,7 +1523,7 @@ function renderCashFloorStatus(balance, cashFloor, lowCashWeek, hasAnyData) {
 
   if (balance < cashFloor) {
     cashFloorAlert.className = "cash-floor-alert risk";
-    cashFloorAlert.textContent = `Alerta: tu saldo proyectado está bajo tu caja mínima de ${formatCurrency(cashFloor)}.`;
+    cashFloorAlert.textContent = `Alerta: la plata proyectada baja de tu caja mínima de ${formatCurrency(cashFloor)}.`;
     return;
   }
 
@@ -1068,29 +1557,29 @@ function renderTips(
 
   if (cashFloor > 0 && balance < cashFloor) {
     tips.push(
-      `Tu saldo proyectado está bajo tu caja mínima de ${formatCurrency(cashFloor)}. Prioriza cobrar pendientes o postergar pagos no urgentes.`
+      `Tu plata proyectada está bajo tu caja mínima de ${formatCurrency(cashFloor)}. Prioriza cobrar pendientes o frenar pagos no urgentes.`
     );
   } else if (lowCashWeek) {
     tips.push(
-      `${lowCashWeek.label} caería a ${formatCurrency(lowCashWeek.amount)}, bajo tu caja mínima de ${formatCurrency(cashFloor)}. Ajusta vencimientos o refuerza cobranza antes de esa semana.`
+      `${lowCashWeek.label} bajarías a ${formatCurrency(lowCashWeek.amount)}, bajo tu caja mínima de ${formatCurrency(cashFloor)}. Ajusta pagos o refuerza cobranza antes de esa semana.`
     );
   }
 
   if (expenseTotal > incomeTotal) {
     tips.push(
-      "Tus egresos del mes superan los ingresos. Revisa precios, frecuencia de compra o gastos que puedas postergar."
+      "Tus gastos del mes superan tus ingresos. Revisa precios, frecuencia de compra o gastos que puedas postergar."
     );
   }
 
   if (recurring.length >= 3) {
     tips.push(
-      "Ya tienes varios movimientos recurrentes. Conviene separar costos fijos de variables para anticipar semanas más estrechas."
+      "Ya tienes varios pagos repetidos. Conviene distinguir fijos y variables para anticipar semanas más apretadas."
     );
   }
 
   if (balance < 150000) {
     tips.push(
-      "El saldo proyectado está bajo para operar con holgura. Considera resguardar una reserva mínima para compras y despachos."
+      "La plata disponible está baja para operar con holgura. Considera guardar una reserva mínima para compras y despachos."
     );
   }
 
@@ -1125,7 +1614,7 @@ function renderTips(
 
   if (incomeTotal > expenseTotal && balance >= 150000) {
     tips.push(
-      "Tu caja se ve estable este mes. Puede ser buen momento para definir un porcentaje fijo de reinversión."
+      "Tu plata se ve más estable este mes. Puede ser buen momento para definir cuánto invertir sin apretarte."
     );
   }
 
@@ -1208,24 +1697,24 @@ function getHealth(incomeTotal, expenseTotal, balance, cashFloor = 0) {
 
   if (balance <= minimumBalance || expenseTotal > incomeTotal) {
     return {
-      label: "Atención inmediata",
+      label: "No te alcanza",
       tone: "risk",
-      description: "La caja proyectada está bajo presión y requiere ajustes pronto.",
+      description: "Ojo: te estás quedando sin caja para cerrar el mes con calma.",
     };
   }
 
   if (balance <= cautionBalance || expenseTotal > incomeTotal * 0.8) {
     return {
-      label: "Zona de cuidado",
+      label: "Ajustado",
       tone: "warn",
-      description: "La operación sigue viva, pero con margen más estrecho.",
+      description: "Te alcanza, pero vas justo. Conviene cuidar gastos esta semana.",
     };
   }
 
   return {
-    label: "Caja saludable",
+    label: "Vas bien",
     tone: "ok",
-    description: "Tu flujo aguanta mejor compras, pagos y semanas lentas.",
+    description: "Vas bien: tienes margen para operar y decidir sin tanta presión.",
   };
 }
 
@@ -1265,25 +1754,38 @@ function createAdvice(
   topCategory,
   receivableTotal,
   payableTotal,
-  hasAnyData
+  hasAnyData,
+  projectedBalance = 0,
+  cashFloor = 0,
+  lowCashWeek = null
 ) {
   if (!hasAnyData) {
     return "";
   }
 
+  const safeReserve = cashFloor > 0 ? cashFloor : 100000;
+  const weeklySpend = Math.max(
+    0,
+    Math.floor((projectedBalance - safeReserve) / 4 / 1000) * 1000
+  );
+
+  if (projectedBalance <= safeReserve || lowCashWeek) {
+    return "Te estás quedando sin caja. Prioriza cobrar y frenar gastos no urgentes esta semana.";
+  }
+
   if (netTotal < 0) {
-    return `Este mes cerraría en rojo. Parte revisando la categoría más pesada: ${topCategory}.`;
+    return `Reduce gastos en ${topCategory} esta semana para no cerrar el mes apretado.`;
   }
 
   if (payableTotal > receivableTotal) {
-    return "Tus salidas comprometidas superan lo que tienes por cobrar. Cuida compras nuevas y ordena vencimientos.";
+    return "Tus pagos comprometidos pesan más que tus cobros. Revisa compras nuevas antes de comprometer más plata.";
   }
 
   if (recurringCount > 0) {
-    return "Tus cargos recurrentes ya están visibles. Usa esa base para definir un piso mínimo de ventas cada mes.";
+    return `Puedes gastar hasta ${formatCurrency(weeklySpend)} esta semana sin bajar tu caja mínima.`;
   }
 
-  return "Tu flujo mensual va positivo. Ahora conviene registrar también tus costos fijos para no sobreestimar margen.";
+  return `Vas bien. Puedes invertir ${formatCurrency(weeklySpend)} sin quedar bajo tu caja mínima.`;
 }
 
 function sum(items) {
@@ -1346,6 +1848,13 @@ function today() {
   const year = now.getFullYear();
   const month = String(now.getMonth() + 1).padStart(2, "0");
   const day = String(now.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function toISODate(date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
   return `${year}-${month}-${day}`;
 }
 
@@ -1426,20 +1935,24 @@ function text(selector, value) {
   document.querySelector(selector).textContent = value;
 }
 
-function fillTransactionForm(transaction) {
-  transactionFields.transactionId.value = transaction.id;
+function fillTransactionForm(transaction, asTemplate = false) {
+  transactionFields.transactionId.value = asTemplate ? "" : transaction.id;
   transactionFields.type.value = transaction.type;
   renderCategoryOptions(transaction.type);
   transactionFields.description.value = transaction.description;
   transactionFields.note.value = transaction.note || "";
   transactionFields.amount.value = transaction.amount;
-  transactionFields.date.value = transaction.date;
+  transactionFields.date.value = asTemplate ? today() : transaction.date;
   transactionFields.category.value = transaction.category;
   transactionFields.channel.value = transaction.channel;
   transactionFields.recurring.checked = Boolean(transaction.recurring);
-  saveTransactionBtn.textContent = "Guardar cambios";
-  cancelTransactionEditBtn.hidden = false;
-  document.querySelector("#transactionForm").scrollIntoView({ behavior: "smooth", block: "start" });
+  movementExtraDetails.open = true;
+  movementImpactText.textContent = asTemplate
+    ? "Revisa el monto y guarda para repetir el último movimiento."
+    : "";
+  saveTransactionBtn.textContent = asTemplate ? "Guardar movimiento" : "Guardar cambios";
+  cancelTransactionEditBtn.hidden = asTemplate;
+  openTransactionModal(transaction.type, { preserveForm: true });
 }
 
 function resetTransactionForm() {
@@ -1448,8 +1961,11 @@ function resetTransactionForm() {
   transactionFields.date.value = today();
   transactionFields.type.value = "income";
   renderCategoryOptions("income");
+  movementExtraDetails.open = false;
+  movementImpactText.textContent = "";
   saveTransactionBtn.textContent = "Guardar movimiento";
   cancelTransactionEditBtn.hidden = true;
+  transactionModal.hidden = true;
 }
 
 function fillReceivableForm(receivable) {

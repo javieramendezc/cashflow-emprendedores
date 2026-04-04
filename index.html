@@ -19,8 +19,8 @@
         <p class="eyebrow">Acceso privado</p>
         <h1>Entra a Flujo Claro</h1>
         <p class="auth-copy">
-          Crea tu cuenta o inicia sesión para guardar tu flujo de caja en la nube
-          y ver solo tu información.
+          Crea tu cuenta o inicia sesión para guardar tu plata en la nube y ver
+          solo tu información.
         </p>
 
         <form id="authForm" class="transaction-form">
@@ -63,7 +63,7 @@
           </button>
           <div>
             <p class="eyebrow">Flujo claro</p>
-            <h1>Controla tu caja sin hojas sueltas</h1>
+            <h1>Tu plata clara en segundos</h1>
           </div>
         </div>
 
@@ -79,32 +79,32 @@
         </div>
 
         <div class="sidebar-section">
-          <p class="section-label">Atajos</p>
-          <nav class="quick-links">
-            <a href="#overview">Resumen</a>
-            <a href="#transactions">Movimientos</a>
-            <a href="#receivables">Cuentas por cobrar</a>
-            <a href="#payables">Facturas por pagar</a>
-            <a href="#monthly-summary">Ver por mes</a>
-            <a href="#forecast">Proyección</a>
+          <p class="section-label">Menú</p>
+          <nav class="quick-links main-nav">
+            <button type="button" class="nav-link is-active" data-page-target="home">
+              Inicio
+            </button>
+            <button type="button" class="nav-link" data-page-target="projection">
+              Proyección
+            </button>
+            <button type="button" class="nav-link" data-page-target="detail">
+              Detalle
+            </button>
           </nav>
         </div>
 
         <div class="sidebar-section">
-          <p class="section-label">Estado actual</p>
-          <div class="balance-card">
-            <span>Saldo disponible</span>
-            <strong id="sidebarBalance">$0</strong>
-            <small id="sidebarHealth">Sin datos aún</small>
-          </div>
+          <p class="section-label">Plata hoy</p>
           <div class="cash-floor-card">
+            <strong class="sidebar-live-cash" id="sidebarBalance">$0</strong>
+            <small id="sidebarHealth">Sin datos aún</small>
             <label>
               Caja mínima
               <input
                 type="number"
                 id="cashFloorInput"
                 min="0"
-                step="1000"
+                step="any"
                 placeholder="Ej. 200000"
               />
             </label>
@@ -112,13 +112,6 @@
               Define tu caja mínima para activar alertas.
             </small>
           </div>
-        </div>
-
-        <div class="sidebar-section sidebar-note">
-          <p class="section-label">Sugerencia</p>
-          <p id="adviceText">
-            Registra ingresos y egresos del mismo periodo para ver tu flujo real.
-          </p>
         </div>
 
         <div class="sidebar-section sidebar-note">
@@ -131,234 +124,317 @@
       </aside>
 
       <main class="dashboard">
-        <section class="hero-panel" id="overview">
-          <div class="hero-copy">
-            <p class="eyebrow">Workspace financiero</p>
-            <h2>Ve en minutos si tu emprendimiento respira o se aprieta.</h2>
-            <p>
-              Sigue tus entradas, egresos, gastos fijos y la proyección de caja
-              para tomar decisiones con más calma.
-            </p>
-          </div>
+        <section class="app-page is-active" id="homePage" data-app-page="home">
+          <section class="home-hero-panel">
+            <article class="money-main-card">
+              <p class="section-label">Hoy tienes</p>
+              <strong id="homeTodayCash">$0</strong>
+              <small id="homeTodayHint">Tu plata disponible ahora.</small>
+            </article>
 
-          <div class="hero-metrics">
-            <article class="metric">
-              <span>Ingresos del mes</span>
-              <strong id="incomeTotal">$0</strong>
+            <article class="money-main-card month-end-card" id="homeMonthEndCard">
+              <p class="section-label">A fin de mes tendrás</p>
+              <strong id="homeMonthEndCash">$0</strong>
+              <small id="homeMonthEndHint">Actualizado con cobros y pagos del mes.</small>
             </article>
-            <article class="metric">
-              <span>Egresos del mes</span>
-              <strong id="expenseTotal">$0</strong>
-            </article>
-            <article class="metric">
-              <span>Por cobrar pendiente</span>
-              <strong id="receivableTotal">$0</strong>
-            </article>
-            <article class="metric">
-              <span>Por pagar pendiente</span>
-              <strong id="payableTotal">$0</strong>
-            </article>
-            <article class="metric">
-              <span>IVA mensual estimado (19%)</span>
-              <strong id="monthlyVatTotal">$0</strong>
-            </article>
-            <article class="metric">
-              <span>IVA a descontar estimado (19%)</span>
-              <strong id="monthlyVatCreditTotal">$0</strong>
-            </article>
-            <article class="metric accent">
-              <span>Resultado neto</span>
-              <strong id="netTotal">$0</strong>
-            </article>
-          </div>
-        </section>
 
-        <section class="workspace-grid">
-          <section class="panel form-panel">
+            <article class="assistant-card">
+              <p class="section-label">Asistente financiero</p>
+              <h2>Recomendación de hoy</h2>
+              <p id="adviceText">Agrega tu primer ingreso o gasto para ver recomendaciones claras.</p>
+            </article>
+          </section>
+
+          <section class="home-quick-grid">
+            <button type="button" class="quick-action-card income" id="quickIncomeBtn">
+              <span>+</span>
+              Ingreso
+            </button>
+            <button type="button" class="quick-action-card expense" id="quickExpenseBtn">
+              <span>−</span>
+              Gasto
+            </button>
+          </section>
+
+          <section class="panel">
             <div class="panel-header">
               <div>
-                <p class="section-label">Nuevo movimiento</p>
-                <h3>Carga ingresos y gastos</h3>
+                <p class="section-label">Últimos movimientos</p>
+                <h3>Lo último que pasó con tu plata</h3>
               </div>
             </div>
+            <div class="recent-movement-list" id="recentMovementList"></div>
+          </section>
+        </section>
 
-            <form id="transactionForm" class="transaction-form">
-              <input type="hidden" name="transactionId" />
+        <section class="app-page" id="projectionPage" data-app-page="projection" hidden>
+          <section class="projection-hero-panel">
+            <article class="projection-status-card" id="projectionStatusCard">
+              <p class="section-label">A fin de mes tendrás</p>
+              <strong id="projectionMonthEndValue">$0</strong>
+              <p id="projectionAlertText">Aún no hay movimientos para proyectar.</p>
+            </article>
 
-              <label>
-                Tipo
-                <select name="type" required>
-                  <option value="income">Ingreso</option>
-                  <option value="expense">Egreso</option>
-                </select>
-              </label>
+            <article class="projection-assistant-card">
+              <p class="section-label">Asistente financiero</p>
+              <h2>¿Te alcanza?</h2>
+              <ul id="tipsList" class="tips-list"></ul>
+            </article>
+          </section>
 
-              <label>
-                Concepto
-                <input
-                  type="text"
-                  name="description"
-                  placeholder="Ej. Venta por Instagram"
-                  required
-                />
-              </label>
+          <section class="panel">
+            <div class="panel-header">
+              <div>
+                <p class="section-label">Hoy → fin de mes</p>
+                <h3>Curva de dinero</h3>
+              </div>
+            </div>
+            <div class="money-curve-chart" id="moneyCurveChart"></div>
+          </section>
 
-              <label>
-                Nota
-                <input
-                  type="text"
-                  name="note"
-                  placeholder="Escribe una nota breve"
-                  maxlength="120"
-                />
-              </label>
+          <section class="forecast-grid">
+            <section class="panel forecast-panel">
+              <div class="panel-header">
+                <div>
+                  <p class="section-label">Alerta por semanas</p>
+                  <h3>Zona crítica</h3>
+                </div>
+              </div>
+              <div id="forecastList" class="forecast-list"></div>
+            </section>
 
-              <div class="form-row">
-                <label>
-                  Monto IVA incluido
-                  <input
-                    type="number"
-                    name="amount"
-                    min="0"
-                    step="any"
-                    placeholder="25000"
-                    required
-                  />
-                </label>
-
-                <label>
-                  Fecha
-                  <input type="date" name="date" required />
-                </label>
+            <section class="panel simulator-panel">
+              <div class="panel-header">
+                <div>
+                  <p class="section-label">Simulador</p>
+                  <h3>¿Qué pasa si...?</h3>
+                </div>
               </div>
 
               <div class="form-row">
                 <label>
-                  Categoría
-                  <select name="category" required></select>
-                </label>
-
-                <label>
-                  Método
-                  <select name="channel" required>
-                    <option value="Transferencia">Transferencia</option>
-                    <option value="Efectivo">Efectivo</option>
-                    <option value="Tarjeta">Tarjeta</option>
-                    <option value="Mercado Pago">Mercado Pago</option>
+                  Tipo
+                  <select id="scenarioType">
+                    <option value="income">vendo</option>
+                    <option value="expense">gasto</option>
                   </select>
                 </label>
+                <label>
+                  Monto
+                  <input type="number" id="scenarioAmount" min="0" step="any" placeholder="200000" />
+                </label>
               </div>
 
-              <label class="checkbox-row">
-                <input type="checkbox" name="recurring" />
-                <span>Marcar como gasto o ingreso recurrente</span>
-              </label>
-
-              <div class="form-actions">
-                <button type="submit" class="primary-btn" id="saveTransactionBtn">
-                  Guardar movimiento
-                </button>
-                <button
-                  type="button"
-                  class="ghost-btn"
-                  id="cancelTransactionEditBtn"
-                  hidden
-                >
-                  Cancelar edición
-                </button>
-              </div>
-            </form>
-          </section>
-
-          <section class="panel insights-panel">
-            <div class="panel-header">
-              <div>
-                <p class="section-label">Lectura rápida</p>
-                <h3>Salud de caja</h3>
-              </div>
-              <span class="pill" id="healthPill">Sin datos</span>
-            </div>
-
-            <div class="kpi-stack">
-              <div>
-                <span>Gastos fijos detectados</span>
-                <strong id="recurringCount">0 movimientos</strong>
-              </div>
-              <div>
-                <span>Ticket promedio de ingreso</span>
-                <strong id="avgIncome">$0</strong>
-              </div>
-              <div>
-                <span>Categoría que más pesa</span>
-                <strong id="topCategory">Sin movimientos</strong>
-              </div>
-              <div>
-                <span>Compromiso próximos 30 días</span>
-                <strong id="nextCommitment">$0</strong>
-              </div>
-            </div>
-
-            <div class="mini-chart">
-              <div class="mini-chart-header">
-                <span>Distribución de egresos</span>
-                <small>Por categoría</small>
-              </div>
-              <div id="expenseBreakdown" class="breakdown-list"></div>
-            </div>
+              <button type="button" class="primary-btn" id="runScenarioBtn">Probar escenario</button>
+              <p class="scenario-result" id="scenarioResultText">
+                Simula una venta o un gasto y mira altiro el impacto.
+              </p>
+            </section>
           </section>
         </section>
 
-        <section class="panel transaction-panel" id="transactions">
-          <div class="panel-header panel-header-split">
-            <div>
-              <p class="section-label">Registro</p>
-              <h3>Movimientos del flujo de caja</h3>
-            </div>
-            <div class="filters">
-              <label>
-                Mes
-                <input type="month" id="monthFilter" />
-              </label>
-              <button id="exportExcelBtn" class="ghost-btn" type="button">
-                Descargar Excel
-              </button>
-              <button id="exportPdfBtn" class="ghost-btn" type="button">
-                Descargar PDF
-              </button>
-              <button id="resetDataBtn" class="ghost-btn" type="button">
-                Reiniciar en cero
-              </button>
-            </div>
-          </div>
-
-          <div class="table-wrap">
-            <table>
-              <thead>
-                <tr>
-                  <th>Fecha</th>
-                  <th>Concepto</th>
-                  <th>Categoría</th>
-                  <th>Método</th>
-                  <th>Nota</th>
-                  <th>Tipo</th>
-                  <th>Monto</th>
-                  <th>Acción</th>
-                </tr>
-              </thead>
-              <tbody id="transactionTableBody"></tbody>
-            </table>
-          </div>
-        </section>
-
-        <section class="ledger-grid">
-          <section class="panel" id="receivables">
-            <div class="panel-header">
+        <section class="app-page" id="detailPage" data-app-page="detail" hidden>
+          <section class="panel">
+            <div class="panel-header panel-header-split">
               <div>
-                <p class="section-label">Cobranza</p>
-                <h3>Cuentas por cobrar</h3>
+                <p class="section-label">Modo avanzado</p>
+                <h3>Detalle</h3>
               </div>
-              <span class="pill warn" id="receivablePill">0 pendientes</span>
+              <div class="detail-tabs">
+                <button type="button" class="detail-tab-btn is-active" data-detail-tab="summary">
+                  Resumen
+                </button>
+                <button type="button" class="detail-tab-btn" data-detail-tab="categories">
+                  Categorías
+                </button>
+                <button type="button" class="detail-tab-btn" data-detail-tab="history">
+                  Historial
+                </button>
+              </div>
             </div>
+          </section>
+
+          <section class="detail-tab-panel is-active" data-detail-panel="summary">
+            <section class="hero-panel">
+              <div class="hero-copy">
+                <p class="eyebrow">Resumen de plata</p>
+                <h2>Una vista más completa sin saturar el inicio.</h2>
+                <p id="detailSummaryCopy">
+                  Mira ingresos, gastos y compromisos del mes con más contexto.
+                </p>
+              </div>
+
+              <div class="hero-metrics">
+                <article class="metric">
+                  <span>Ingresos del mes</span>
+                  <strong id="incomeTotal">$0</strong>
+                </article>
+                <article class="metric">
+                  <span>Gastos del mes</span>
+                  <strong id="expenseTotal">$0</strong>
+                </article>
+                <article class="metric">
+                  <span>Por cobrar</span>
+                  <strong id="receivableTotal">$0</strong>
+                </article>
+                <article class="metric">
+                  <span>Por pagar</span>
+                  <strong id="payableTotal">$0</strong>
+                </article>
+                <article class="metric accent">
+                  <span>Cómo vas este mes</span>
+                  <strong id="netTotal">$0</strong>
+                </article>
+              </div>
+            </section>
+
+            <section class="panel insights-panel">
+              <div class="panel-header">
+                <div>
+                  <p class="section-label">Lectura rápida</p>
+                  <h3>Señales importantes</h3>
+                </div>
+                <span class="pill" id="healthPill">Sin datos</span>
+              </div>
+
+              <div class="kpi-stack">
+                <div>
+                  <span>Gastos fijos detectados</span>
+                  <strong id="recurringCount">0 movimientos</strong>
+                </div>
+                <div>
+                  <span>Ticket promedio de ingreso</span>
+                  <strong id="avgIncome">$0</strong>
+                </div>
+                <div>
+                  <span>Categoría que más pesa</span>
+                  <strong id="topCategory">Sin movimientos</strong>
+                </div>
+                <div>
+                  <span>Compromiso próximos 30 días</span>
+                  <strong id="nextCommitment">$0</strong>
+                </div>
+              </div>
+            </section>
+          </section>
+
+          <section class="detail-tab-panel" data-detail-panel="categories" hidden>
+            <section class="workspace-grid">
+              <section class="panel">
+                <div class="panel-header">
+                  <div>
+                    <p class="section-label">IVA y egresos</p>
+                    <h3>Categorías</h3>
+                  </div>
+                </div>
+
+                <div class="hero-metrics detail-tax-grid">
+                  <article class="metric">
+                    <span>IVA a pagar estimado</span>
+                    <strong id="monthlyVatTotal">$0</strong>
+                  </article>
+                  <article class="metric">
+                    <span>IVA a descontar estimado</span>
+                    <strong id="monthlyVatCreditTotal">$0</strong>
+                  </article>
+                </div>
+
+                <div class="mini-chart">
+                  <div class="mini-chart-header">
+                    <span>Distribución de gastos</span>
+                    <small>Por categoría</small>
+                  </div>
+                  <div id="expenseBreakdown" class="breakdown-list"></div>
+                </div>
+              </section>
+
+              <section class="panel transaction-panel" id="monthly-summary">
+                <div class="panel-header">
+                  <div>
+                    <p class="section-label">Vista mensual</p>
+                    <h3>Resumen por mes</h3>
+                  </div>
+                </div>
+
+                <div class="monthly-chart-wrap">
+                  <div class="mini-chart-header">
+                    <span>Gráfico mensual</span>
+                    <small>Ingresos, gastos y neto</small>
+                  </div>
+                  <div class="monthly-flow-chart" id="monthlyFlowChart"></div>
+                </div>
+
+                <div class="table-wrap">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Mes</th>
+                        <th>Ingresos</th>
+                        <th>Gastos</th>
+                        <th>Por cobrar</th>
+                        <th>Por pagar</th>
+                        <th>Resultado</th>
+                      </tr>
+                    </thead>
+                    <tbody id="monthlySummaryTableBody"></tbody>
+                  </table>
+                </div>
+              </section>
+            </section>
+          </section>
+
+          <section class="detail-tab-panel" data-detail-panel="history" hidden>
+            <section class="panel transaction-panel" id="transactions">
+              <div class="panel-header panel-header-split">
+                <div>
+                  <p class="section-label">Historial</p>
+                  <h3>Movimientos</h3>
+                </div>
+                <div class="filters">
+                  <label>
+                    Mes
+                    <input type="month" id="monthFilter" />
+                  </label>
+                  <button id="exportExcelBtn" class="ghost-btn" type="button">
+                    Descargar Excel
+                  </button>
+                  <button id="exportPdfBtn" class="ghost-btn" type="button">
+                    Descargar PDF
+                  </button>
+                  <button id="resetDataBtn" class="ghost-btn" type="button">
+                    Reiniciar en cero
+                  </button>
+                </div>
+              </div>
+
+              <div class="table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Fecha</th>
+                      <th>Concepto</th>
+                      <th>Categoría</th>
+                      <th>Método</th>
+                      <th>Nota</th>
+                      <th>Tipo</th>
+                      <th>Monto</th>
+                      <th>Acción</th>
+                    </tr>
+                  </thead>
+                  <tbody id="transactionTableBody"></tbody>
+                </table>
+              </div>
+            </section>
+
+            <section class="ledger-grid">
+              <section class="panel" id="receivables">
+                <div class="panel-header">
+                  <div>
+                    <p class="section-label">Cobranza</p>
+                    <h3>Cuentas por cobrar</h3>
+                  </div>
+                  <span class="pill warn" id="receivablePill">0 pendientes</span>
+                </div>
 
             <form id="receivableForm" class="transaction-form compact-form">
               <input type="hidden" name="receivableId" />
@@ -583,61 +659,115 @@
           </section>
         </section>
 
-        <section class="panel transaction-panel" id="monthly-summary">
-          <div class="panel-header">
-            <div>
-              <p class="section-label">Vista mensual</p>
-              <h3>Resumen por mes</h3>
-            </div>
-          </div>
-
-          <div class="monthly-chart-wrap">
-            <div class="mini-chart-header">
-              <span>Gráfico de flujo mensual</span>
-              <small>Ingresos, egresos y resultado</small>
-            </div>
-            <div class="monthly-flow-chart" id="monthlyFlowChart"></div>
-          </div>
-
-          <div class="table-wrap">
-            <table>
-              <thead>
-                <tr>
-                  <th>Mes</th>
-                  <th>Ingresos</th>
-                  <th>Egresos</th>
-                  <th>Por cobrar</th>
-                  <th>Por pagar</th>
-                  <th>Saldo proyectado</th>
-                </tr>
-              </thead>
-              <tbody id="monthlySummaryTableBody"></tbody>
-            </table>
-          </div>
-        </section>
-
-        <section class="forecast-grid" id="forecast">
-          <section class="panel forecast-panel">
-            <div class="panel-header">
-              <div>
-                <p class="section-label">Proyección</p>
-                <h3>Semáforo de las próximas 8 semanas</h3>
-              </div>
-            </div>
-            <div id="forecastList" class="forecast-list"></div>
-          </section>
-
-          <section class="panel tips-panel">
-            <div class="panel-header">
-              <div>
-                <p class="section-label">Decisión operativa</p>
-                <h3>Recomendaciones útiles</h3>
-              </div>
-            </div>
-            <ul id="tipsList" class="tips-list"></ul>
           </section>
         </section>
       </main>
+
+      <button type="button" class="floating-add-btn" id="openTransactionModalBtn">+</button>
+    </div>
+
+    <div class="transaction-modal" id="transactionModal" hidden>
+      <div class="transaction-modal-card" role="dialog" aria-modal="true" aria-labelledby="movementModalTitle">
+        <div class="transaction-modal-header">
+          <div>
+            <p class="section-label">Agregar movimiento</p>
+            <h3 id="movementModalTitle">Registra en 5 segundos</h3>
+          </div>
+          <button type="button" class="close-modal-btn" id="closeTransactionModalBtn">×</button>
+        </div>
+
+        <form id="transactionForm" class="transaction-form quick-movement-form">
+          <input type="hidden" name="transactionId" />
+
+          <label class="quick-amount-label">
+            Monto
+            <input
+              type="number"
+              name="amount"
+              min="0"
+              step="any"
+              placeholder="0"
+              inputmode="decimal"
+              class="quick-amount-input"
+              required
+            />
+          </label>
+
+          <label>
+            Tipo
+            <select name="type" class="quick-type-select" required>
+              <option value="income">Ingreso</option>
+              <option value="expense">Gasto</option>
+            </select>
+          </label>
+
+          <details class="movement-extra-details" id="movementExtraDetails">
+            <summary>Más detalles</summary>
+
+            <label>
+              Concepto
+              <input
+                type="text"
+                name="description"
+                placeholder="Ej. Venta Instagram"
+              />
+            </label>
+
+            <div class="form-row">
+              <label>
+                Categoría
+                <select name="category"></select>
+              </label>
+
+              <label>
+                Cuenta
+                <select name="channel">
+                  <option value="Transferencia">Transferencia</option>
+                  <option value="Efectivo">Efectivo</option>
+                  <option value="Tarjeta">Tarjeta</option>
+                  <option value="Mercado Pago">Mercado Pago</option>
+                </select>
+              </label>
+            </div>
+
+            <label>
+              Nota
+              <input
+                type="text"
+                name="note"
+                placeholder="Nota corta"
+                maxlength="120"
+              />
+            </label>
+
+            <div class="form-row">
+              <label>
+                Fecha
+                <input type="date" name="date" required />
+              </label>
+
+              <label class="checkbox-row quick-recurring-row">
+                <input type="checkbox" name="recurring" />
+                <span>Recurrente</span>
+              </label>
+            </div>
+          </details>
+
+          <p class="movement-impact-text" id="movementImpactText"></p>
+
+          <div class="form-actions">
+            <button type="submit" class="primary-btn" id="saveTransactionBtn">
+              Guardar movimiento
+            </button>
+            <button type="button" class="ghost-btn" id="repeatLastMovementBtn">
+              Repetir último
+            </button>
+            <button type="button" class="ghost-btn" id="cancelTransactionEditBtn" hidden>
+              Cancelar edición
+            </button>
+          </div>
+        </form>
+      </div>
     </div>
 
     <div class="reset-modal" id="resetConfirmModal" hidden>
