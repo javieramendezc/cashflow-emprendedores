@@ -1023,6 +1023,22 @@ function isHomeLearningState() {
   );
 }
 
+function isHomeOnboardingState() {
+  return state.data.transactions.length < UX_RULES.progressiveVisibility.projectionTransactions;
+}
+
+function getHomeViewState() {
+  if (state.appError) {
+    return "error";
+  }
+
+  if (isHomeOnboardingState()) {
+    return "onboarding";
+  }
+
+  return "normal";
+}
+
 function getWeeklySpendBudget(projectedBalance, cashFloor = 0) {
   const safeReserve = cashFloor > 0 ? cashFloor : 100000;
   return Math.max(0, Math.floor((projectedBalance - safeReserve) / 4 / 1000) * 1000);
@@ -1033,11 +1049,11 @@ function isProjectionCritical(projectedBalance) {
 }
 
 function isHomeRiskState(projectedBalance) {
-  return !isHomeLearningState() && isProjectionCritical(projectedBalance);
+  return !isHomeOnboardingState() && isProjectionCritical(projectedBalance);
 }
 
 function isHomePositiveState(health, projectedBalance) {
-  return !isHomeLearningState() && !isProjectionCritical(projectedBalance) && health?.tone === "ok";
+  return !isHomeOnboardingState() && !isProjectionCritical(projectedBalance) && health?.tone === "ok";
 }
 
 function buildHomeRiskCopy(criticalCashDate, projectedBalance) {
@@ -1457,6 +1473,9 @@ function render() {
   const liveTopCategory = findTopExpenseCategory(liveExpenses);
   const hasMovements = state.data.transactions.length > 0;
   const isLearningState = isHomeLearningState();
+  const homeViewState = getHomeViewState();
+  const isOnboardingState = homeViewState === "onboarding";
+  const isNormalState = homeViewState === "normal";
   const hasAnyData =
     hasMovements ||
     state.data.receivables.length > 0 ||
@@ -1484,9 +1503,8 @@ function render() {
         tone: "neutral",
         description: "Agrega tu primer movimiento para ver si te alcanza este mes.",
       };
-  const isRiskState = isHomeRiskState(projectedBalance);
-  const isPositiveState = isHomePositiveState(health, projectedBalance);
-  const hasAppError = state.appError;
+  const isRiskState = isNormalState && isHomeRiskState(projectedBalance);
+  const isPositiveState = isNormalState && isHomePositiveState(health, projectedBalance);
   const assistantMessage = createAdvice(
     liveIncomeTotal - liveExpenseTotal,
     liveRecurring.length,
@@ -1516,13 +1534,15 @@ function render() {
   }
   text(
     "#homeTodayHint",
-    isLearningState
-      ? "Aún estamos aprendiendo de tu dinero"
+    isOnboardingState
+      ? hasMovements
+        ? "Aún estamos aprendiendo de tu dinero"
+        : "Empieza agregando tu primer movimiento para ver tu situación real"
       : isRiskState
         ? "Te estás quedando sin dinero"
         : isPositiveState
           ? "Vas bien"
-      : hasMovements
+      : isNormalState && hasMovements
         ? currentBalance > 0
           ? "Hoy tienes disponible"
           : currentBalance < 0
@@ -1542,7 +1562,7 @@ function render() {
   text("#nextCommitment", formatCurrency(nextCommitment));
   text(
     "#adviceText",
-    isLearningState
+    isOnboardingState
       ? `Agrega ${
           UX_RULES.progressiveVisibility.projectionTransactions - state.data.transactions.length
         } movimiento${
@@ -1558,9 +1578,9 @@ function render() {
           "Agrega tu primer ingreso o gasto y te diré cuánto puedes mover esta semana."
   );
   if (homeProgressNote) {
-    homeProgressNote.hidden = !isLearningState;
-    homeProgressNote.textContent = isLearningState
-      ? `Llevas ${state.data.transactions.length} de ${UX_RULES.progressiveVisibility.projectionTransactions} movimientos`
+    homeProgressNote.hidden = !isOnboardingState;
+    homeProgressNote.textContent = isOnboardingState
+      ? `${state.data.transactions.length} de ${UX_RULES.progressiveVisibility.projectionTransactions} movimientos`
       : "";
   }
   text("#receivablePill", `${openReceivables.length} pendientes`);
@@ -1602,23 +1622,26 @@ function render() {
       }
     }
   }
-  homeErrorState.hidden = !hasAppError;
-  homeErrorHint.textContent = state.appErrorMessage || "Inténtalo de nuevo";
-  homeHeroPanel.hidden = hasAppError;
-  homeBalanceCard.classList.toggle("is-empty", !hasMovements);
-  homeBalanceCard.classList.toggle("is-learning", isLearningState);
+  homeErrorState.hidden = homeViewState !== "error";
+  if (homeErrorHint) {
+    homeErrorHint.hidden = true;
+    homeErrorHint.textContent = "";
+  }
+  homeHeroPanel.hidden = homeViewState === "error";
+  homeBalanceCard.classList.toggle("is-empty", !hasMovements && isOnboardingState);
+  homeBalanceCard.classList.toggle("is-learning", hasMovements && isOnboardingState);
   homeBalanceCard.classList.toggle("is-risk", isRiskState);
   homeBalanceCard.classList.toggle("is-ok", isPositiveState);
-  homeMonthEndCard.hidden = !hasMovements || isLearningState || isRiskState || hasAppError;
-  homeAdviceCard.hidden = !hasMovements || hasAppError;
-  homeAdviceCard.classList.toggle("is-learning", isLearningState);
+  homeMonthEndCard.hidden = homeViewState !== "normal";
+  homeAdviceCard.hidden = homeViewState !== "normal";
+  homeAdviceCard.classList.toggle("is-learning", isOnboardingState);
   homeAdviceCard.classList.toggle("is-risk", isRiskState);
   homeAdviceCard.classList.toggle("is-ok", isPositiveState);
-  homeQuickGrid.hidden = hasAppError;
-  homeTodayPanel.hidden = !hasMovements || isLearningState || isRiskState || hasAppError;
-  openTransactionModalBtn.hidden = hasAppError;
+  homeQuickGrid.hidden = homeViewState === "error";
+  homeTodayPanel.hidden = homeViewState !== "normal";
+  openTransactionModalBtn.hidden = homeViewState === "error";
   homeQuickGrid.classList.toggle("is-single", isLearningState);
-  quickExpenseBtn.hidden = isLearningState;
+  quickExpenseBtn.hidden = hasMovements && isOnboardingState;
   if (quickIncomeLabel) {
     quickIncomeLabel.textContent = !hasMovements
       ? "Agregar ingreso"
