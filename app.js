@@ -133,15 +133,20 @@ const bottomNavigation = document.querySelector(".bottom-navigation");
 const featureUnlockPanel = document.querySelector("#featureUnlockPanel");
 const featureUnlockList = document.querySelector("#featureUnlockList");
 const detailSummaryCopy = document.querySelector("#detailSummaryCopy");
+const homeBalanceCard = document.querySelector("#homeBalanceCard");
 const homeTodayCash = document.querySelector("#homeTodayCash");
 const homeTodayHint = document.querySelector("#homeTodayHint");
 const homeMonthEndCash = document.querySelector("#homeMonthEndCash");
 const homeMonthEndCard = document.querySelector("#homeMonthEndCard");
 const homeMonthEndHint = document.querySelector("#homeMonthEndHint");
 const homeMonthEndDot = document.querySelector("#homeMonthEndDot");
+const homeAdviceCard = document.querySelector("#homeAdviceCard");
+const homeTodayPanel = document.querySelector("#homeTodayPanel");
 const todayMovementList = document.querySelector("#todayMovementList");
 const quickIncomeBtn = document.querySelector("#quickIncomeBtn");
 const quickExpenseBtn = document.querySelector("#quickExpenseBtn");
+const quickIncomeLabel = document.querySelector("#quickIncomeLabel");
+const quickExpenseLabel = document.querySelector("#quickExpenseLabel");
 const quickTypeButtons = [...document.querySelectorAll("[data-quick-type]")];
 const openTransactionModalBtn = document.querySelector("#openTransactionModalBtn");
 const transactionModal = document.querySelector("#transactionModal");
@@ -1350,14 +1355,16 @@ function render() {
   text("#sidebarBalance", formatCurrency(currentBalance));
   text("#appHeaderCashValue", formatCurrency(currentBalance));
   text("#sidebarHealth", health.description);
-  text("#homeTodayCash", formatCurrency(currentBalance));
+  text("#homeTodayCash", hasAnyData ? formatCurrency(currentBalance) : "Aún no tienes datos");
   text(
     "#homeTodayHint",
-    currentBalance > 0
-      ? "Hoy tienes disponible"
-      : currentBalance < 0
-        ? "Hoy te falta plata"
-        : "Empieza registrando tu plata de hoy"
+    hasAnyData
+      ? currentBalance > 0
+        ? "Hoy tienes disponible"
+        : currentBalance < 0
+          ? "Hoy te falta plata"
+          : "Empieza registrando tu plata de hoy"
+      : "Empieza agregando tu primer movimiento para ver tu situación real"
   );
   text("#homeMonthEndCash", formatCurrency(projectedBalance));
   text("#projectionMonthEndValue", formatCurrency(projectedBalance));
@@ -1386,6 +1393,16 @@ function render() {
   homeMonthEndHint.textContent = getHomeHealthCopy(health);
   homeMonthEndDot.className = `home-month-dot ${health.tone}`;
   projectionStatusCard.className = `projection-status-card ${health.tone}`;
+  homeBalanceCard.classList.toggle("is-empty", !hasAnyData);
+  homeMonthEndCard.hidden = !hasAnyData;
+  homeAdviceCard.hidden = !hasAnyData;
+  homeTodayPanel.hidden = !hasAnyData;
+  if (quickIncomeLabel) {
+    quickIncomeLabel.textContent = hasAnyData ? "Ingreso" : "Agregar ingreso";
+  }
+  if (quickExpenseLabel) {
+    quickExpenseLabel.textContent = hasAnyData ? "Gasto" : "Agregar gasto";
+  }
   state.latestScenarioBalance = projectedBalance;
 
   applyCompanyLogo();

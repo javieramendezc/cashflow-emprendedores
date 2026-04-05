@@ -147,7 +147,7 @@
           data-component="HomeScreen"
         >
           <section class="home-hero-panel" data-ux-block data-ux-block-group="home">
-            <article class="home-balance-card" data-ux-focus="primary">
+            <article class="home-balance-card" id="homeBalanceCard" data-ux-focus="primary">
               <strong id="homeTodayCash">$0</strong>
               <small id="homeTodayHint">Hoy tienes disponible</small>
             </article>
@@ -169,6 +169,7 @@
 
             <article
               class="home-alert-card"
+              id="homeAdviceCard"
               data-ux-focus="secondary"
               data-component="InsightsPanel"
             >
@@ -178,16 +179,16 @@
 
           <section class="home-quick-grid" data-ux-block>
             <button type="button" class="quick-action-card income" id="quickIncomeBtn">
-              <span>+</span>
-              Ingreso
+              <span class="quick-action-icon">+</span>
+              <span class="quick-action-text" id="quickIncomeLabel">Ingreso</span>
             </button>
             <button type="button" class="quick-action-card expense" id="quickExpenseBtn">
-              <span>−</span>
-              Gasto
+              <span class="quick-action-icon">−</span>
+              <span class="quick-action-text" id="quickExpenseLabel">Gasto</span>
             </button>
           </section>
 
-          <section class="home-today-panel" data-ux-block>
+          <section class="home-today-panel" id="homeTodayPanel" data-ux-block>
             <div class="home-today-header">
               <p class="section-label" data-ux-copy>Hoy</p>
             </div>

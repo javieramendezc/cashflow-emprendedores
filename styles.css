@@ -529,6 +529,24 @@ body::before {
   color: var(--muted);
 }
 
+.home-balance-card.is-empty {
+  gap: 12px;
+  padding: 8px 0 2px;
+}
+
+.home-balance-card.is-empty strong {
+  max-width: 10ch;
+  font-size: clamp(2.2rem, 7vw, 3.1rem);
+  line-height: 1.02;
+  letter-spacing: -0.05em;
+}
+
+.home-balance-card.is-empty small {
+  max-width: 24ch;
+  font-size: 1rem;
+  line-height: 1.55;
+}
+
 .month-end-card.ok,
 .projection-status-card.ok {
   background: linear-gradient(180deg, var(--state-positive-surface), rgba(252, 250, 246, 0.9));
@@ -683,8 +701,13 @@ body::before {
   transition: transform 180ms ease, background 180ms ease, border-color 180ms ease;
 }
 
-.quick-action-card span {
+.quick-action-icon {
   font-size: 1.12rem;
+  line-height: 1;
+}
+
+.quick-action-text {
+  white-space: nowrap;
 }
 
 .quick-action-card:hover {
@@ -2184,6 +2207,10 @@ tbody tr:hover {
 
   .home-balance-card strong {
     font-size: clamp(3.4rem, 15vw, 4.6rem);
+  }
+
+  .home-balance-card.is-empty strong {
+    font-size: clamp(2rem, 10vw, 2.8rem);
   }
 
   .home-month-line {
