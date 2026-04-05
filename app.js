@@ -4,6 +4,7 @@ const SUPABASE_PUBLIC_KEY = "sb_publishable_-sACG1yR0TURwqX70-XwTA_1Q9QPJ0w";
 const SUPABASE_STATE_TABLE = "cashflow_user_data";
 const MAX_INVOICE_IMAGE_BYTES = 850 * 1024;
 const INVOICE_IMAGE_MAX_WIDTH = 1400;
+const APP_HEADER_TITLE = "Tu dinero";
 const UX_RULES = {
   maxMainBlocksPerScreen: 3,
   feedbackDurationMs: 2600,
@@ -934,19 +935,11 @@ function switchPage(pageName) {
     navLink.classList.toggle("is-active", navLink.dataset.pageTarget === pageName);
   });
 
-  appHeaderScreenTitle.textContent = getPageTitle(pageName);
+  if (appHeaderScreenTitle) {
+    appHeaderScreenTitle.textContent = APP_HEADER_TITLE;
+  }
 
   applyUXComponentRules();
-}
-
-function getPageTitle(pageName) {
-  const titles = {
-    home: "Inicio",
-    projection: "Proyección",
-    detail: "Detalle",
-  };
-
-  return titles[pageName] || "Inicio";
 }
 
 function switchDetailTab(tabName) {
