@@ -318,7 +318,7 @@ window.addEventListener("offline", () => {
   render();
 
   if (!wasOffline) {
-    showUXFeedback("Sin conexión. Seguimos guardando en este equipo.", "warn");
+    showUXFeedback("Sin conexión. Puedes seguir usando la app.", "warn");
   }
 });
 
@@ -1558,7 +1558,7 @@ function render() {
         connectionBanner.className = "app-connection-banner offline";
         connectionBannerTitle.textContent = "Sin conexión";
         connectionBannerText.textContent =
-          "Seguimos guardando en este equipo. Tus cambios se subirán cuando vuelva internet.";
+          "Puedes seguir usando la app. Guardaremos los cambios automáticamente.";
         connectionBannerBtn.hidden = true;
       } else if (state.syncingPending) {
         connectionBanner.className = "app-connection-banner syncing";
@@ -2140,7 +2140,7 @@ async function saveData() {
     render();
 
     if (!wasPending) {
-      showUXFeedback("Sin conexión. Tus cambios quedaron guardados aquí.", "warn");
+      showUXFeedback("Sin conexión. Tus cambios se guardarán automáticamente.", "warn");
     }
 
     return;
@@ -2159,7 +2159,7 @@ async function saveData() {
       render();
 
       if (!wasPending) {
-        showUXFeedback("Tus cambios quedaron guardados aquí y se subirán después.", "warn");
+        showUXFeedback("Tus cambios se guardaron aquí y se subirán después.", "warn");
       }
 
       return;
