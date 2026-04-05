@@ -54,6 +54,7 @@ const state = {
   filterMonth: currentMonth(),
   session: null,
   appError: false,
+  appErrorMessage: "",
   authMode: "signIn",
   activePage: "home",
   activeDetailTab: "summary",
@@ -340,7 +341,7 @@ companyLogoInput.addEventListener("change", async () => {
   }
 
   if (file.size > 500 * 1024) {
-    alert("El logo no puede superar 500 KB.");
+    showUXFeedback(getFriendlyErrorMessage("logo_size"), "warn");
     companyLogoInput.value = "";
     return;
   }
@@ -382,7 +383,7 @@ invoicePhotoInput.addEventListener("change", async () => {
   }
 
   if (!file.type.startsWith("image/")) {
-    alert("Sube una imagen de la factura en formato JPG, PNG o similar.");
+    showUXFeedback(getFriendlyErrorMessage("invoice_file_type"), "warn");
     invoicePhotoInput.value = "";
     return;
   }
@@ -399,7 +400,7 @@ invoicePhotoInput.addEventListener("change", async () => {
     updateInvoiceAttachmentPreview();
     setInvoiceReadStatus("Foto adjunta. Presiona “Leer factura” para intentar autocompletar datos.");
   } catch (error) {
-    alert(error.message || "No se pudo cargar la imagen de la factura.");
+    showUXFeedback(getFriendlyErrorMessage("invoice_image", error), "warn");
     state.payableInvoiceDraft = { image: "", ocrText: "" };
     invoicePhotoInput.value = "";
     updateInvoiceAttachmentPreview();
@@ -421,7 +422,7 @@ readInvoiceBtn.addEventListener("click", async () => {
   }
 
   if (!window.Tesseract?.recognize) {
-    setInvoiceReadStatus("No se pudo cargar el lector OCR. Revisa tu conexión y vuelve a intentar.");
+    setInvoiceReadStatus(getFriendlyErrorMessage("invoice_ocr_unavailable"));
     return;
   }
 
@@ -445,11 +446,7 @@ readInvoiceBtn.addEventListener("click", async () => {
         : "La lectura terminó, pero no pude detectar datos con confianza. Puedes completar el formulario manualmente."
     );
   } catch (error) {
-    setInvoiceReadStatus(
-      `No pude leer la factura automáticamente. Puedes registrarla manualmente. Detalle: ${
-        error.message || "OCR no disponible"
-      }`
-    );
+    setInvoiceReadStatus(getFriendlyErrorMessage("invoice_ocr_read", error));
   } finally {
     readInvoiceBtn.disabled = false;
     readInvoiceBtn.textContent = "Leer factura";
@@ -531,7 +528,7 @@ receivableForm.addEventListener("submit", async (event) => {
   const status = formData.get("status");
 
   if (status === "partial" && (partialAmount <= 0 || partialAmount >= amount)) {
-    alert("Si el estado es Abono parcial, el Abono debe ser mayor a 0 y menor que el monto total.");
+    showUXFeedback(getFriendlyErrorMessage("partial_amount"), "warn");
     return;
   }
 
@@ -580,7 +577,7 @@ payableForm.addEventListener("submit", async (event) => {
   const status = formData.get("status");
 
   if (status === "partial" && (partialAmount <= 0 || partialAmount >= amount)) {
-    alert("Si el estado es Abono parcial, el Abono debe ser mayor a 0 y menor que el monto total.");
+    showUXFeedback(getFriendlyErrorMessage("partial_amount"), "warn");
     return;
   }
 
@@ -820,7 +817,7 @@ async function handleAuthSubmit() {
   authSubmitBtn.disabled = false;
 
   if (authResponse.error) {
-    authMessage.textContent = authResponse.error.message;
+    authMessage.textContent = getFriendlyErrorMessage("auth", authResponse.error);
     return;
   }
 
@@ -842,6 +839,7 @@ async function handleAuthSubmit() {
 async function syncSessionView() {
   if (!state.session?.user) {
     state.appError = false;
+    state.appErrorMessage = "";
     switchPage("home");
     switchDetailTab("summary");
     appShell.hidden = true;
@@ -866,9 +864,11 @@ async function syncSessionView() {
   try {
     state.data = await loadData();
     state.appError = false;
+    state.appErrorMessage = "";
   } catch {
     state.data = cloneSeedState();
     state.appError = true;
+    state.appErrorMessage = getFriendlyErrorMessage("load_data");
   }
   state.filterMonth = currentMonth();
   monthFilter.value = state.filterMonth;
@@ -1513,7 +1513,7 @@ function render() {
   homeMonthEndDot.className = `home-month-dot ${health.tone}`;
   projectionStatusCard.className = `projection-status-card ${health.tone}`;
   homeErrorState.hidden = !hasAppError;
-  homeErrorHint.textContent = "Inténtalo de nuevo";
+  homeErrorHint.textContent = state.appErrorMessage || "Inténtalo de nuevo";
   homeHeroPanel.hidden = hasAppError;
   homeBalanceCard.classList.toggle("is-empty", !hasMovements);
   homeBalanceCard.classList.toggle("is-learning", isLearningState);
@@ -2037,6 +2037,7 @@ async function saveData() {
     await saveDataToSupabase(normalizedData);
   } catch (error) {
     console.warn("No se pudo sincronizar con Supabase:", error.message);
+    showUXFeedback(getFriendlyErrorMessage("save_sync", error), "warn");
   }
 }
 
@@ -2661,6 +2662,72 @@ function showUXFeedback(message, tone = "ok") {
   }, UX_RULES.feedbackDurationMs);
 }
 
+function getFriendlyErrorMessage(context, error) {
+  const rawMessage = String(error?.message || "").toLowerCase();
+
+  if (context === "auth") {
+    if (rawMessage.includes("invalid login credentials")) {
+      return "Revisa tu correo y tu clave, y vuelve a intentarlo.";
+    }
+
+    if (rawMessage.includes("email not confirmed")) {
+      return "Primero confirma tu correo y después vuelve a entrar.";
+    }
+
+    if (rawMessage.includes("user already registered")) {
+      return "Ese correo ya tiene cuenta. Prueba iniciando sesión.";
+    }
+
+    if (rawMessage.includes("password")) {
+      return "Tu clave debe tener al menos 6 caracteres.";
+    }
+
+    return "No pudimos entrar ahora. Inténtalo de nuevo.";
+  }
+
+  if (context === "logo_size") {
+    return "Ese logo es muy pesado. Súbelo más liviano.";
+  }
+
+  if (context === "invoice_file_type") {
+    return "Sube una foto de la factura en JPG, PNG o similar.";
+  }
+
+  if (context === "invoice_image") {
+    if (rawMessage.includes("pesada")) {
+      return "Esa foto es muy pesada. Súbela más liviana o recortada.";
+    }
+
+    return "No pudimos cargar esa foto. Prueba con otra imagen.";
+  }
+
+  if (context === "invoice_ocr_unavailable") {
+    return "No pude leer la factura ahora. Revisa tu conexión e inténtalo de nuevo.";
+  }
+
+  if (context === "invoice_ocr_read") {
+    return "No pude leer la factura automáticamente. Puedes completar los datos a mano.";
+  }
+
+  if (context === "partial_amount") {
+    return "Revisa el abono: debe ser mayor a 0 y menor que el monto total.";
+  }
+
+  if (context === "save_sync") {
+    return "No pudimos guardar en la nube ahora. Vuelve a intentarlo en un momento.";
+  }
+
+  if (context === "load_data") {
+    return "No pudimos cargar tu información ahora. Inténtalo de nuevo.";
+  }
+
+  if (context === "pdf_popup") {
+    return "No pude abrir el PDF. Activa las ventanas emergentes e inténtalo de nuevo.";
+  }
+
+  return "Ups, algo no funcionó. Inténtalo de nuevo.";
+}
+
 function fillReceivableForm(receivable) {
   receivableFields.receivableId.value = receivable.id;
   receivableFields.client.value = receivable.client;
@@ -3150,7 +3217,7 @@ function exportToPdf() {
   const reportWindow = window.open("", "_blank");
 
   if (!reportWindow) {
-    alert("Permite ventanas emergentes para generar el PDF.");
+    showUXFeedback(getFriendlyErrorMessage("pdf_popup"), "warn");
     return;
   }
 
