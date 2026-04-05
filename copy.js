@@ -1,8 +1,23 @@
 (() => {
+  /*
+   * ARCHIVO MAESTRO DE TEXTOS
+   *
+   * Edita aquí los textos visibles de la app.
+   * Regla simple:
+   * - Cambia solo el texto a la derecha de los ":".
+   * - No cambies los nombres de las claves, porque la app las usa para encontrar cada texto.
+   * - Los textos con {amount}, {count}, {month}, etc. se completan automáticamente.
+   *
+   * Ejemplo:
+   * spend: "Puedes gastar hasta {amount} esta semana"
+   */
   const APP_COPY = {
+    // General
     app: {
       documentTitle: "Flujo Claro | Tu dinero claro. Sin estrés.",
     },
+
+    // Acceso
     auth: {
       eyebrow: "Acceso privado",
       title: "Entra a Flujo Claro",
@@ -17,20 +32,28 @@
         switchToSignIn: "Ya tengo cuenta",
       },
     },
+
+    // Header fijo
     header: {
       title: "Tu dinero",
       logout: "Salir",
       closeSession: "Cerrar sesión",
     },
+
+    // Textos comunes reutilizados en varias pantallas
     common: {
       noMovements: "Sin movimientos",
       deleting: "Borrando...",
       acceptDelete: "Aceptar borrado",
     },
+
+    // Marca / identidad visual
     brand: {
       eyebrow: "Flujo claro",
       title: "Tu dinero claro. Sin estrés.",
     },
+
+    // Estado de conexión
     connection: {
       offline: {
         title: "Sin conexión",
@@ -46,6 +69,8 @@
         action: "Sincronizar",
       },
     },
+
+    // Pantalla principal: Inicio
     home: {
       error: {
         title: "Ups, algo no funcionó",
@@ -96,6 +121,8 @@
         invest: "Vas bien. Puedes invertir {amount} sin quedar bajo tu mínimo seguro.",
       },
     },
+
+    // Modal y feedback de movimientos
     movement: {
       titles: {
         deleted: "✔️ Movimiento eliminado",
@@ -117,11 +144,15 @@
       },
       save: "Guardar movimiento",
     },
+
+    // Formularios secundarios
     forms: {
       saveChanges: "Guardar cambios",
       receivableSave: "Registrar cuenta por cobrar",
       payableSave: "Registrar factura por pagar",
     },
+
+    // Mensajes cortos después de guardar, borrar o sincronizar
     feedback: {
       offlineShort: "Sin conexión. Puedes seguir usando la app.",
       offlineAutoSave: "Sin conexión. Tus cambios se guardarán automáticamente.",
@@ -140,6 +171,8 @@
       cashFloorOff: "Mínimo seguro desactivado.",
       cashFloorReady: "Mínimo seguro listo en {amount}.",
     },
+
+    // Pantalla de proyección y simulador
     projection: {
       empty: "Aún no hay movimientos para proyectar.",
       criticalDay: "Día {day}: te quedas bajo tu mínimo seguro de {amount}.",
@@ -149,6 +182,8 @@
         expense: "Si gastas",
       },
     },
+
+    // Facturas por pagar con foto / lectura automática
     invoice: {
       processingImage: "Procesando imagen...",
       photoReady: "Foto adjunta. Presiona “Leer factura” para intentar autocompletar datos.",
@@ -164,6 +199,8 @@
       replaceHint:
         "Esta factura ya tiene foto adjunta. Puedes reemplazarla o volver a leerla.",
     },
+
+    // Errores en lenguaje humano
     errors: {
       auth: {
         invalid: "Revisa tu correo y tu clave, y vuelve a intentarlo.",
@@ -185,12 +222,16 @@
       pdfPopup: "No pude abrir el PDF. Activa las ventanas emergentes e inténtalo de nuevo.",
       fallback: "No pudimos completar eso ahora. Inténtalo de nuevo.",
     },
+
+    // Estados de cuentas por cobrar / pagar
     statuses: {
       pending: "Pendiente",
       partial: "Abono parcial",
       scheduled: "Programada",
       paid: "Pagada",
     },
+
+    // Categorías del formulario de movimientos
     categories: {
       income: ["Ventas", "Servicios", "Inversión", "Otros ingresos"],
       expense: [
@@ -206,6 +247,8 @@
         "Otros gastos",
       ],
     },
+
+    // Estados de salud del dinero
     health: {
       labels: {
         risk: "No te alcanza",
@@ -226,6 +269,8 @@
         neutral: "Sin datos",
       },
     },
+
+    // Asistente financiero
     advice: {
       lowCash:
         "Te estás quedando sin caja. Prioriza cobrar y frenar gastos no urgentes esta semana.",
@@ -235,6 +280,8 @@
       recurring: "Puedes gastar hasta {amount} esta semana sin bajar tu mínimo seguro.",
       invest: "Vas bien. Puedes invertir {amount} sin quedar bajo tu mínimo seguro.",
     },
+
+    // Desbloqueo progresivo de funciones
     featureUnlocks: {
       projectionTitle: "Proyección",
       projectionOne: "Agrega {count} movimiento más y verás cómo cierras el mes.",
@@ -254,6 +301,8 @@
         "Ya abriste el detalle. Cuando uses movimientos recurrentes o tengas más uso, activaremos categorías y análisis más profundos.",
       summaryReady: "Mira ingresos, gastos y compromisos del mes con más contexto.",
     },
+
+    // Bloque de mínimo seguro
     cashFloor: {
       define: "Define tu mínimo seguro para activar alertas.",
       waiting: "Cuando cargues movimientos, te avisaré si bajas de tu mínimo seguro.",
@@ -261,6 +310,8 @@
       alertWeek: "Alerta: {label} baja a {amount}, bajo tu mínimo seguro.",
       safe: "Tu proyección se mantiene sobre tu mínimo seguro de {amount}.",
     },
+
+    // Recomendaciones útiles y alertas
     tips: {
       belowCashFloor:
         "Tu plata proyectada está bajo tu mínimo seguro de {amount}. Prioriza cobrar pendientes o frenar pagos no urgentes.",
@@ -284,6 +335,7 @@
     },
   };
 
+  // Estos textos se cargan automáticamente en elementos fijos del HTML.
   const STATIC_BINDINGS = {
     title: "app.documentTitle",
     ".auth-card .eyebrow": "auth.eyebrow",
@@ -310,18 +362,21 @@
     ".home-today-header .section-label": "home.todaySection",
   };
 
+  // Busca un texto dentro del objeto usando rutas tipo "home.today.available".
   function getValue(path) {
     return String(path || "")
       .split(".")
       .reduce((acc, key) => (acc && key in acc ? acc[key] : undefined), APP_COPY);
   }
 
+  // Reemplaza variables dinámicas como {amount}, {count}, {month}.
   function interpolate(template, vars = {}) {
     return String(template).replace(/\{(\w+)\}/g, (_, key) =>
       Object.prototype.hasOwnProperty.call(vars, key) ? String(vars[key]) : ""
     );
   }
 
+  // Devuelve un texto listo para mostrarse en pantalla.
   function copyText(path, vars = {}) {
     const value = getValue(path);
     if (typeof value !== "string") {
@@ -331,6 +386,7 @@
     return interpolate(value, vars);
   }
 
+  // Aplica textos fijos al cargar la app.
   function applyStaticCopy(root = document) {
     Object.entries(STATIC_BINDINGS).forEach(([selector, path]) => {
       const value = copyText(path);
