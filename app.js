@@ -8,6 +8,7 @@ const UX_RULES = {
   maxMainBlocksPerScreen: 3,
   feedbackDurationMs: 2400,
   feedbackExitMs: 220,
+  criticalProjectionAmount: 100000,
   progressiveVisibility: {
     projectionTransactions: 3,
     detailTransactions: 6,
@@ -969,11 +970,15 @@ function isHomeLearningState() {
   );
 }
 
-function isHomeRiskState(health) {
-  return !isHomeLearningState() && health?.tone === "risk";
+function isProjectionCritical(projectedBalance) {
+  return projectedBalance <= UX_RULES.criticalProjectionAmount;
 }
 
-function buildHomeRiskCopy(criticalCashDate) {
+function isHomeRiskState(projectedBalance) {
+  return !isHomeLearningState() && isProjectionCritical(projectedBalance);
+}
+
+function buildHomeRiskCopy(criticalCashDate, projectedBalance) {
   if (criticalCashDate) {
     const days = daysUntil(criticalCashDate);
 
@@ -984,7 +989,11 @@ function buildHomeRiskCopy(criticalCashDate) {
     return `En ${days} día${days === 1 ? "" : "s"} podrías tener problemas`;
   }
 
-  return "Podrías tener problemas si no ajustas tus gastos pronto";
+  if (projectedBalance <= 0) {
+    return "Si sigues así, podrías quedarte sin dinero este mes";
+  }
+
+  return "Si sigues así, podrías quedarte sin dinero muy pronto";
 }
 
 function renderMoneyCurveChart(currentBalance, cashFloor) {
@@ -1368,7 +1377,7 @@ function render() {
         tone: "neutral",
         description: "Agrega tu primer movimiento para ver si te alcanza este mes.",
       };
-  const isRiskState = isHomeRiskState(health);
+  const isRiskState = isHomeRiskState(projectedBalance);
   const assistantMessage = createAdvice(
     liveIncomeTotal - liveExpenseTotal,
     liveRecurring.length,
@@ -1427,7 +1436,7 @@ function render() {
             : "s"
         } más para ver tu proyección`
       : isRiskState
-        ? buildHomeRiskCopy(criticalCashDate)
+        ? buildHomeRiskCopy(criticalCashDate, projectedBalance)
       : assistantMessage ||
           "Agrega tu primer ingreso o gasto y te diré cuánto puedes mover esta semana."
   );
