@@ -539,6 +539,11 @@ body::before {
   padding: 4px 0 0;
 }
 
+.home-balance-card.is-ok {
+  gap: 12px;
+  padding: 4px 0 0;
+}
+
 .home-balance-card.is-risk {
   gap: 12px;
   padding: 4px 0 0;
@@ -562,6 +567,14 @@ body::before {
   font-size: 1.02rem;
   line-height: 1.55;
   color: var(--ink);
+}
+
+.home-balance-card.is-ok small {
+  max-width: 24ch;
+  font-size: 1.02rem;
+  line-height: 1.55;
+  color: var(--state-positive);
+  font-weight: 800;
 }
 
 .home-balance-card.is-risk small {
@@ -708,6 +721,11 @@ body::before {
 .home-alert-card.is-learning p {
   max-width: 28ch;
   color: var(--muted);
+}
+
+.home-alert-card.is-ok p {
+  max-width: 28ch;
+  color: var(--ink);
 }
 
 .home-alert-card.is-risk p {

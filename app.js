@@ -970,12 +970,21 @@ function isHomeLearningState() {
   );
 }
 
+function getWeeklySpendBudget(projectedBalance, cashFloor = 0) {
+  const safeReserve = cashFloor > 0 ? cashFloor : 100000;
+  return Math.max(0, Math.floor((projectedBalance - safeReserve) / 4 / 1000) * 1000);
+}
+
 function isProjectionCritical(projectedBalance) {
   return projectedBalance <= UX_RULES.criticalProjectionAmount;
 }
 
 function isHomeRiskState(projectedBalance) {
   return !isHomeLearningState() && isProjectionCritical(projectedBalance);
+}
+
+function isHomePositiveState(health, projectedBalance) {
+  return !isHomeLearningState() && !isProjectionCritical(projectedBalance) && health?.tone === "ok";
 }
 
 function buildHomeRiskCopy(criticalCashDate, projectedBalance) {
@@ -994,6 +1003,16 @@ function buildHomeRiskCopy(criticalCashDate, projectedBalance) {
   }
 
   return "Si sigues así, podrías quedarte sin dinero muy pronto";
+}
+
+function buildHomePositiveCopy(projectedBalance, cashFloor) {
+  const weeklySpend = getWeeklySpendBudget(projectedBalance, cashFloor);
+
+  if (!weeklySpend) {
+    return "Esta semana conviene gastar con calma para mantener tu margen.";
+  }
+
+  return `Puedes gastar hasta ${formatCurrency(weeklySpend)} esta semana`;
 }
 
 function renderMoneyCurveChart(currentBalance, cashFloor) {
@@ -1378,6 +1397,7 @@ function render() {
         description: "Agrega tu primer movimiento para ver si te alcanza este mes.",
       };
   const isRiskState = isHomeRiskState(projectedBalance);
+  const isPositiveState = isHomePositiveState(health, projectedBalance);
   const assistantMessage = createAdvice(
     liveIncomeTotal - liveExpenseTotal,
     liveRecurring.length,
@@ -1407,6 +1427,8 @@ function render() {
       ? "Aún estamos aprendiendo de tu dinero"
       : isRiskState
         ? "Te estás quedando sin dinero"
+        : isPositiveState
+          ? "Vas bien"
       : hasMovements
         ? currentBalance > 0
           ? "Hoy tienes disponible"
@@ -1437,6 +1459,8 @@ function render() {
         } más para ver tu proyección`
       : isRiskState
         ? buildHomeRiskCopy(criticalCashDate, projectedBalance)
+        : isPositiveState
+          ? buildHomePositiveCopy(projectedBalance, cashFloor)
       : assistantMessage ||
           "Agrega tu primer ingreso o gasto y te diré cuánto puedes mover esta semana."
   );
@@ -1462,10 +1486,12 @@ function render() {
   homeBalanceCard.classList.toggle("is-empty", !hasMovements);
   homeBalanceCard.classList.toggle("is-learning", isLearningState);
   homeBalanceCard.classList.toggle("is-risk", isRiskState);
+  homeBalanceCard.classList.toggle("is-ok", isPositiveState);
   homeMonthEndCard.hidden = !hasMovements || isLearningState || isRiskState;
   homeAdviceCard.hidden = !hasMovements;
   homeAdviceCard.classList.toggle("is-learning", isLearningState);
   homeAdviceCard.classList.toggle("is-risk", isRiskState);
+  homeAdviceCard.classList.toggle("is-ok", isPositiveState);
   homeTodayPanel.hidden = !hasMovements || isLearningState || isRiskState;
   homeQuickGrid.classList.toggle("is-single", isLearningState);
   quickExpenseBtn.hidden = isLearningState;
@@ -2064,10 +2090,7 @@ function createAdvice(
   }
 
   const safeReserve = cashFloor > 0 ? cashFloor : 100000;
-  const weeklySpend = Math.max(
-    0,
-    Math.floor((projectedBalance - safeReserve) / 4 / 1000) * 1000
-  );
+  const weeklySpend = getWeeklySpendBudget(projectedBalance, cashFloor);
 
   if (projectedBalance <= safeReserve || lowCashWeek) {
     return "Te estás quedando sin caja. Prioriza cobrar y frenar gastos no urgentes esta semana.";
