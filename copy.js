@@ -10,6 +10,39 @@
    *
    * Ejemplo:
    * spend: "Puedes gastar hasta {amount} esta semana"
+   *
+   * TEXTOS MAS USADOS
+   *
+   * HOME
+   * - APP_COPY.home.emptyTitle
+   * - APP_COPY.home.today.available
+   * - APP_COPY.home.today.learning
+   * - APP_COPY.home.today.risk
+   * - APP_COPY.home.today.positive
+   * - APP_COPY.home.monthEnd.label
+   * - APP_COPY.home.advice.initial
+   *
+   * BOTONES
+   * - APP_COPY.home.quick.income
+   * - APP_COPY.home.quick.expense
+   * - APP_COPY.home.quick.addIncome
+   * - APP_COPY.home.quick.addExpense
+   * - APP_COPY.movement.save
+   * - APP_COPY.forms.saveChanges
+   *
+   * ERRORES
+   * - APP_COPY.home.error.title
+   * - APP_COPY.home.error.retry
+   * - APP_COPY.errors.auth.invalid
+   * - APP_COPY.errors.loadData
+   * - APP_COPY.errors.fallback
+   *
+   * FEEDBACK
+   * - APP_COPY.movement.titles.income
+   * - APP_COPY.movement.titles.expense
+   * - APP_COPY.movement.impact.remaining
+   * - APP_COPY.feedback.synced
+   * - APP_COPY.feedback.savedLocal
    */
   const APP_COPY = {
     // General
