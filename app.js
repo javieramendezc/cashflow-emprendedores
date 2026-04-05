@@ -969,6 +969,24 @@ function isHomeLearningState() {
   );
 }
 
+function isHomeRiskState(health) {
+  return !isHomeLearningState() && health?.tone === "risk";
+}
+
+function buildHomeRiskCopy(criticalCashDate) {
+  if (criticalCashDate) {
+    const days = daysUntil(criticalCashDate);
+
+    if (days <= 0) {
+      return "Hoy podrías tener problemas";
+    }
+
+    return `En ${days} día${days === 1 ? "" : "s"} podrías tener problemas`;
+  }
+
+  return "Podrías tener problemas si no ajustas tus gastos pronto";
+}
+
 function renderMoneyCurveChart(currentBalance, cashFloor) {
   const points = buildMoneyCurvePoints(currentBalance, cashFloor);
   const width = 640;
@@ -1350,6 +1368,7 @@ function render() {
         tone: "neutral",
         description: "Agrega tu primer movimiento para ver si te alcanza este mes.",
       };
+  const isRiskState = isHomeRiskState(health);
   const assistantMessage = createAdvice(
     liveIncomeTotal - liveExpenseTotal,
     liveRecurring.length,
@@ -1377,13 +1396,15 @@ function render() {
     "#homeTodayHint",
     isLearningState
       ? "Aún estamos aprendiendo de tu dinero"
+      : isRiskState
+        ? "Te estás quedando sin dinero"
       : hasMovements
-      ? currentBalance > 0
-        ? "Hoy tienes disponible"
-        : currentBalance < 0
-          ? "Hoy te falta plata"
-          : "Empieza registrando tu plata de hoy"
-      : "Empieza agregando tu primer movimiento para ver tu situación real"
+        ? currentBalance > 0
+          ? "Hoy tienes disponible"
+          : currentBalance < 0
+            ? "Hoy te falta plata"
+            : "Empieza registrando tu plata de hoy"
+        : "Empieza agregando tu primer movimiento para ver tu situación real"
   );
   text("#homeMonthEndCash", formatCurrency(projectedBalance));
   text("#projectionMonthEndValue", formatCurrency(projectedBalance));
@@ -1405,6 +1426,8 @@ function render() {
             ? ""
             : "s"
         } más para ver tu proyección`
+      : isRiskState
+        ? buildHomeRiskCopy(criticalCashDate)
       : assistantMessage ||
           "Agrega tu primer ingreso o gasto y te diré cuánto puedes mover esta semana."
   );
@@ -1429,10 +1452,12 @@ function render() {
   projectionStatusCard.className = `projection-status-card ${health.tone}`;
   homeBalanceCard.classList.toggle("is-empty", !hasMovements);
   homeBalanceCard.classList.toggle("is-learning", isLearningState);
-  homeMonthEndCard.hidden = !hasMovements || isLearningState;
+  homeBalanceCard.classList.toggle("is-risk", isRiskState);
+  homeMonthEndCard.hidden = !hasMovements || isLearningState || isRiskState;
   homeAdviceCard.hidden = !hasMovements;
   homeAdviceCard.classList.toggle("is-learning", isLearningState);
-  homeTodayPanel.hidden = !hasMovements || isLearningState;
+  homeAdviceCard.classList.toggle("is-risk", isRiskState);
+  homeTodayPanel.hidden = !hasMovements || isLearningState || isRiskState;
   homeQuickGrid.classList.toggle("is-single", isLearningState);
   quickExpenseBtn.hidden = isLearningState;
   if (quickIncomeLabel) {
