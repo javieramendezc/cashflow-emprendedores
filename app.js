@@ -1009,10 +1009,10 @@ function buildHomePositiveCopy(projectedBalance, cashFloor) {
   const weeklySpend = getWeeklySpendBudget(projectedBalance, cashFloor);
 
   if (!weeklySpend) {
-    return "Esta semana conviene gastar con calma para mantener tu margen.";
+    return "Vas bien. Mantén ese margen esta semana.";
   }
 
-  return `Puedes gastar hasta ${formatCurrency(weeklySpend)} esta semana`;
+  return `Vas bien, puedes gastar hasta ${formatCurrency(weeklySpend)} esta semana`;
 }
 
 function renderMoneyCurveChart(currentBalance, cashFloor) {

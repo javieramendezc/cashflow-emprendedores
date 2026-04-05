@@ -725,7 +725,7 @@ body::before {
 
 .home-alert-card.is-ok p {
   max-width: 28ch;
-  color: var(--ink);
+  color: var(--state-positive);
 }
 
 .home-alert-card.is-risk p {
