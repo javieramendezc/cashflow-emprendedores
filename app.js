@@ -4,6 +4,9 @@ const SUPABASE_PUBLIC_KEY = "sb_publishable_-sACG1yR0TURwqX70-XwTA_1Q9QPJ0w";
 const SUPABASE_STATE_TABLE = "cashflow_user_data";
 const MAX_INVOICE_IMAGE_BYTES = 850 * 1024;
 const INVOICE_IMAGE_MAX_WIDTH = 1400;
+const copyText = window.copyText || ((path) => String(path || ""));
+const copyValue = window.copyValue || (() => undefined);
+const applyStaticCopy = window.applyStaticCopy || (() => {});
 const UX_RULES = {
   maxMainBlocksPerScreen: 3,
   feedbackDurationMs: 2600,
@@ -23,7 +26,7 @@ const UX_RULES = {
   ],
 };
 
-const categoryMap = {
+const categoryMap = copyValue("categories") || {
   income: ["Ventas", "Servicios", "Inversión", "Otros ingresos"],
   expense: [
     "Insumos",
@@ -211,6 +214,8 @@ const uxToast = document.querySelector("#uxToast");
 let uxToastTimer = null;
 let uxToastHideTimer = null;
 
+applyStaticCopy();
+
 transactionFields.date.value = today();
 receivableFields.issueDate.value = today();
 receivableFields.dueDate.value = addDays(10);
@@ -264,8 +269,14 @@ toggleAuthModeBtn.addEventListener("click", () => {
   state.authMode = state.authMode === "signIn" ? "signUp" : "signIn";
   authMessage.textContent = "";
   authMessage.classList.remove("success");
-  authSubmitBtn.textContent = state.authMode === "signIn" ? "Iniciar sesión" : "Crear cuenta";
-  toggleAuthModeBtn.textContent = state.authMode === "signIn" ? "Crear cuenta" : "Ya tengo cuenta";
+  authSubmitBtn.textContent =
+    state.authMode === "signIn"
+      ? copyText("auth.actions.signIn")
+      : copyText("auth.actions.signUp");
+  toggleAuthModeBtn.textContent =
+    state.authMode === "signIn"
+      ? copyText("auth.actions.switchToSignUp")
+      : copyText("auth.actions.switchToSignIn");
 });
 
 logoutBtn.addEventListener("click", async () => {
@@ -303,13 +314,13 @@ retryHomeBtn.addEventListener("click", async () => {
   }
 
   retryHomeBtn.disabled = true;
-  retryHomeBtn.textContent = "Reintentando...";
+  retryHomeBtn.textContent = copyText("home.error.retrying");
 
   try {
     await syncSessionView();
   } finally {
     retryHomeBtn.disabled = false;
-    retryHomeBtn.textContent = "Reintentar";
+    retryHomeBtn.textContent = copyText("home.error.retry");
   }
 });
 
@@ -319,7 +330,7 @@ window.addEventListener("offline", () => {
   render();
 
   if (!wasOffline) {
-    showUXFeedback("Sin conexión. Puedes seguir usando la app.", "warn");
+    showUXFeedback(copyText("feedback.offlineShort"), "warn");
   }
 });
 
@@ -343,7 +354,7 @@ repeatLastMovementBtn.addEventListener("click", () => {
   const lastTransaction = state.data.transactions[0];
 
   if (!lastTransaction) {
-    movementImpactText.textContent = "Todavía no hay un movimiento anterior para repetir.";
+    movementImpactText.textContent = copyText("movement.repeat.empty");
     return;
   }
 
@@ -378,14 +389,14 @@ companyLogoInput.addEventListener("change", async () => {
   companyLogoInput.value = "";
   await saveData();
   applyCompanyLogo();
-  showUXFeedback("Logo actualizado.", "ok");
+  showUXFeedback(copyText("feedback.logoUpdated"), "ok");
 });
 
 removeLogoBtn.addEventListener("click", async () => {
   state.data.companyLogo = "";
   await saveData();
   applyCompanyLogo();
-  showUXFeedback("Logo quitado.", "warn");
+  showUXFeedback(copyText("feedback.logoRemoved"), "warn");
 });
 
 cashFloorInput.addEventListener("change", async (event) => {
@@ -417,7 +428,7 @@ invoicePhotoInput.addEventListener("change", async () => {
   }
 
   try {
-    setInvoiceReadStatus("Procesando imagen...");
+    setInvoiceReadStatus(copyText("invoice.processingImage"));
     state.payableInvoiceDraft.image = await resizeImageToDataUrl(
       file,
       INVOICE_IMAGE_MAX_WIDTH,
@@ -426,13 +437,13 @@ invoicePhotoInput.addEventListener("change", async () => {
     state.payableInvoiceDraft.ocrText = "";
     invoicePhotoInput.value = "";
     updateInvoiceAttachmentPreview();
-    setInvoiceReadStatus("Foto adjunta. Presiona “Leer factura” para intentar autocompletar datos.");
+    setInvoiceReadStatus(copyText("invoice.photoReady"));
   } catch (error) {
     showUXFeedback(getFriendlyErrorMessage("invoice_image", error), "warn");
     state.payableInvoiceDraft = { image: "", ocrText: "" };
     invoicePhotoInput.value = "";
     updateInvoiceAttachmentPreview();
-    setInvoiceReadStatus("Sube una foto nítida y presiona “Leer factura”.");
+    setInvoiceReadStatus(copyText("invoice.uploadHint"));
   }
 });
 
@@ -440,12 +451,12 @@ removeInvoicePhotoBtn.addEventListener("click", () => {
   state.payableInvoiceDraft = { image: "", ocrText: "" };
   invoicePhotoInput.value = "";
   updateInvoiceAttachmentPreview();
-  setInvoiceReadStatus("Sube una foto nítida y presiona “Leer factura”.");
+  setInvoiceReadStatus(copyText("invoice.uploadHint"));
 });
 
 readInvoiceBtn.addEventListener("click", async () => {
   if (!state.payableInvoiceDraft.image) {
-    setInvoiceReadStatus("Primero sube una foto de la factura.");
+    setInvoiceReadStatus(copyText("invoice.uploadFirst"));
     return;
   }
 
@@ -455,8 +466,8 @@ readInvoiceBtn.addEventListener("click", async () => {
   }
 
   readInvoiceBtn.disabled = true;
-  readInvoiceBtn.textContent = "Leyendo...";
-  setInvoiceReadStatus("Leyendo la factura, puede tardar algunos segundos...");
+  readInvoiceBtn.textContent = copyText("invoice.readingButton");
+  setInvoiceReadStatus(copyText("invoice.readingStatus"));
 
   try {
     const {
@@ -470,14 +481,17 @@ readInvoiceBtn.addEventListener("click", async () => {
     const filledFields = Object.values(extractedData).filter(Boolean).length;
     setInvoiceReadStatus(
       filledFields
-        ? `Lectura lista: completé ${filledFields} dato${filledFields === 1 ? "" : "s"}. Revisa antes de registrar.`
-        : "La lectura terminó, pero no pude detectar datos con confianza. Puedes completar el formulario manualmente."
+        ? copyText(
+            filledFields === 1 ? "invoice.readSuccessOne" : "invoice.readSuccessMany",
+            { count: filledFields }
+          )
+        : copyText("invoice.readLowConfidence")
     );
   } catch (error) {
     setInvoiceReadStatus(getFriendlyErrorMessage("invoice_ocr_read", error));
   } finally {
     readInvoiceBtn.disabled = false;
-    readInvoiceBtn.textContent = "Leer factura";
+    readInvoiceBtn.textContent = copyText("invoice.readButton");
   }
 });
 
@@ -536,7 +550,7 @@ transactionForm.addEventListener("submit", async (event) => {
   transactionFields.date.value = today();
   transactionFields.recurring.checked = false;
   movementExtraDetails.open = false;
-  saveTransactionBtn.textContent = "Guardar movimiento";
+  saveTransactionBtn.textContent = copyText("movement.save");
   cancelTransactionEditBtn.hidden = true;
   movementImpactText.textContent = impactCopy;
   const feedback = createMovementFeedback(transaction.date.slice(0, 7), "saved", transaction.type);
@@ -587,7 +601,7 @@ receivableForm.addEventListener("submit", async (event) => {
   resetReceivableForm();
   render();
   const receivableFeedback = createActionFeedback(
-    isEditing ? "Cuenta por cobrar actualizada." : "Cuenta por cobrar guardada.",
+    copyText(isEditing ? "feedback.receivableUpdated" : "feedback.receivableSaved"),
     receivable.dueDate.slice(0, 7)
   );
   showUXFeedback(receivableFeedback.message, receivableFeedback.tone);
@@ -638,7 +652,7 @@ payableForm.addEventListener("submit", async (event) => {
   resetPayableForm();
   render();
   const payableFeedback = createActionFeedback(
-    isEditing ? "Factura por pagar actualizada." : "Factura por pagar guardada.",
+    copyText(isEditing ? "feedback.payableUpdated" : "feedback.payableSaved"),
     payable.dueDate.slice(0, 7)
   );
   showUXFeedback(payableFeedback.message, payableFeedback.tone);
@@ -715,7 +729,7 @@ receivableTableBody.addEventListener("click", async (event) => {
   resetReceivableForm();
   render();
   const receivableFeedback = createActionFeedback(
-    "Cuenta por cobrar borrada.",
+    copyText("feedback.receivableDeleted"),
     deletedReceivable?.dueDate?.slice(0, 7) || currentMonth()
   );
   showUXFeedback(receivableFeedback.message, receivableFeedback.tone);
@@ -750,7 +764,7 @@ payableTableBody.addEventListener("click", async (event) => {
   resetPayableForm();
   render();
   const payableFeedback = createActionFeedback(
-    "Factura por pagar borrada.",
+    copyText("feedback.payableDeleted"),
     deletedPayable?.dueDate?.slice(0, 7) || currentMonth()
   );
   showUXFeedback(payableFeedback.message, payableFeedback.tone);
@@ -792,7 +806,7 @@ resetConfirmModal.addEventListener("click", (event) => {
 
 confirmResetModalBtn.addEventListener("click", async () => {
   confirmResetModalBtn.disabled = true;
-  confirmResetModalBtn.textContent = "Borrando...";
+  confirmResetModalBtn.textContent = copyText("common.deleting");
   state.data = cloneSeedState();
   state.filterMonth = currentMonth();
   monthFilter.value = state.filterMonth;
@@ -803,9 +817,9 @@ confirmResetModalBtn.addEventListener("click", async () => {
   resetPayableForm();
   resetConfirmModal.hidden = true;
   confirmResetModalBtn.disabled = false;
-  confirmResetModalBtn.textContent = "Aceptar borrado";
+  confirmResetModalBtn.textContent = copyText("common.acceptDelete");
   render();
-  showUXFeedback("Todo quedó en cero.", "risk");
+  showUXFeedback(copyText("feedback.resetDone"), "risk");
 });
 
 async function initializeAuth() {
@@ -834,7 +848,7 @@ async function handleAuthSubmit() {
 
   authSubmitBtn.disabled = true;
   authMessage.classList.remove("success");
-  authMessage.textContent = "Procesando...";
+  authMessage.textContent = copyText("auth.processing");
 
   const authResponse =
     state.authMode === "signIn"
@@ -850,11 +864,10 @@ async function handleAuthSubmit() {
 
   if (state.authMode === "signUp" && !authResponse.data.session) {
     authMessage.classList.add("success");
-    authMessage.textContent =
-      "Cuenta creada. Revisa tu correo si Supabase pide confirmación y luego inicia sesión.";
+    authMessage.textContent = copyText("auth.signUpSuccess");
     state.authMode = "signIn";
-    authSubmitBtn.textContent = "Iniciar sesión";
-    toggleAuthModeBtn.textContent = "Crear cuenta";
+    authSubmitBtn.textContent = copyText("auth.actions.signIn");
+    toggleAuthModeBtn.textContent = copyText("auth.actions.switchToSignUp");
     authForm.reset();
     return;
   }
@@ -973,7 +986,7 @@ function openTransactionModal(preferredType = "", options = {}) {
     transactionFields.recurring.checked = false;
     movementExtraDetails.open = false;
     movementImpactText.textContent = "";
-    saveTransactionBtn.textContent = "Guardar movimiento";
+    saveTransactionBtn.textContent = copyText("movement.save");
     cancelTransactionEditBtn.hidden = true;
   }
 
@@ -1061,27 +1074,29 @@ function buildHomeRiskCopy(criticalCashDate, projectedBalance) {
     const days = daysUntil(criticalCashDate);
 
     if (days <= 0) {
-      return "Hoy podrías tener problemas";
+      return copyText("home.risk.today");
     }
 
-    return `En ${days} día${days === 1 ? "" : "s"} podrías tener problemas`;
+    return copyText(days === 1 ? "home.risk.inDays" : "home.risk.inManyDays", {
+      count: days,
+    });
   }
 
   if (projectedBalance <= 0) {
-    return "Si sigues así, podrías quedarte sin dinero este mes";
+    return copyText("home.risk.month");
   }
 
-  return "Si sigues así, podrías quedarte sin dinero muy pronto";
+  return copyText("home.risk.soon");
 }
 
 function buildHomePositiveCopy(projectedBalance, cashFloor) {
   const weeklySpend = getWeeklySpendBudget(projectedBalance, cashFloor);
 
   if (!weeklySpend) {
-    return "Vas bien. Mantén ese margen esta semana.";
+    return copyText("home.positive.hold");
   }
 
-  return `Vas bien, puedes gastar hasta ${formatCurrency(weeklySpend)} esta semana`;
+  return copyText("home.positive.spend", { amount: formatCurrency(weeklySpend) });
 }
 
 function renderMoneyCurveChart(currentBalance, cashFloor) {
@@ -1236,11 +1251,14 @@ function findCriticalCashDate(currentBalance, cashFloor) {
 
 function buildProjectionAlertCopy(hasAnyData, fallbackDescription, criticalCashDate, cashFloor) {
   if (!hasAnyData) {
-    return "Aún no hay movimientos para proyectar.";
+    return copyText("projection.empty");
   }
 
   if (criticalCashDate) {
-    return `Día ${Number(criticalCashDate.slice(8, 10))}: te quedas bajo tu mínimo seguro de ${formatCurrency(cashFloor)}.`;
+    return copyText("projection.criticalDay", {
+      day: Number(criticalCashDate.slice(8, 10)),
+      amount: formatCurrency(cashFloor),
+    });
   }
 
   return fallbackDescription;
@@ -1250,14 +1268,16 @@ function renderScenarioResult() {
   const scenarioDelta = Number(scenarioAmount.value) || 0;
   if (!scenarioDelta) {
     scenarioResultText.className = "scenario-result";
-    scenarioResultText.textContent = "Ingresa un monto para simular una venta o un gasto.";
+    scenarioResultText.textContent = copyText("projection.scenarioPrompt");
     return;
   }
 
   const sign = scenarioType.value === "income" ? 1 : -1;
   const simulatedBalance = state.latestScenarioBalance + scenarioDelta * sign;
   const tone = getForecastTone(simulatedBalance, Number(state.data.cashFloor) || 0);
-  const scenarioLabel = scenarioType.value === "income" ? "Si vendes" : "Si gastas";
+  const scenarioLabel = copyText(
+    scenarioType.value === "income" ? "projection.scenario.income" : "projection.scenario.expense"
+  );
 
   scenarioResultText.className = `scenario-result ${tone}`;
   scenarioResultText.textContent = `${scenarioLabel} ${formatCurrency(
@@ -1283,7 +1303,7 @@ function updateMovementImpactPreview() {
 
 function createMovementImpactMessage(targetMonth = currentMonth()) {
   if (targetMonth !== currentMonth()) {
-    return `Quedó guardado para ${formatMonthLabel(targetMonth)}.`;
+    return copyText("movement.impact.savedFuture", { month: formatMonthLabel(targetMonth) });
   }
 
   return createRemainingMoneySentence(
@@ -1295,14 +1315,16 @@ function createMovementImpactMessage(targetMonth = currentMonth()) {
 
 function createMovementFeedbackTitle(action = "saved", movementType = "expense") {
   if (action === "deleted") {
-    return "✔️ Movimiento eliminado";
+    return copyText("movement.titles.deleted");
   }
 
   if (action === "updated") {
-    return "✔️ Movimiento actualizado";
+    return copyText("movement.titles.updated");
   }
 
-  return movementType === "income" ? "✔️ Ingreso registrado" : "✔️ Gasto registrado";
+  return movementType === "income"
+    ? copyText("movement.titles.income")
+    : copyText("movement.titles.expense");
 }
 
 function createMovementFeedback(targetMonth = currentMonth(), action = "saved", movementType = "expense") {
@@ -1330,8 +1352,12 @@ async function updateCashFloorValue(value) {
   await saveData();
   render();
   const feedback = state.data.cashFloor
-    ? createActionFeedback(`Mínimo seguro listo en ${formatCurrency(state.data.cashFloor)}.`)
-    : { message: "Mínimo seguro desactivado.", tone: "warn" };
+    ? createActionFeedback(
+        copyText("feedback.cashFloorReady", {
+          amount: formatCurrency(state.data.cashFloor),
+        })
+      )
+    : { message: copyText("feedback.cashFloorOff"), tone: "warn" };
   showUXFeedback(feedback.message, feedback.tone);
 }
 
@@ -1350,20 +1376,35 @@ function createRemainingMoneySentence(projectedBalance, targetMonth = currentMon
   const periodLabel = targetMonth === currentMonth() ? "este mes" : `en ${formatMonthLabel(targetMonth)}`;
 
   if (projectedBalance < 0) {
-    return `${intro}te faltan ${formatCurrency(Math.abs(projectedBalance))} ${periodLabel}.`;
+    return copyText("movement.impact.missing", {
+      prefix: intro,
+      amount: formatCurrency(Math.abs(projectedBalance)),
+      period: periodLabel,
+    });
   }
 
   if (projectedBalance === 0) {
-    return `${intro}quedas justo en ${formatCurrency(0)} ${periodLabel}.`;
+    return copyText("movement.impact.zero", {
+      prefix: intro,
+      amount: formatCurrency(0),
+      period: periodLabel,
+    });
   }
 
-  return `${intro}te quedan ${formatCurrency(projectedBalance)} ${periodLabel}.`;
+  return copyText("movement.impact.remaining", {
+    prefix: intro,
+    amount: formatCurrency(projectedBalance),
+    period: periodLabel,
+  });
 }
 
 function createActionFeedback(actionLabel, targetMonth = currentMonth()) {
   if (targetMonth !== currentMonth()) {
     return {
-      message: `${actionLabel} Quedó registrado para ${formatMonthLabel(targetMonth)}.`,
+      message: copyText("feedback.futureAction", {
+        action: actionLabel,
+        month: formatMonthLabel(targetMonth),
+      }),
       tone: "ok",
     };
   }
@@ -1499,9 +1540,9 @@ function render() {
   const health = hasAnyData
     ? getHealth(liveIncomeTotal, liveExpenseTotal, projectedBalance, cashFloor)
     : {
-        label: "Sin datos",
+        label: copyText("health.labels.neutral"),
         tone: "neutral",
-        description: "Agrega tu primer movimiento para ver si te alcanza este mes.",
+        description: copyText("health.descriptions.neutral"),
       };
   const isRiskState = isNormalState && isHomeRiskState(projectedBalance);
   const isPositiveState = isNormalState && isHomePositiveState(health, projectedBalance);
@@ -1530,25 +1571,25 @@ function render() {
   if (hasMovements) {
     setAnimatedCurrency("#homeTodayCash", currentBalance);
   } else {
-    text("#homeTodayCash", "Aún no tienes datos");
+    text("#homeTodayCash", copyText("home.emptyTitle"));
   }
   text(
     "#homeTodayHint",
     isOnboardingState
       ? hasMovements
-        ? "Aún estamos aprendiendo de tu dinero"
-        : "Empieza agregando tu primer movimiento para ver tu situación real"
+        ? copyText("home.today.learning")
+        : copyText("home.today.empty")
       : isRiskState
-        ? "Te estás quedando sin dinero"
+        ? copyText("home.today.risk")
         : isPositiveState
-          ? "Vas bien"
+          ? copyText("home.today.positive")
       : isNormalState && hasMovements
         ? currentBalance > 0
-          ? "Hoy tienes disponible"
+          ? copyText("home.today.available")
           : currentBalance < 0
-            ? "Hoy te falta plata"
-            : "Empieza registrando tu plata de hoy"
-        : "Empieza agregando tu primer movimiento para ver tu situación real"
+            ? copyText("home.today.low")
+            : copyText("home.today.start")
+        : copyText("home.today.empty")
   );
   setAnimatedCurrency("#homeMonthEndCash", projectedBalance);
   setAnimatedCurrency("#projectionMonthEndValue", projectedBalance);
@@ -1563,24 +1604,30 @@ function render() {
   text(
     "#adviceText",
     isOnboardingState
-      ? `Agrega ${
-          UX_RULES.progressiveVisibility.projectionTransactions - state.data.transactions.length
-        } movimiento${
+      ? copyText(
           UX_RULES.progressiveVisibility.projectionTransactions - state.data.transactions.length === 1
-            ? ""
-            : "s"
-        } más para ver tu proyección`
+            ? "home.onboarding.addOneMore"
+            : "home.onboarding.addManyMore",
+          {
+            count:
+              UX_RULES.progressiveVisibility.projectionTransactions -
+              state.data.transactions.length,
+          }
+        )
       : isRiskState
         ? buildHomeRiskCopy(criticalCashDate, projectedBalance)
         : isPositiveState
           ? buildHomePositiveCopy(projectedBalance, cashFloor)
       : assistantMessage ||
-          "Agrega tu primer ingreso o gasto y te diré cuánto puedes mover esta semana."
+          copyText("home.advice.starter")
   );
   if (homeProgressNote) {
     homeProgressNote.hidden = !isOnboardingState;
     homeProgressNote.textContent = isOnboardingState
-      ? `${state.data.transactions.length} de ${UX_RULES.progressiveVisibility.projectionTransactions} movimientos`
+      ? copyText("home.onboarding.progress", {
+          current: state.data.transactions.length,
+          target: UX_RULES.progressiveVisibility.projectionTransactions,
+        })
       : "";
   }
   text("#receivablePill", `${openReceivables.length} pendientes`);
@@ -1603,22 +1650,20 @@ function render() {
     if (showConnectionBanner) {
       if (state.offline) {
         connectionBanner.className = "app-connection-banner offline";
-        connectionBannerTitle.textContent = "Sin conexión";
-        connectionBannerText.textContent =
-          "Puedes seguir usando la app. Guardaremos los cambios automáticamente.";
+        connectionBannerTitle.textContent = copyText("connection.offline.title");
+        connectionBannerText.textContent = copyText("connection.offline.body");
         connectionBannerBtn.hidden = true;
       } else if (state.syncingPending) {
         connectionBanner.className = "app-connection-banner syncing";
-        connectionBannerTitle.textContent = "Sincronizando";
-        connectionBannerText.textContent = "Estamos subiendo los cambios guardados.";
+        connectionBannerTitle.textContent = copyText("connection.syncing.title");
+        connectionBannerText.textContent = copyText("connection.syncing.body");
         connectionBannerBtn.hidden = true;
       } else {
         connectionBanner.className = "app-connection-banner pending";
-        connectionBannerTitle.textContent = "Pendiente por sincronizar";
-        connectionBannerText.textContent =
-          "Tus cambios ya están guardados aquí. Puedes seguir usando la app.";
+        connectionBannerTitle.textContent = copyText("connection.pending.title");
+        connectionBannerText.textContent = copyText("connection.pending.body");
         connectionBannerBtn.hidden = false;
-        connectionBannerBtn.textContent = "Sincronizar";
+        connectionBannerBtn.textContent = copyText("connection.pending.action");
       }
     }
   }
@@ -1644,13 +1689,15 @@ function render() {
   quickExpenseBtn.hidden = hasMovements && isOnboardingState;
   if (quickIncomeLabel) {
     quickIncomeLabel.textContent = !hasMovements
-      ? "Agregar ingreso"
+      ? copyText("home.quick.addIncome")
       : isLearningState
-        ? "Agregar"
-        : "Ingreso";
+        ? copyText("home.quick.add")
+        : copyText("home.quick.income");
   }
   if (quickExpenseLabel) {
-    quickExpenseLabel.textContent = hasMovements ? "Gasto" : "Agregar gasto";
+    quickExpenseLabel.textContent = hasMovements
+      ? copyText("home.quick.expense")
+      : copyText("home.quick.addExpense");
   }
   state.latestScenarioBalance = projectedBalance;
 
@@ -1973,30 +2020,37 @@ function renderForecast(weeks, cashFloor) {
 function renderCashFloorStatus(balance, cashFloor, lowCashWeek, hasAnyData) {
   if (!cashFloor) {
     cashFloorAlert.className = "cash-floor-alert";
-    cashFloorAlert.textContent = "Define tu mínimo seguro para activar alertas.";
+    cashFloorAlert.textContent = copyText("cashFloor.define");
     return;
   }
 
   if (!hasAnyData) {
     cashFloorAlert.className = "cash-floor-alert warn";
-    cashFloorAlert.textContent = "Cuando cargues movimientos, te avisaré si bajas de tu mínimo seguro.";
+    cashFloorAlert.textContent = copyText("cashFloor.waiting");
     return;
   }
 
   if (balance < cashFloor) {
     cashFloorAlert.className = "cash-floor-alert risk";
-    cashFloorAlert.textContent = `Alerta: la plata proyectada baja de tu mínimo seguro de ${formatCurrency(cashFloor)}.`;
+    cashFloorAlert.textContent = copyText("cashFloor.alertProjection", {
+      amount: formatCurrency(cashFloor),
+    });
     return;
   }
 
   if (lowCashWeek) {
     cashFloorAlert.className = "cash-floor-alert warn";
-    cashFloorAlert.textContent = `Alerta: ${lowCashWeek.label} baja a ${formatCurrency(lowCashWeek.amount)}, bajo tu mínimo seguro.`;
+    cashFloorAlert.textContent = copyText("cashFloor.alertWeek", {
+      label: lowCashWeek.label,
+      amount: formatCurrency(lowCashWeek.amount),
+    });
     return;
   }
 
   cashFloorAlert.className = "cash-floor-alert ok";
-  cashFloorAlert.textContent = `Tu proyección se mantiene sobre tu mínimo seguro de ${formatCurrency(cashFloor)}.`;
+  cashFloorAlert.textContent = copyText("cashFloor.safe", {
+    amount: formatCurrency(cashFloor),
+  });
 }
 
 function renderTips(
@@ -2018,31 +2072,27 @@ function renderTips(
   const tips = [];
 
   if (cashFloor > 0 && balance < cashFloor) {
-    tips.push(
-      `Tu plata proyectada está bajo tu mínimo seguro de ${formatCurrency(cashFloor)}. Prioriza cobrar pendientes o frenar pagos no urgentes.`
-    );
+    tips.push(copyText("tips.belowCashFloor", { amount: formatCurrency(cashFloor) }));
   } else if (lowCashWeek) {
     tips.push(
-      `${lowCashWeek.label} bajarías a ${formatCurrency(lowCashWeek.amount)}, bajo tu mínimo seguro de ${formatCurrency(cashFloor)}. Ajusta pagos o refuerza cobranza antes de esa semana.`
+      copyText("tips.lowCashWeek", {
+        label: lowCashWeek.label,
+        amount: formatCurrency(lowCashWeek.amount),
+        cashFloor: formatCurrency(cashFloor),
+      })
     );
   }
 
   if (expenseTotal > incomeTotal) {
-    tips.push(
-      "Tus gastos del mes superan tus ingresos. Revisa precios, frecuencia de compra o gastos que puedas postergar."
-    );
+    tips.push(copyText("tips.negativeNet"));
   }
 
   if (recurring.length >= 3) {
-    tips.push(
-      "Ya tienes varios pagos repetidos. Conviene distinguir fijos y variables para anticipar semanas más apretadas."
-    );
+    tips.push(copyText("tips.recurring"));
   }
 
   if (balance < 150000) {
-    tips.push(
-      "La plata disponible está baja para operar con holgura. Considera guardar una reserva mínima para compras y despachos."
-    );
+    tips.push(copyText("tips.lowAvailable"));
   }
 
   const receivablesDueTomorrow = openReceivables.filter(
@@ -2051,39 +2101,31 @@ function renderTips(
   const payablesDueTomorrow = openPayables.filter((item) => daysUntil(item.dueDate) === 1);
 
   if (openReceivables.some((item) => daysUntil(item.dueDate) < 0)) {
-    tips.push(
-      "Tienes cuentas por cobrar vencidas. Prioriza seguimiento de clientes antes de comprometer nuevas compras."
-    );
+    tips.push(copyText("tips.overdueReceivables"));
   }
 
   if (receivablesDueTomorrow.length) {
     receivablesDueTomorrow.forEach((item) => {
-      tips.push(`Mañana vence ${item.document} de ${item.client}.`);
+      tips.push(copyText("tips.dueTomorrow", { document: item.document, name: item.client }));
     });
   }
 
   if (payablesDueTomorrow.length) {
     payablesDueTomorrow.forEach((item) => {
-      tips.push(`Mañana vence ${item.document} de ${item.vendor}.`);
+      tips.push(copyText("tips.dueTomorrow", { document: item.document, name: item.vendor }));
     });
   }
 
   if (openPayables.some((item) => daysUntil(item.dueDate) <= 7)) {
-    tips.push(
-      "Hay facturas por pagar con vencimiento cercano. Programa esos pagos para evitar recargos o tensión con proveedores."
-    );
+    tips.push(copyText("tips.nearPayables"));
   }
 
   if (incomeTotal > expenseTotal && balance >= 150000) {
-    tips.push(
-      "Tu plata se ve más estable este mes. Puede ser buen momento para definir cuánto invertir sin apretarte."
-    );
+    tips.push(copyText("tips.stable"));
   }
 
   if (!tips.length) {
-    tips.push(
-      "Carga más movimientos y vencimientos para que la aplicación pueda detectar patrones y darte recomendaciones más precisas."
-    );
+    tips.push(copyText("tips.empty"));
   }
 
   tipsList.innerHTML = tips.map((tip) => `<li>${tip}</li>`).join("");
@@ -2190,7 +2232,7 @@ async function saveData() {
     render();
 
     if (!wasPending) {
-      showUXFeedback("Sin conexión. Tus cambios se guardarán automáticamente.", "warn");
+      showUXFeedback(copyText("feedback.offlineAutoSave"), "warn");
     }
 
     return;
@@ -2209,7 +2251,7 @@ async function saveData() {
       render();
 
       if (!wasPending) {
-        showUXFeedback("Tus cambios se guardaron aquí y se subirán después.", "warn");
+        showUXFeedback(copyText("feedback.savedLocal"), "warn");
       }
 
       return;
@@ -2225,29 +2267,29 @@ function getHealth(incomeTotal, expenseTotal, balance, cashFloor = 0) {
 
   if (balance <= minimumBalance || expenseTotal > incomeTotal) {
     return {
-      label: "No te alcanza",
+      label: copyText("health.labels.risk"),
       tone: "risk",
-      description: "Ojo: te estás quedando sin caja para cerrar el mes con calma.",
+      description: copyText("health.descriptions.risk"),
     };
   }
 
   if (balance <= cautionBalance || expenseTotal > incomeTotal * 0.8) {
     return {
-      label: "Ajustado",
+      label: copyText("health.labels.warn"),
       tone: "warn",
-      description: "Te alcanza, pero vas justo. Conviene cuidar gastos esta semana.",
+      description: copyText("health.descriptions.warn"),
     };
   }
 
   return {
-    label: "Vas bien",
+    label: copyText("health.labels.ok"),
     tone: "ok",
-    description: "Vas bien: tienes margen para operar y decidir sin tanta presión.",
+    description: copyText("health.descriptions.ok"),
   };
 }
 
 function getHomeHealthCopy(health) {
-  const copyMap = {
+  const copyMap = copyValue("health.home") || {
     ok: "Vas bien",
     warn: "Vas ajustada",
     risk: "Te falta plata",
@@ -2275,7 +2317,7 @@ function getForecastTone(amount, cashFloor) {
 
 function findTopExpenseCategory(expenses) {
   if (!expenses.length) {
-    return "Sin movimientos";
+    return copyText("common.noMovements");
   }
 
   const totals = expenses.reduce((acc, item) => {
@@ -2306,22 +2348,22 @@ function createAdvice(
   const weeklySpend = getWeeklySpendBudget(projectedBalance, cashFloor);
 
   if (projectedBalance <= safeReserve || lowCashWeek) {
-    return "Te estás quedando sin caja. Prioriza cobrar y frenar gastos no urgentes esta semana.";
+    return copyText("advice.lowCash");
   }
 
   if (netTotal < 0) {
-    return `Reduce gastos en ${topCategory} esta semana para no cerrar el mes apretado.`;
+    return copyText("advice.negativeNet", { category: topCategory });
   }
 
   if (payableTotal > receivableTotal) {
-    return "Tus pagos comprometidos pesan más que tus cobros. Revisa compras nuevas antes de comprometer más plata.";
+    return copyText("advice.payablesHeavy");
   }
 
   if (recurringCount > 0) {
-    return `Puedes gastar hasta ${formatCurrency(weeklySpend)} esta semana sin bajar tu mínimo seguro.`;
+    return copyText("advice.recurring", { amount: formatCurrency(weeklySpend) });
   }
 
-  return `Vas bien. Puedes invertir ${formatCurrency(weeklySpend)} sin quedar bajo tu mínimo seguro.`;
+  return copyText("advice.invest", { amount: formatCurrency(weeklySpend) });
 }
 
 function sum(items) {
@@ -2418,7 +2460,7 @@ function sortByDueDateAsc(a, b) {
 }
 
 function labelStatus(status) {
-  const labels = {
+  const labels = copyValue("statuses") || {
     pending: "Pendiente",
     partial: "Abono parcial",
     scheduled: "Programada",
@@ -2483,11 +2525,16 @@ function buildVisibilityHints(visibility) {
     const missingTransactions =
       UX_RULES.progressiveVisibility.projectionTransactions - transactionsCount;
     hints.push({
-      title: "Proyección",
+      title: copyText("featureUnlocks.projectionTitle"),
       copy:
         missingTransactions > 0
-          ? `Agrega ${missingTransactions} movimiento${missingTransactions === 1 ? "" : "s"} más y verás cómo cierras el mes.`
-          : "Sigue registrando movimientos para activar tu proyección.",
+          ? copyText(
+              missingTransactions === 1
+                ? "featureUnlocks.projectionOne"
+                : "featureUnlocks.projectionMany",
+              { count: missingTransactions }
+            )
+          : copyText("featureUnlocks.projectionFallback"),
       progress: Math.min(
         100,
         (transactionsCount / UX_RULES.progressiveVisibility.projectionTransactions) * 100
@@ -2499,13 +2546,13 @@ function buildVisibilityHints(visibility) {
     const missingTransactions =
       UX_RULES.progressiveVisibility.detailTransactions - transactionsCount;
     hints.push({
-      title: "Detalle",
+      title: copyText("featureUnlocks.detailTitle"),
       copy:
         recurringCount > 0
-          ? "Tu análisis avanzado se activará al seguir registrando movimientos."
+          ? copyText("featureUnlocks.detailRecurring")
           : missingTransactions > 0
-            ? `Marca un movimiento como recurrente o agrega ${missingTransactions} más para abrir análisis más profundos.`
-            : "Marca un movimiento como recurrente para abrir análisis más profundos.",
+            ? copyText("featureUnlocks.detailLocked", { count: missingTransactions })
+            : copyText("featureUnlocks.detailFallback"),
       progress: Math.min(
         100,
         Math.max(
@@ -2518,13 +2565,13 @@ function buildVisibilityHints(visibility) {
     const missingTransactions =
       UX_RULES.progressiveVisibility.categoriesTransactions - transactionsCount;
     hints.push({
-      title: "Categorías",
+      title: copyText("featureUnlocks.categoriesTitle"),
       copy:
         recurringCount > 0
-          ? "Tus categorías avanzadas se activarán solas con más uso."
+          ? copyText("featureUnlocks.categoriesRecurring")
           : missingTransactions > 0
-            ? `Marca un movimiento como recurrente o agrega ${missingTransactions} más para ver análisis por categoría.`
-            : "Marca un movimiento como recurrente para ver análisis por categoría.",
+            ? copyText("featureUnlocks.categoriesLocked", { count: missingTransactions })
+            : copyText("featureUnlocks.categoriesFallback"),
       progress: Math.min(
         100,
         Math.max(
@@ -2657,14 +2704,14 @@ function renderFeatureUnlocks() {
 
 function buildDetailSummaryCopy() {
   if (!state.visibility.detail) {
-    return "Sigue registrando movimientos para desbloquear este nivel cuando de verdad te haga falta.";
+    return copyText("featureUnlocks.summaryLocked");
   }
 
   if (!state.visibility.detailTabs.categories) {
-    return "Ya abriste el detalle. Cuando uses movimientos recurrentes o tengas más uso, activaremos categorías y análisis más profundos.";
+    return copyText("featureUnlocks.summaryWarm");
   }
 
-  return "Mira ingresos, gastos y compromisos del mes con más contexto.";
+  return copyText("featureUnlocks.summaryReady");
 }
 
 function getUserStorageKey() {
@@ -2730,7 +2777,7 @@ async function syncPendingLocalData(options = {}) {
     render();
 
     if (options.showFeedback !== false) {
-      showUXFeedback("Tus cambios ya quedaron sincronizados.", "ok");
+      showUXFeedback(copyText("feedback.synced"), "ok");
     }
 
     return true;
@@ -2841,9 +2888,11 @@ function fillTransactionForm(transaction, asTemplate = false) {
   transactionFields.recurring.checked = Boolean(transaction.recurring);
   movementExtraDetails.open = true;
   movementImpactText.textContent = asTemplate
-    ? "Revisa el monto y guarda para repetir el último movimiento."
+    ? copyText("movement.repeat.template")
     : "";
-  saveTransactionBtn.textContent = asTemplate ? "Guardar movimiento" : "Guardar cambios";
+  saveTransactionBtn.textContent = asTemplate
+    ? copyText("movement.save")
+    : copyText("forms.saveChanges");
   cancelTransactionEditBtn.hidden = asTemplate;
   syncTransactionTypeButtons();
   openTransactionModal(transaction.type, { preserveForm: true });
@@ -2858,7 +2907,7 @@ function resetTransactionForm() {
   syncTransactionTypeButtons();
   movementExtraDetails.open = false;
   movementImpactText.textContent = "";
-  saveTransactionBtn.textContent = "Guardar movimiento";
+  saveTransactionBtn.textContent = copyText("movement.save");
   cancelTransactionEditBtn.hidden = true;
   transactionModal.hidden = true;
   applyUXComponentRules();
@@ -2983,65 +3032,65 @@ function getFriendlyErrorMessage(context, error) {
 
   if (context === "auth") {
     if (rawMessage.includes("invalid login credentials")) {
-      return "Revisa tu correo y tu clave, y vuelve a intentarlo.";
+      return copyText("errors.auth.invalid");
     }
 
     if (rawMessage.includes("email not confirmed")) {
-      return "Primero confirma tu correo y después vuelve a entrar.";
+      return copyText("errors.auth.emailNotConfirmed");
     }
 
     if (rawMessage.includes("user already registered")) {
-      return "Ese correo ya tiene cuenta. Prueba iniciando sesión.";
+      return copyText("errors.auth.registered");
     }
 
     if (rawMessage.includes("password")) {
-      return "Tu clave debe tener al menos 6 caracteres.";
+      return copyText("errors.auth.password");
     }
 
-    return "No pudimos entrar ahora. Inténtalo de nuevo.";
+    return copyText("errors.auth.fallback");
   }
 
   if (context === "logo_size") {
-    return "Ese logo es muy pesado. Súbelo más liviano.";
+    return copyText("errors.logoSize");
   }
 
   if (context === "invoice_file_type") {
-    return "Sube una foto de la factura en JPG, PNG o similar.";
+    return copyText("errors.invoiceFileType");
   }
 
   if (context === "invoice_image") {
     if (rawMessage.includes("pesada")) {
-      return "Esa foto es muy pesada. Súbela más liviana o recortada.";
+      return copyText("errors.invoiceImageHeavy");
     }
 
-    return "No pudimos cargar esa foto. Prueba con otra imagen.";
+    return copyText("errors.invoiceImageFallback");
   }
 
   if (context === "invoice_ocr_unavailable") {
-    return "No pude leer la factura ahora. Revisa tu conexión e inténtalo de nuevo.";
+    return copyText("errors.invoiceOcrUnavailable");
   }
 
   if (context === "invoice_ocr_read") {
-    return "No pude leer la factura automáticamente. Puedes completar los datos a mano.";
+    return copyText("errors.invoiceOcrRead");
   }
 
   if (context === "partial_amount") {
-    return "Revisa el abono: debe ser mayor a 0 y menor que el monto total.";
+    return copyText("errors.partialAmount");
   }
 
   if (context === "save_sync") {
-    return "No pudimos guardar en la nube ahora. Vuelve a intentarlo en un momento.";
+    return copyText("errors.saveSync");
   }
 
   if (context === "load_data") {
-    return "No pudimos cargar tu información ahora. Inténtalo de nuevo.";
+    return copyText("errors.loadData");
   }
 
   if (context === "pdf_popup") {
-    return "No pude abrir el PDF. Activa las ventanas emergentes e inténtalo de nuevo.";
+    return copyText("errors.pdfPopup");
   }
 
-  return "No pudimos completar eso ahora. Inténtalo de nuevo.";
+  return copyText("errors.fallback");
 }
 
 function fillReceivableForm(receivable) {
@@ -3055,7 +3104,7 @@ function fillReceivableForm(receivable) {
   receivableFields.pendingAmount.value = getPartialAmount(receivable) || "";
   receivableFields.note.value = receivable.note || "";
   togglePartialAmountField(receivableFields, receivablePartialField);
-  saveReceivableBtn.textContent = "Guardar cambios";
+  saveReceivableBtn.textContent = copyText("forms.saveChanges");
   cancelReceivableEditBtn.hidden = false;
   receivableForm.scrollIntoView({ behavior: "smooth", block: "start" });
 }
@@ -3066,7 +3115,7 @@ function resetReceivableForm() {
   receivableFields.issueDate.value = today();
   receivableFields.dueDate.value = addDays(10);
   togglePartialAmountField(receivableFields, receivablePartialField);
-  saveReceivableBtn.textContent = "Registrar cuenta por cobrar";
+  saveReceivableBtn.textContent = copyText("forms.receivableSave");
   cancelReceivableEditBtn.hidden = true;
 }
 
@@ -3087,11 +3136,11 @@ function fillPayableForm(payable) {
   updateInvoiceAttachmentPreview();
   setInvoiceReadStatus(
     payable.invoicePhoto
-      ? "Esta factura ya tiene foto adjunta. Puedes reemplazarla o volver a leerla."
-      : "Sube una foto nítida y presiona “Leer factura”."
+      ? copyText("invoice.replaceHint")
+      : copyText("invoice.uploadHint")
   );
   togglePartialAmountField(payableFields, payablePartialField);
-  savePayableBtn.textContent = "Guardar cambios";
+  savePayableBtn.textContent = copyText("forms.saveChanges");
   cancelPayableEditBtn.hidden = false;
   payableForm.scrollIntoView({ behavior: "smooth", block: "start" });
 }
@@ -3104,9 +3153,9 @@ function resetPayableForm() {
   state.payableInvoiceDraft = { image: "", ocrText: "" };
   invoicePhotoInput.value = "";
   updateInvoiceAttachmentPreview();
-  setInvoiceReadStatus("Sube una foto nítida y presiona “Leer factura”.");
+  setInvoiceReadStatus(copyText("invoice.uploadHint"));
   togglePartialAmountField(payableFields, payablePartialField);
-  savePayableBtn.textContent = "Registrar factura por pagar";
+  savePayableBtn.textContent = copyText("forms.payableSave");
   cancelPayableEditBtn.hidden = true;
 }
 
