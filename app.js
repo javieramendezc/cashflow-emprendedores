@@ -1306,8 +1306,9 @@ function render() {
     ? Math.round(liveIncomeTotal / liveIncomes.length)
     : 0;
   const liveTopCategory = findTopExpenseCategory(liveExpenses);
+  const hasMovements = state.data.transactions.length > 0;
   const hasAnyData =
-    state.data.transactions.length > 0 ||
+    hasMovements ||
     state.data.receivables.length > 0 ||
     state.data.payables.length > 0;
   const nextCommitment = sum(
@@ -1355,10 +1356,10 @@ function render() {
   text("#sidebarBalance", formatCurrency(currentBalance));
   text("#appHeaderCashValue", formatCurrency(currentBalance));
   text("#sidebarHealth", health.description);
-  text("#homeTodayCash", hasAnyData ? formatCurrency(currentBalance) : "Aún no tienes datos");
+  text("#homeTodayCash", hasMovements ? formatCurrency(currentBalance) : "Aún no tienes datos");
   text(
     "#homeTodayHint",
-    hasAnyData
+    hasMovements
       ? currentBalance > 0
         ? "Hoy tienes disponible"
         : currentBalance < 0
@@ -1393,15 +1394,15 @@ function render() {
   homeMonthEndHint.textContent = getHomeHealthCopy(health);
   homeMonthEndDot.className = `home-month-dot ${health.tone}`;
   projectionStatusCard.className = `projection-status-card ${health.tone}`;
-  homeBalanceCard.classList.toggle("is-empty", !hasAnyData);
-  homeMonthEndCard.hidden = !hasAnyData;
-  homeAdviceCard.hidden = !hasAnyData;
-  homeTodayPanel.hidden = !hasAnyData;
+  homeBalanceCard.classList.toggle("is-empty", !hasMovements);
+  homeMonthEndCard.hidden = !hasMovements;
+  homeAdviceCard.hidden = !hasMovements;
+  homeTodayPanel.hidden = !hasMovements;
   if (quickIncomeLabel) {
-    quickIncomeLabel.textContent = hasAnyData ? "Ingreso" : "Agregar ingreso";
+    quickIncomeLabel.textContent = hasMovements ? "Ingreso" : "Agregar ingreso";
   }
   if (quickExpenseLabel) {
-    quickExpenseLabel.textContent = hasAnyData ? "Gasto" : "Agregar gasto";
+    quickExpenseLabel.textContent = hasMovements ? "Gasto" : "Agregar gasto";
   }
   state.latestScenarioBalance = projectedBalance;
 
@@ -2310,7 +2311,7 @@ function renderFeatureUnlocks() {
     return;
   }
 
-  if (!state.visibility.hints.length) {
+  if (!state.data.transactions.length || !state.visibility.hints.length) {
     featureUnlockPanel.hidden = true;
     featureUnlockList.innerHTML = "";
     return;
