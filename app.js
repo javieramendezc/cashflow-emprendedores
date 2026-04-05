@@ -4,7 +4,6 @@ const SUPABASE_PUBLIC_KEY = "sb_publishable_-sACG1yR0TURwqX70-XwTA_1Q9QPJ0w";
 const SUPABASE_STATE_TABLE = "cashflow_user_data";
 const MAX_INVOICE_IMAGE_BYTES = 850 * 1024;
 const INVOICE_IMAGE_MAX_WIDTH = 1400;
-const APP_HEADER_TITLE = "Tu dinero";
 const UX_RULES = {
   maxMainBlocksPerScreen: 3,
   feedbackDurationMs: 2600,
@@ -83,7 +82,6 @@ const authForm = document.querySelector("#authForm");
 const authMessage = document.querySelector("#authMessage");
 const authSubmitBtn = document.querySelector("#authSubmitBtn");
 const toggleAuthModeBtn = document.querySelector("#toggleAuthModeBtn");
-const appHeaderScreenTitle = document.querySelector("#appHeaderScreenTitle");
 const appHeaderCashValue = document.querySelector("#appHeaderCashValue");
 const userEmailLabel = document.querySelector("#userEmailLabel");
 const logoutBtn = document.querySelector("#logoutBtn");
@@ -934,10 +932,6 @@ function switchPage(pageName) {
   navLinks.forEach((navLink) => {
     navLink.classList.toggle("is-active", navLink.dataset.pageTarget === pageName);
   });
-
-  if (appHeaderScreenTitle) {
-    appHeaderScreenTitle.textContent = APP_HEADER_TITLE;
-  }
 
   applyUXComponentRules();
 }
@@ -3024,7 +3018,7 @@ function getFriendlyErrorMessage(context, error) {
     return "No pude abrir el PDF. Activa las ventanas emergentes e inténtalo de nuevo.";
   }
 
-  return "Ups, algo no funcionó. Inténtalo de nuevo.";
+  return "No pudimos completar eso ahora. Inténtalo de nuevo.";
 }
 
 function fillReceivableForm(receivable) {
