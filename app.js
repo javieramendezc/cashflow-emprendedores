@@ -70,6 +70,8 @@ const state = {
   },
 };
 
+const animatedCurrencyHandles = new WeakMap();
+
 const authScreen = document.querySelector("#authScreen");
 const appShell = document.querySelector("#appShell");
 const connectionBanner = document.querySelector("#connectionBanner");
@@ -1517,10 +1519,14 @@ function render() {
   text("#monthlyVatTotal", formatCurrency(monthlyVatTotal));
   text("#monthlyVatCreditTotal", formatCurrency(monthlyVatCreditTotal));
   text("#netTotal", formatCurrency(liveIncomeTotal - liveExpenseTotal));
-  text("#sidebarBalance", formatCurrency(currentBalance));
-  text("#appHeaderCashValue", formatCurrency(currentBalance));
+  setAnimatedCurrency("#sidebarBalance", currentBalance);
+  setAnimatedCurrency("#appHeaderCashValue", currentBalance);
   text("#sidebarHealth", health.description);
-  text("#homeTodayCash", hasMovements ? formatCurrency(currentBalance) : "Aún no tienes datos");
+  if (hasMovements) {
+    setAnimatedCurrency("#homeTodayCash", currentBalance);
+  } else {
+    text("#homeTodayCash", "Aún no tienes datos");
+  }
   text(
     "#homeTodayHint",
     isLearningState
@@ -1537,8 +1543,8 @@ function render() {
             : "Empieza registrando tu plata de hoy"
         : "Empieza agregando tu primer movimiento para ver tu situación real"
   );
-  text("#homeMonthEndCash", formatCurrency(projectedBalance));
-  text("#projectionMonthEndValue", formatCurrency(projectedBalance));
+  setAnimatedCurrency("#homeMonthEndCash", projectedBalance);
+  setAnimatedCurrency("#projectionMonthEndValue", projectedBalance);
   text(
     "#projectionAlertText",
     buildProjectionAlertCopy(hasAnyData, health.description, criticalCashDate, cashFloor)
@@ -2747,7 +2753,69 @@ async function saveDataToSupabase(payload) {
 }
 
 function text(selector, value) {
-  document.querySelector(selector).textContent = value;
+  const element = document.querySelector(selector);
+  if (!element) {
+    return;
+  }
+
+  element.textContent = value;
+}
+
+function setAnimatedCurrency(selector, value, options = {}) {
+  const element = document.querySelector(selector);
+  if (!element) {
+    return;
+  }
+
+  if (!Number.isFinite(value)) {
+    element.textContent = String(value);
+    delete element.dataset.currencyValue;
+    const activeHandle = animatedCurrencyHandles.get(element);
+    if (activeHandle) {
+      cancelAnimationFrame(activeHandle);
+      animatedCurrencyHandles.delete(element);
+    }
+    return;
+  }
+
+  const nextValue = Math.round(value);
+  const previousValue = Number(element.dataset.currencyValue);
+  const shouldAnimate = options.animate !== false && Number.isFinite(previousValue);
+
+  if (!shouldAnimate || previousValue === nextValue) {
+    element.textContent = formatCurrency(nextValue);
+    element.dataset.currencyValue = String(nextValue);
+    return;
+  }
+
+  const activeHandle = animatedCurrencyHandles.get(element);
+  if (activeHandle) {
+    cancelAnimationFrame(activeHandle);
+  }
+
+  const duration = options.durationMs || 360;
+  const startTime = performance.now();
+  const startValue = previousValue;
+  const delta = nextValue - startValue;
+
+  const tick = (now) => {
+    const progress = Math.min((now - startTime) / duration, 1);
+    const eased = 1 - Math.pow(1 - progress, 3);
+    const currentValue = Math.round(startValue + delta * eased);
+    element.textContent = formatCurrency(currentValue);
+
+    if (progress < 1) {
+      const handle = requestAnimationFrame(tick);
+      animatedCurrencyHandles.set(element, handle);
+      return;
+    }
+
+    element.dataset.currencyValue = String(nextValue);
+    animatedCurrencyHandles.delete(element);
+  };
+
+  const handle = requestAnimationFrame(tick);
+  animatedCurrencyHandles.set(element, handle);
 }
 
 function fillTransactionForm(transaction, asTemplate = false) {
