@@ -1625,7 +1625,7 @@ select:focus {
   left: 50%;
   bottom: 24px;
   z-index: 110;
-  transform: translate(-50%, 18px) scale(0.98);
+  transform: translate(-50%, 22px) scale(0.985);
   opacity: 0;
   width: min(520px, calc(100vw - 24px));
   padding: 15px 18px 15px 24px;
@@ -1639,7 +1639,10 @@ select:focus {
   box-shadow: 0 20px 48px rgba(49, 42, 26, 0.2);
   pointer-events: none;
   will-change: transform, opacity;
-  transition: transform 220ms ease, opacity 220ms ease, box-shadow 220ms ease;
+  transition:
+    transform 260ms cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 220ms ease,
+    box-shadow 260ms ease;
 }
 
 .ux-toast::before {
@@ -1660,11 +1663,12 @@ select:focus {
 .ux-toast.is-visible {
   opacity: 1;
   transform: translate(-50%, 0) scale(1);
+  box-shadow: 0 24px 56px rgba(49, 42, 26, 0.24);
 }
 
 .ux-toast.is-hiding {
   opacity: 0;
-  transform: translate(-50%, 14px) scale(0.98);
+  transform: translate(-50%, 12px) scale(0.99);
 }
 
 .ux-toast.ok {
