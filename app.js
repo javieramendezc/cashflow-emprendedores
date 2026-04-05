@@ -55,6 +55,9 @@ const state = {
   session: null,
   appError: false,
   appErrorMessage: "",
+  offline: typeof navigator !== "undefined" ? navigator.onLine === false : false,
+  syncPending: false,
+  syncingPending: false,
   authMode: "signIn",
   activePage: "home",
   activeDetailTab: "summary",
@@ -69,6 +72,10 @@ const state = {
 
 const authScreen = document.querySelector("#authScreen");
 const appShell = document.querySelector("#appShell");
+const connectionBanner = document.querySelector("#connectionBanner");
+const connectionBannerTitle = document.querySelector("#connectionBannerTitle");
+const connectionBannerText = document.querySelector("#connectionBannerText");
+const connectionBannerBtn = document.querySelector("#connectionBannerBtn");
 const authForm = document.querySelector("#authForm");
 const authMessage = document.querySelector("#authMessage");
 const authSubmitBtn = document.querySelector("#authSubmitBtn");
@@ -285,6 +292,10 @@ openTransactionModalBtn.addEventListener("click", () => {
   openTransactionModal();
 });
 
+connectionBannerBtn.addEventListener("click", async () => {
+  await syncPendingLocalData({ showFeedback: true });
+});
+
 retryHomeBtn.addEventListener("click", async () => {
   if (!state.session?.user) {
     return;
@@ -299,6 +310,22 @@ retryHomeBtn.addEventListener("click", async () => {
     retryHomeBtn.disabled = false;
     retryHomeBtn.textContent = "Reintentar";
   }
+});
+
+window.addEventListener("offline", () => {
+  const wasOffline = state.offline;
+  state.offline = true;
+  render();
+
+  if (!wasOffline) {
+    showUXFeedback("Sin conexión. Seguimos guardando en este equipo.", "warn");
+  }
+});
+
+window.addEventListener("online", async () => {
+  state.offline = false;
+  render();
+  await syncPendingLocalData({ showFeedback: true });
 });
 
 closeTransactionModalBtn.addEventListener("click", () => {
@@ -840,6 +867,9 @@ async function syncSessionView() {
   if (!state.session?.user) {
     state.appError = false;
     state.appErrorMessage = "";
+    state.offline = !hasNetworkConnection();
+    state.syncPending = false;
+    state.syncingPending = false;
     switchPage("home");
     switchDetailTab("summary");
     appShell.hidden = true;
@@ -861,6 +891,7 @@ async function syncSessionView() {
   appShell.hidden = false;
   switchPage("home");
   switchDetailTab("summary");
+  state.offline = !hasNetworkConnection();
   try {
     state.data = await loadData();
     state.appError = false;
@@ -872,11 +903,17 @@ async function syncSessionView() {
   }
   state.filterMonth = currentMonth();
   monthFilter.value = state.filterMonth;
+  state.syncPending = readPendingSyncFlag();
+  state.syncingPending = false;
   syncCashFloorInputs(state.data.cashFloor);
   resetTransactionForm();
   resetReceivableForm();
   resetPayableForm();
   render();
+
+  if (state.syncPending && hasNetworkConnection()) {
+    await syncPendingLocalData({ showFeedback: false });
+  }
 }
 
 function switchPage(pageName) {
@@ -1512,6 +1549,32 @@ function render() {
   homeMonthEndHint.textContent = getHomeHealthCopy(health);
   homeMonthEndDot.className = `home-month-dot ${health.tone}`;
   projectionStatusCard.className = `projection-status-card ${health.tone}`;
+  if (connectionBanner) {
+    const showConnectionBanner = state.offline || state.syncPending || state.syncingPending;
+    connectionBanner.hidden = !showConnectionBanner;
+
+    if (showConnectionBanner) {
+      if (state.offline) {
+        connectionBanner.className = "app-connection-banner offline";
+        connectionBannerTitle.textContent = "Sin conexión";
+        connectionBannerText.textContent =
+          "Seguimos guardando en este equipo. Tus cambios se subirán cuando vuelva internet.";
+        connectionBannerBtn.hidden = true;
+      } else if (state.syncingPending) {
+        connectionBanner.className = "app-connection-banner syncing";
+        connectionBannerTitle.textContent = "Sincronizando";
+        connectionBannerText.textContent = "Estamos subiendo los cambios guardados.";
+        connectionBannerBtn.hidden = true;
+      } else {
+        connectionBanner.className = "app-connection-banner pending";
+        connectionBannerTitle.textContent = "Pendiente por sincronizar";
+        connectionBannerText.textContent =
+          "Tus cambios ya están guardados aquí. Puedes seguir usando la app.";
+        connectionBannerBtn.hidden = false;
+        connectionBannerBtn.textContent = "Sincronizar";
+      }
+    }
+  }
   homeErrorState.hidden = !hasAppError;
   homeErrorHint.textContent = state.appErrorMessage || "Inténtalo de nuevo";
   homeHeroPanel.hidden = hasAppError;
@@ -1983,6 +2046,29 @@ async function loadData() {
 
   const storageKey = getUserStorageKey();
   const localBackup = localStorage.getItem(storageKey);
+  const hasPendingLocalSync = readPendingSyncFlag();
+
+  if (hasPendingLocalSync && localBackup) {
+    try {
+      return normalizeStatePayload(JSON.parse(localBackup));
+    } catch {
+      setPendingSyncFlag(false);
+    }
+  }
+
+  if (!hasNetworkConnection()) {
+    state.offline = true;
+
+    if (localBackup) {
+      try {
+        return normalizeStatePayload(JSON.parse(localBackup));
+      } catch {
+        return cloneSeedState();
+      }
+    }
+
+    return cloneSeedState();
+  }
 
   try {
     const { data, error } = await supabaseClient
@@ -2011,7 +2097,21 @@ async function loadData() {
     await saveDataToSupabase(seed);
     localStorage.setItem(storageKey, JSON.stringify(seed));
     return seed;
-  } catch {
+  } catch (error) {
+    if (isConnectivityError(error)) {
+      state.offline = true;
+
+      if (localBackup) {
+        try {
+          return normalizeStatePayload(JSON.parse(localBackup));
+        } catch {
+          return cloneSeedState();
+        }
+      }
+
+      return cloneSeedState();
+    }
+
     if (localBackup) {
       try {
         return normalizeStatePayload(JSON.parse(localBackup));
@@ -2033,10 +2133,38 @@ async function saveData() {
   state.data = normalizedData;
   localStorage.setItem(getUserStorageKey(), JSON.stringify(normalizedData));
 
+  if (!hasNetworkConnection()) {
+    const wasPending = state.syncPending;
+    state.offline = true;
+    setPendingSyncFlag(true);
+    render();
+
+    if (!wasPending) {
+      showUXFeedback("Sin conexión. Tus cambios quedaron guardados aquí.", "warn");
+    }
+
+    return;
+  }
+
   try {
     await saveDataToSupabase(normalizedData);
+    state.offline = false;
+    setPendingSyncFlag(false);
   } catch (error) {
     console.warn("No se pudo sincronizar con Supabase:", error.message);
+    if (isConnectivityError(error)) {
+      const wasPending = state.syncPending;
+      state.offline = !hasNetworkConnection();
+      setPendingSyncFlag(true);
+      render();
+
+      if (!wasPending) {
+        showUXFeedback("Tus cambios quedaron guardados aquí y se subirán después.", "warn");
+      }
+
+      return;
+    }
+
     showUXFeedback(getFriendlyErrorMessage("save_sync", error), "warn");
   }
 }
@@ -2491,6 +2619,82 @@ function buildDetailSummaryCopy() {
 
 function getUserStorageKey() {
   return `${STORAGE_KEY}-${state.session.user.id}`;
+}
+
+function getUserPendingSyncKey() {
+  return `${getUserStorageKey()}-pending-sync`;
+}
+
+function readPendingSyncFlag() {
+  if (!state.session?.user) {
+    return false;
+  }
+
+  return localStorage.getItem(getUserPendingSyncKey()) === "1";
+}
+
+function setPendingSyncFlag(value) {
+  state.syncPending = value;
+
+  if (!state.session?.user) {
+    return;
+  }
+
+  if (value) {
+    localStorage.setItem(getUserPendingSyncKey(), "1");
+    return;
+  }
+
+  localStorage.removeItem(getUserPendingSyncKey());
+}
+
+function hasNetworkConnection() {
+  return typeof navigator === "undefined" ? true : navigator.onLine !== false;
+}
+
+function isConnectivityError(error) {
+  const rawMessage = String(error?.message || "").toLowerCase();
+  return (
+    !hasNetworkConnection() ||
+    rawMessage.includes("failed to fetch") ||
+    rawMessage.includes("network") ||
+    rawMessage.includes("fetch")
+  );
+}
+
+async function syncPendingLocalData(options = {}) {
+  if (!state.session?.user || !state.syncPending || !hasNetworkConnection()) {
+    state.offline = !hasNetworkConnection();
+    render();
+    return false;
+  }
+
+  state.syncingPending = true;
+  render();
+
+  try {
+    await saveDataToSupabase(normalizeStatePayload(state.data));
+    setPendingSyncFlag(false);
+    state.offline = false;
+    state.syncingPending = false;
+    render();
+
+    if (options.showFeedback !== false) {
+      showUXFeedback("Tus cambios ya quedaron sincronizados.", "ok");
+    }
+
+    return true;
+  } catch (error) {
+    state.syncingPending = false;
+    state.offline = !hasNetworkConnection();
+    render();
+
+    if (!isConnectivityError(error)) {
+      showUXFeedback(getFriendlyErrorMessage("save_sync", error), "warn");
+    }
+
+    return false;
+  }
 }
 
 async function saveDataToSupabase(payload) {

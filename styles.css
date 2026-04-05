@@ -64,6 +64,55 @@ body::before {
   padding: 24px;
 }
 
+.app-connection-banner {
+  grid-column: 1 / -1;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  padding: 14px 18px;
+  border-radius: 20px;
+  border: 1px solid var(--state-risk-border);
+  background: rgba(255, 248, 234, 0.82);
+}
+
+.app-connection-banner[hidden] {
+  display: none;
+}
+
+.app-connection-banner.pending {
+  border-color: rgba(24, 38, 31, 0.1);
+  background: rgba(255, 255, 255, 0.7);
+}
+
+.app-connection-banner.syncing {
+  border-color: var(--state-positive-border);
+  background: rgba(244, 255, 248, 0.82);
+}
+
+.app-connection-copy {
+  display: grid;
+  gap: 2px;
+}
+
+.app-connection-copy strong {
+  font-size: 0.95rem;
+  letter-spacing: -0.02em;
+}
+
+.app-connection-copy p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.9rem;
+  line-height: 1.45;
+}
+
+.connection-banner-btn {
+  width: fit-content;
+  margin-top: 0;
+  min-width: 120px;
+}
+
 .app-header-minimal {
   display: none;
 }
@@ -2114,6 +2163,16 @@ tbody tr:hover {
     background: rgba(252, 250, 246, 0.9);
     border: 1px solid rgba(255, 255, 255, 0.7);
     box-shadow: var(--shadow);
+  }
+
+  .app-connection-banner {
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 14px;
+  }
+
+  .connection-banner-btn {
+    width: 100%;
   }
 
   .sidebar,
