@@ -143,6 +143,7 @@ const homeMonthEndDot = document.querySelector("#homeMonthEndDot");
 const homeAdviceCard = document.querySelector("#homeAdviceCard");
 const homeTodayPanel = document.querySelector("#homeTodayPanel");
 const todayMovementList = document.querySelector("#todayMovementList");
+const homeQuickGrid = document.querySelector("#homeQuickGrid");
 const quickIncomeBtn = document.querySelector("#quickIncomeBtn");
 const quickExpenseBtn = document.querySelector("#quickExpenseBtn");
 const quickIncomeLabel = document.querySelector("#quickIncomeLabel");
@@ -260,6 +261,11 @@ mobileLogoutBtn.addEventListener("click", async () => {
 });
 
 quickIncomeBtn.addEventListener("click", () => {
+  if (isHomeLearningState()) {
+    openTransactionModal();
+    return;
+  }
+
   openTransactionModal("income");
 });
 
@@ -954,6 +960,14 @@ function renderTodayMovements(transactions) {
     .join("");
 }
 
+function isHomeLearningState() {
+  const transactionsCount = state.data.transactions.length;
+  return (
+    transactionsCount > 0 &&
+    transactionsCount < UX_RULES.progressiveVisibility.projectionTransactions
+  );
+}
+
 function renderMoneyCurveChart(currentBalance, cashFloor) {
   const points = buildMoneyCurvePoints(currentBalance, cashFloor);
   const width = 640;
@@ -1307,6 +1321,7 @@ function render() {
     : 0;
   const liveTopCategory = findTopExpenseCategory(liveExpenses);
   const hasMovements = state.data.transactions.length > 0;
+  const isLearningState = isHomeLearningState();
   const hasAnyData =
     hasMovements ||
     state.data.receivables.length > 0 ||
@@ -1359,7 +1374,9 @@ function render() {
   text("#homeTodayCash", hasMovements ? formatCurrency(currentBalance) : "Aún no tienes datos");
   text(
     "#homeTodayHint",
-    hasMovements
+    isLearningState
+      ? "Aún estamos aprendiendo de tu dinero"
+      : hasMovements
       ? currentBalance > 0
         ? "Hoy tienes disponible"
         : currentBalance < 0
@@ -1379,7 +1396,16 @@ function render() {
   text("#nextCommitment", formatCurrency(nextCommitment));
   text(
     "#adviceText",
-    assistantMessage || "Agrega tu primer ingreso o gasto y te diré cuánto puedes mover esta semana."
+    isLearningState
+      ? `Agrega ${
+          UX_RULES.progressiveVisibility.projectionTransactions - state.data.transactions.length
+        } movimiento${
+          UX_RULES.progressiveVisibility.projectionTransactions - state.data.transactions.length === 1
+            ? ""
+            : "s"
+        } más para ver tu proyección`
+      : assistantMessage ||
+          "Agrega tu primer ingreso o gasto y te diré cuánto puedes mover esta semana."
   );
   text("#receivablePill", `${openReceivables.length} pendientes`);
   text("#payablePill", `${openPayables.length} pendientes`);
@@ -1395,11 +1421,19 @@ function render() {
   homeMonthEndDot.className = `home-month-dot ${health.tone}`;
   projectionStatusCard.className = `projection-status-card ${health.tone}`;
   homeBalanceCard.classList.toggle("is-empty", !hasMovements);
-  homeMonthEndCard.hidden = !hasMovements;
+  homeBalanceCard.classList.toggle("is-learning", isLearningState);
+  homeMonthEndCard.hidden = !hasMovements || isLearningState;
   homeAdviceCard.hidden = !hasMovements;
-  homeTodayPanel.hidden = !hasMovements;
+  homeAdviceCard.classList.toggle("is-learning", isLearningState);
+  homeTodayPanel.hidden = !hasMovements || isLearningState;
+  homeQuickGrid.classList.toggle("is-single", isLearningState);
+  quickExpenseBtn.hidden = isLearningState;
   if (quickIncomeLabel) {
-    quickIncomeLabel.textContent = hasMovements ? "Ingreso" : "Agregar ingreso";
+    quickIncomeLabel.textContent = !hasMovements
+      ? "Agregar ingreso"
+      : isLearningState
+        ? "Agregar"
+        : "Ingreso";
   }
   if (quickExpenseLabel) {
     quickExpenseLabel.textContent = hasMovements ? "Gasto" : "Agregar gasto";
@@ -2311,7 +2345,10 @@ function renderFeatureUnlocks() {
     return;
   }
 
-  if (!state.data.transactions.length || !state.visibility.hints.length) {
+  if (
+    state.data.transactions.length < UX_RULES.progressiveVisibility.projectionTransactions ||
+    !state.visibility.hints.length
+  ) {
     featureUnlockPanel.hidden = true;
     featureUnlockList.innerHTML = "";
     return;

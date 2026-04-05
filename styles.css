@@ -534,6 +534,11 @@ body::before {
   padding: 8px 0 2px;
 }
 
+.home-balance-card.is-learning {
+  gap: 12px;
+  padding: 4px 0 0;
+}
+
 .home-balance-card.is-empty strong {
   max-width: 10ch;
   font-size: clamp(2.2rem, 7vw, 3.1rem);
@@ -545,6 +550,13 @@ body::before {
   max-width: 24ch;
   font-size: 1rem;
   line-height: 1.55;
+}
+
+.home-balance-card.is-learning small {
+  max-width: 24ch;
+  font-size: 1.02rem;
+  line-height: 1.55;
+  color: var(--ink);
 }
 
 .month-end-card.ok,
@@ -668,6 +680,11 @@ body::before {
   color: var(--ink);
 }
 
+.home-alert-card.is-learning p {
+  max-width: 28ch;
+  color: var(--muted);
+}
+
 .assistant-card h2,
 .projection-assistant-card h2 {
   margin: 0;
@@ -681,6 +698,16 @@ body::before {
   display: flex;
   gap: 12px;
   max-width: 420px;
+}
+
+.home-quick-grid.is-single {
+  max-width: 220px;
+}
+
+.home-quick-grid.is-single .quick-action-card {
+  background: #18261f;
+  border-color: #18261f;
+  color: #fff7eb;
 }
 
 .quick-action-card {
