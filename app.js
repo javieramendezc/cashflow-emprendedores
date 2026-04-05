@@ -523,7 +523,7 @@ transactionForm.addEventListener("submit", async (event) => {
 
   if (isEditing) {
     resetTransactionForm();
-    const feedback = createMovementFeedback(transaction.date.slice(0, 7), "updated");
+    const feedback = createMovementFeedback(transaction.date.slice(0, 7), "updated", transaction.type);
     showUXFeedback(feedback.message, feedback.tone);
     return;
   }
@@ -538,7 +538,7 @@ transactionForm.addEventListener("submit", async (event) => {
   saveTransactionBtn.textContent = "Guardar movimiento";
   cancelTransactionEditBtn.hidden = true;
   movementImpactText.textContent = impactCopy;
-  const feedback = createMovementFeedback(transaction.date.slice(0, 7), "saved");
+  const feedback = createMovementFeedback(transaction.date.slice(0, 7), "saved", transaction.type);
   showUXFeedback(feedback.message, feedback.tone);
   transactionFields.amount.focus();
 });
@@ -678,7 +678,8 @@ transactionTableBody.addEventListener("click", async (event) => {
   render();
   const transactionFeedback = createMovementFeedback(
     deletedTransaction?.date?.slice(0, 7) || currentMonth(),
-    "deleted"
+    "deleted",
+    deletedTransaction?.type || "expense"
   );
   state.lastMovementImpact = transactionFeedback.message;
   showUXFeedback(transactionFeedback.message, transactionFeedback.tone);
@@ -1275,40 +1276,47 @@ function updateMovementImpactPreview() {
       : `Si lo guardas, quedará registrado para ${formatMonthLabel(targetMonth)}.`;
 }
 
-function createMovementFeedback(targetMonth = currentMonth(), action = "saved") {
+function createMovementImpactMessage(targetMonth = currentMonth()) {
   if (targetMonth !== currentMonth()) {
-    const monthLabel = formatMonthLabel(targetMonth);
-
-    if (action === "deleted") {
-      return {
-        message: `Quité ese movimiento de ${monthLabel}.`,
-        tone: "ok",
-      };
-    }
-
-    if (action === "updated") {
-      return {
-        message: `Actualicé ese movimiento para ${monthLabel}.`,
-        tone: "ok",
-      };
-    }
-
-    return {
-      message: `Listo. Quedó guardado para ${monthLabel}.`,
-      tone: "ok",
-    };
+    return `Quedó guardado para ${formatMonthLabel(targetMonth)}.`;
   }
 
-  const projectedBalance = estimateProjectedBalanceForCurrentMonth(targetMonth);
+  return createRemainingMoneySentence(
+    estimateProjectedBalanceForCurrentMonth(targetMonth),
+    targetMonth,
+    "Ahora"
+  );
+}
+
+function createMovementFeedbackTitle(action = "saved", movementType = "expense") {
+  if (action === "deleted") {
+    return "✔️ Movimiento eliminado";
+  }
+
+  if (action === "updated") {
+    return "✔️ Movimiento actualizado";
+  }
+
+  return movementType === "income" ? "✔️ Ingreso registrado" : "✔️ Gasto registrado";
+}
+
+function createMovementFeedback(targetMonth = currentMonth(), action = "saved", movementType = "expense") {
+  const impactMessage = createMovementImpactMessage(targetMonth);
 
   return {
-    message: createRemainingMoneySentence(projectedBalance, targetMonth, "Ahora"),
-    tone: getForecastTone(projectedBalance, Number(state.data.cashFloor) || 0),
+    message: `${createMovementFeedbackTitle(action, movementType)}\n\n${impactMessage}`,
+    tone:
+      targetMonth === currentMonth()
+        ? getForecastTone(
+            estimateProjectedBalanceForCurrentMonth(targetMonth),
+            Number(state.data.cashFloor) || 0
+          )
+        : "ok",
   };
 }
 
 function createMovementImpactCopy(transaction, action = "saved") {
-  return createMovementFeedback(transaction.date.slice(0, 7), action).message;
+  return createMovementImpactMessage(transaction.date.slice(0, 7));
 }
 
 async function updateCashFloorValue(value) {

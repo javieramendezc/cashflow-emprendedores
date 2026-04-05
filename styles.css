@@ -1636,6 +1636,7 @@ select:focus {
   font-size: 0.92rem;
   font-weight: 800;
   line-height: 1.45;
+  white-space: pre-line;
   box-shadow: 0 20px 48px rgba(49, 42, 26, 0.2);
   pointer-events: none;
   will-change: transform, opacity;
