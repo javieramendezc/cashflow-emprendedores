@@ -148,24 +148,32 @@
         >
           <section class="home-hero-panel" data-ux-block data-ux-block-group="home">
             <article class="money-main-card home-balance-card" data-ux-focus="primary">
-              <p class="section-label" data-ux-copy>Hoy tienes</p>
+              <p class="section-label" data-ux-copy>Zona segura</p>
               <strong id="homeTodayCash">$0</strong>
-              <small id="homeTodayHint">Tu plata disponible ahora.</small>
-            </article>
-
-            <article class="money-main-card month-end-card" id="homeMonthEndCard" data-ux-focus="secondary">
-              <p class="section-label" data-ux-copy>A fin de mes tendrás</p>
-              <strong id="homeMonthEndCash">$0</strong>
-              <small id="homeMonthEndHint">Actualizado con cobros y pagos del mes.</small>
+              <small id="homeTodayHint">Hoy tienes disponible</small>
             </article>
 
             <article
-              class="assistant-card"
+              class="money-main-card month-end-card home-month-summary"
+              id="homeMonthEndCard"
+              data-ux-focus="secondary"
+            >
+              <div class="home-month-summary-top">
+                <p class="section-label" data-ux-copy>Fin de mes</p>
+                <div class="home-month-status">
+                  <span class="home-month-dot neutral" id="homeMonthEndDot" aria-hidden="true"></span>
+                  <small id="homeMonthEndHint">Sin datos</small>
+                </div>
+              </div>
+              <strong id="homeMonthEndCash">$0</strong>
+            </article>
+
+            <article
+              class="assistant-card home-alert-card"
               data-ux-focus="secondary"
               data-component="InsightsPanel"
             >
-              <p class="section-label" data-ux-copy>Asistente financiero</p>
-              <h2>Recomendación de hoy</h2>
+              <p class="section-label" data-ux-copy>Alerta de hoy</p>
               <p id="adviceText">Agrega tu primer ingreso o gasto para ver recomendaciones claras.</p>
             </article>
           </section>
@@ -181,7 +189,14 @@
             </button>
           </section>
 
-          <section class="panel feature-unlock-panel" id="featureUnlockPanel" data-ux-block hidden>
+          <section class="home-today-panel" data-ux-block>
+            <div class="home-today-header">
+              <p class="section-label" data-ux-copy>Hoy</p>
+            </div>
+            <div class="today-movement-list" id="todayMovementList"></div>
+          </section>
+
+          <section class="panel feature-unlock-panel" id="featureUnlockPanel" hidden>
             <div class="panel-header">
               <div>
                 <p class="section-label" data-ux-copy>Se activa con uso real</p>

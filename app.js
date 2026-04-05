@@ -134,10 +134,12 @@ const featureUnlockPanel = document.querySelector("#featureUnlockPanel");
 const featureUnlockList = document.querySelector("#featureUnlockList");
 const detailSummaryCopy = document.querySelector("#detailSummaryCopy");
 const homeTodayCash = document.querySelector("#homeTodayCash");
+const homeTodayHint = document.querySelector("#homeTodayHint");
 const homeMonthEndCash = document.querySelector("#homeMonthEndCash");
 const homeMonthEndCard = document.querySelector("#homeMonthEndCard");
 const homeMonthEndHint = document.querySelector("#homeMonthEndHint");
-const recentMovementList = document.querySelector("#recentMovementList");
+const homeMonthEndDot = document.querySelector("#homeMonthEndDot");
+const todayMovementList = document.querySelector("#todayMovementList");
 const quickIncomeBtn = document.querySelector("#quickIncomeBtn");
 const quickExpenseBtn = document.querySelector("#quickExpenseBtn");
 const quickTypeButtons = [...document.querySelectorAll("[data-quick-type]")];
@@ -914,20 +916,22 @@ function openTransactionModal(preferredType = "", options = {}) {
   focusTransactionAmount();
 }
 
-function renderRecentMovements(transactions) {
-  if (!recentMovementList) {
+function renderTodayMovements(transactions) {
+  if (!todayMovementList) {
     return;
   }
 
-  const recentTransactions = transactions.slice(0, 6);
+  const todayTransactions = transactions
+    .filter((item) => item.date === today())
+    .slice(0, 3);
 
-  if (!recentTransactions.length) {
-    recentMovementList.innerHTML =
-      '<div class="recent-empty">Aún no hay movimientos. Toca + para agregar el primero.</div>';
+  if (!todayTransactions.length) {
+    todayMovementList.innerHTML =
+      '<div class="recent-empty">Hoy todavía no hay movimientos.</div>';
     return;
   }
 
-  recentMovementList.innerHTML = recentTransactions
+  todayMovementList.innerHTML = todayTransactions
     .map((item) => {
       const sign = item.type === "income" ? "+" : "-";
       const toneClass = item.type === "income" ? "income" : "expense";
@@ -936,7 +940,7 @@ function renderRecentMovements(transactions) {
         <article class="recent-movement-row">
           <div class="recent-movement-copy">
             <strong>${escapeHtml(item.description)}</strong>
-            <small>${formatDate(item.date)} · ${escapeHtml(item.channel || "Sin cuenta")}</small>
+            <small>${escapeHtml(item.category || item.channel || "Movimiento")}</small>
           </div>
           <span class="recent-movement-amount ${toneClass}">${sign}${formatCurrency(item.amount)}</span>
         </article>
@@ -1347,6 +1351,14 @@ function render() {
   text("#appHeaderCashValue", formatCurrency(currentBalance));
   text("#sidebarHealth", health.description);
   text("#homeTodayCash", formatCurrency(currentBalance));
+  text(
+    "#homeTodayHint",
+    currentBalance > 0
+      ? "Hoy tienes disponible"
+      : currentBalance < 0
+        ? "Hoy te falta plata"
+        : "Empieza registrando tu plata de hoy"
+  );
   text("#homeMonthEndCash", formatCurrency(projectedBalance));
   text("#projectionMonthEndValue", formatCurrency(projectedBalance));
   text(
@@ -1357,7 +1369,10 @@ function render() {
   text("#avgIncome", formatCurrency(averageIncome));
   text("#topCategory", liveTopCategory);
   text("#nextCommitment", formatCurrency(nextCommitment));
-  text("#adviceText", assistantMessage);
+  text(
+    "#adviceText",
+    assistantMessage || "Agrega tu primer ingreso o gasto y te diré cuánto puedes mover esta semana."
+  );
   text("#receivablePill", `${openReceivables.length} pendientes`);
   text("#payablePill", `${openPayables.length} pendientes`);
   if (detailSummaryCopy) {
@@ -1367,14 +1382,15 @@ function render() {
   const healthPill = document.querySelector("#healthPill");
   healthPill.textContent = health.label;
   healthPill.className = `pill ${health.tone}`;
-  homeMonthEndCard.className = `money-main-card month-end-card ${health.tone}`;
-  homeMonthEndHint.textContent = health.description;
+  homeMonthEndCard.className = `money-main-card month-end-card home-month-summary ${health.tone}`;
+  homeMonthEndHint.textContent = getHomeHealthCopy(health);
+  homeMonthEndDot.className = `home-month-dot ${health.tone}`;
   projectionStatusCard.className = `projection-status-card ${health.tone}`;
   state.latestScenarioBalance = projectedBalance;
 
   applyCompanyLogo();
 
-  renderRecentMovements(state.data.transactions);
+  renderTodayMovements(state.data.transactions);
   renderTable(transactions);
   renderReceivables(receivables);
   renderPayables(payables);
@@ -1896,6 +1912,17 @@ function getHealth(incomeTotal, expenseTotal, balance, cashFloor = 0) {
     tone: "ok",
     description: "Vas bien: tienes margen para operar y decidir sin tanta presión.",
   };
+}
+
+function getHomeHealthCopy(health) {
+  const copyMap = {
+    ok: "Vas bien",
+    warn: "Vas ajustada",
+    risk: "Te falta plata",
+    neutral: "Sin datos",
+  };
+
+  return copyMap[health?.tone] || health?.label || "Sin datos";
 }
 
 function getForecastTone(amount, cashFloor) {

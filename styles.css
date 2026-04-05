@@ -520,6 +520,10 @@ body::before {
   line-height: 1.45;
 }
 
+.home-balance-card .section-label {
+  margin-bottom: 4px;
+}
+
 .month-end-card.ok,
 .projection-status-card.ok {
   background: linear-gradient(180deg, var(--state-positive-surface), rgba(252, 250, 246, 0.9));
@@ -556,6 +560,51 @@ body::before {
   align-content: start;
 }
 
+.home-month-summary {
+  gap: 10px;
+}
+
+.home-month-summary-top {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: start;
+}
+
+.home-month-summary-top .section-label {
+  margin-bottom: 0;
+}
+
+.home-month-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
+}
+
+.home-month-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: rgba(24, 38, 31, 0.18);
+}
+
+.home-month-dot.ok {
+  background: var(--state-positive);
+}
+
+.home-month-dot.warn {
+  background: var(--state-risk);
+}
+
+.home-month-dot.risk {
+  background: var(--state-critical);
+}
+
+.home-month-dot.neutral {
+  background: rgba(24, 38, 31, 0.22);
+}
+
 .month-end-card strong {
   margin-top: 2px;
   font-size: clamp(2.15rem, 3.5vw, 3rem);
@@ -571,6 +620,23 @@ body::before {
   display: grid;
   gap: 10px;
   align-content: start;
+}
+
+.home-alert-card {
+  padding: 18px 22px;
+  border-radius: 24px;
+  background: rgba(255, 255, 255, 0.7);
+}
+
+.home-alert-card .section-label {
+  margin-bottom: 2px;
+}
+
+.home-alert-card p:last-child {
+  font-size: 1rem;
+  font-weight: 800;
+  line-height: 1.45;
+  color: var(--ink);
 }
 
 .assistant-card h2,
@@ -633,8 +699,17 @@ body::before {
   justify-content: space-between;
   gap: 14px;
   align-items: center;
-  padding: 16px 0;
+  padding: 12px 0;
   border-bottom: 1px solid var(--line);
+}
+
+.today-movement-list .recent-movement-row:first-child {
+  padding-top: 4px;
+}
+
+.today-movement-list .recent-movement-row:last-child {
+  border-bottom: 0;
+  padding-bottom: 0;
 }
 
 .recent-movement-copy {
@@ -643,17 +718,18 @@ body::before {
 }
 
 .recent-movement-copy strong {
-  font-size: 1rem;
+  font-size: 0.98rem;
   color: var(--ink);
 }
 
 .recent-movement-copy small,
 .recent-empty {
   color: var(--muted);
+  font-size: 0.88rem;
 }
 
 .recent-movement-amount {
-  font-size: 1.1rem;
+  font-size: 1rem;
   font-weight: 800;
 }
 
@@ -1084,6 +1160,20 @@ select:focus {
   padding: 6px 0 0;
   border-top: 1px solid var(--line);
   border-radius: 0;
+}
+
+.home-today-panel {
+  max-width: 760px;
+  padding-top: 2px;
+  border-top: 1px solid var(--line);
+}
+
+.home-today-header {
+  margin-bottom: 8px;
+}
+
+.home-today-header .section-label {
+  margin-bottom: 0;
 }
 
 .feature-unlock-list {
@@ -2081,6 +2171,14 @@ tbody tr:hover {
     padding: 18px;
   }
 
+  .home-month-summary-top {
+    gap: 10px;
+  }
+
+  .home-month-status {
+    gap: 6px;
+  }
+
   .home-quick-grid {
     gap: 12px;
     max-width: none;
@@ -2089,6 +2187,10 @@ tbody tr:hover {
   .quick-action-card {
     min-height: 70px;
     font-size: 1rem;
+  }
+
+  .home-alert-card p:last-child {
+    font-size: 0.96rem;
   }
 
   .form-actions,
