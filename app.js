@@ -935,12 +935,12 @@ function renderTodayMovements(transactions) {
     .map((item) => {
       const sign = item.type === "income" ? "+" : "-";
       const toneClass = item.type === "income" ? "income" : "expense";
+      const label = item.description || item.category || item.channel || "Movimiento";
 
       return `
         <article class="recent-movement-row">
           <div class="recent-movement-copy">
-            <strong>${escapeHtml(item.description)}</strong>
-            <small>${escapeHtml(item.category || item.channel || "Movimiento")}</small>
+            <strong>${escapeHtml(label)}</strong>
           </div>
           <span class="recent-movement-amount ${toneClass}">${sign}${formatCurrency(item.amount)}</span>
         </article>
@@ -1382,7 +1382,7 @@ function render() {
   const healthPill = document.querySelector("#healthPill");
   healthPill.textContent = health.label;
   healthPill.className = `pill ${health.tone}`;
-  homeMonthEndCard.className = `money-main-card month-end-card home-month-summary ${health.tone}`;
+  homeMonthEndCard.className = `home-month-summary ${health.tone}`;
   homeMonthEndHint.textContent = getHomeHealthCopy(health);
   homeMonthEndDot.className = `home-month-dot ${health.tone}`;
   projectionStatusCard.className = `projection-status-card ${health.tone}`;

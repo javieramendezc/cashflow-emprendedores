@@ -147,33 +147,31 @@
           data-component="HomeScreen"
         >
           <section class="home-hero-panel" data-ux-block data-ux-block-group="home">
-            <article class="money-main-card home-balance-card" data-ux-focus="primary">
-              <p class="section-label" data-ux-copy>Zona segura</p>
+            <article class="home-balance-card" data-ux-focus="primary">
               <strong id="homeTodayCash">$0</strong>
               <small id="homeTodayHint">Hoy tienes disponible</small>
             </article>
 
             <article
-              class="money-main-card month-end-card home-month-summary"
+              class="home-month-summary"
               id="homeMonthEndCard"
               data-ux-focus="secondary"
             >
-              <div class="home-month-summary-top">
-                <p class="section-label" data-ux-copy>Fin de mes</p>
-                <div class="home-month-status">
+              <p class="home-month-line">
+                <span class="home-month-label">Fin de mes:</span>
+                <strong id="homeMonthEndCash">$0</strong>
+                <span class="home-month-status">
                   <span class="home-month-dot neutral" id="homeMonthEndDot" aria-hidden="true"></span>
                   <small id="homeMonthEndHint">Sin datos</small>
-                </div>
-              </div>
-              <strong id="homeMonthEndCash">$0</strong>
+                </span>
+              </p>
             </article>
 
             <article
-              class="assistant-card home-alert-card"
+              class="home-alert-card"
               data-ux-focus="secondary"
               data-component="InsightsPanel"
             >
-              <p class="section-label" data-ux-copy>Alerta de hoy</p>
               <p id="adviceText">Agrega tu primer ingreso o gasto para ver recomendaciones claras.</p>
             </article>
           </section>
