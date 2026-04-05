@@ -146,7 +146,15 @@
           data-app-page="home"
           data-component="HomeScreen"
         >
-          <section class="home-hero-panel" data-ux-block data-ux-block-group="home">
+          <section class="home-error-state" id="homeErrorState" data-ux-block data-ux-focus="primary" hidden>
+            <strong>Ups, algo no funcionó</strong>
+            <p id="homeErrorHint">Inténtalo de nuevo</p>
+            <button type="button" class="ghost-btn retry-state-btn" id="retryHomeBtn">
+              Reintentar
+            </button>
+          </section>
+
+          <section class="home-hero-panel" id="homeHeroPanel" data-ux-block data-ux-block-group="home">
             <article class="home-balance-card" id="homeBalanceCard" data-ux-focus="primary">
               <strong id="homeTodayCash">$0</strong>
               <small id="homeTodayHint">Hoy tienes disponible</small>

@@ -460,6 +460,33 @@ body::before {
   max-width: 760px;
 }
 
+.home-error-state {
+  display: grid;
+  gap: 10px;
+  max-width: 320px;
+  padding-top: 8px;
+}
+
+.home-error-state strong {
+  font-family: "Space Grotesk", sans-serif;
+  font-size: clamp(2rem, 5vw, 2.6rem);
+  line-height: 0.98;
+  letter-spacing: -0.05em;
+  color: var(--ink);
+}
+
+.home-error-state p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 1rem;
+  line-height: 1.5;
+}
+
+.retry-state-btn {
+  width: fit-content;
+  min-width: 140px;
+}
+
 .home-hero-panel {
   display: grid;
   gap: 24px;

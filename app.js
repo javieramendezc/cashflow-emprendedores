@@ -53,6 +53,7 @@ const state = {
   data: cloneSeedState(),
   filterMonth: currentMonth(),
   session: null,
+  appError: false,
   authMode: "signIn",
   activePage: "home",
   activeDetailTab: "summary",
@@ -134,6 +135,10 @@ const bottomNavigation = document.querySelector(".bottom-navigation");
 const featureUnlockPanel = document.querySelector("#featureUnlockPanel");
 const featureUnlockList = document.querySelector("#featureUnlockList");
 const detailSummaryCopy = document.querySelector("#detailSummaryCopy");
+const homeErrorState = document.querySelector("#homeErrorState");
+const homeErrorHint = document.querySelector("#homeErrorHint");
+const retryHomeBtn = document.querySelector("#retryHomeBtn");
+const homeHeroPanel = document.querySelector("#homeHeroPanel");
 const homeBalanceCard = document.querySelector("#homeBalanceCard");
 const homeTodayCash = document.querySelector("#homeTodayCash");
 const homeTodayHint = document.querySelector("#homeTodayHint");
@@ -277,6 +282,22 @@ quickExpenseBtn.addEventListener("click", () => {
 
 openTransactionModalBtn.addEventListener("click", () => {
   openTransactionModal();
+});
+
+retryHomeBtn.addEventListener("click", async () => {
+  if (!state.session?.user) {
+    return;
+  }
+
+  retryHomeBtn.disabled = true;
+  retryHomeBtn.textContent = "Reintentando...";
+
+  try {
+    await syncSessionView();
+  } finally {
+    retryHomeBtn.disabled = false;
+    retryHomeBtn.textContent = "Reintentar";
+  }
 });
 
 closeTransactionModalBtn.addEventListener("click", () => {
@@ -820,6 +841,7 @@ async function handleAuthSubmit() {
 
 async function syncSessionView() {
   if (!state.session?.user) {
+    state.appError = false;
     switchPage("home");
     switchDetailTab("summary");
     appShell.hidden = true;
@@ -841,7 +863,13 @@ async function syncSessionView() {
   appShell.hidden = false;
   switchPage("home");
   switchDetailTab("summary");
-  state.data = await loadData();
+  try {
+    state.data = await loadData();
+    state.appError = false;
+  } catch {
+    state.data = cloneSeedState();
+    state.appError = true;
+  }
   state.filterMonth = currentMonth();
   monthFilter.value = state.filterMonth;
   syncCashFloorInputs(state.data.cashFloor);
@@ -1398,6 +1426,7 @@ function render() {
       };
   const isRiskState = isHomeRiskState(projectedBalance);
   const isPositiveState = isHomePositiveState(health, projectedBalance);
+  const hasAppError = state.appError;
   const assistantMessage = createAdvice(
     liveIncomeTotal - liveExpenseTotal,
     liveRecurring.length,
@@ -1483,16 +1512,21 @@ function render() {
   homeMonthEndHint.textContent = getHomeHealthCopy(health);
   homeMonthEndDot.className = `home-month-dot ${health.tone}`;
   projectionStatusCard.className = `projection-status-card ${health.tone}`;
+  homeErrorState.hidden = !hasAppError;
+  homeErrorHint.textContent = "Inténtalo de nuevo";
+  homeHeroPanel.hidden = hasAppError;
   homeBalanceCard.classList.toggle("is-empty", !hasMovements);
   homeBalanceCard.classList.toggle("is-learning", isLearningState);
   homeBalanceCard.classList.toggle("is-risk", isRiskState);
   homeBalanceCard.classList.toggle("is-ok", isPositiveState);
-  homeMonthEndCard.hidden = !hasMovements || isLearningState || isRiskState;
-  homeAdviceCard.hidden = !hasMovements;
+  homeMonthEndCard.hidden = !hasMovements || isLearningState || isRiskState || hasAppError;
+  homeAdviceCard.hidden = !hasMovements || hasAppError;
   homeAdviceCard.classList.toggle("is-learning", isLearningState);
   homeAdviceCard.classList.toggle("is-risk", isRiskState);
   homeAdviceCard.classList.toggle("is-ok", isPositiveState);
-  homeTodayPanel.hidden = !hasMovements || isLearningState || isRiskState;
+  homeQuickGrid.hidden = hasAppError;
+  homeTodayPanel.hidden = !hasMovements || isLearningState || isRiskState || hasAppError;
+  openTransactionModalBtn.hidden = hasAppError;
   homeQuickGrid.classList.toggle("is-single", isLearningState);
   quickExpenseBtn.hidden = isLearningState;
   if (quickIncomeLabel) {
@@ -1982,11 +2016,11 @@ async function loadData() {
       try {
         return normalizeStatePayload(JSON.parse(localBackup));
       } catch {
-        return cloneSeedState();
+        throw new Error("No se pudo recuperar el respaldo local.");
       }
     }
 
-    return cloneSeedState();
+    throw new Error("No se pudo cargar la información.");
   }
 }
 
@@ -2406,6 +2440,12 @@ function applyProgressiveVisibility() {
 
 function renderFeatureUnlocks() {
   if (!featureUnlockPanel || !featureUnlockList) {
+    return;
+  }
+
+  if (state.appError) {
+    featureUnlockPanel.hidden = true;
+    featureUnlockList.innerHTML = "";
     return;
   }
 
