@@ -559,6 +559,14 @@ body::before {
   color: var(--ink);
 }
 
+.home-progress-note {
+  margin: 2px 0 0;
+  font-size: 0.9rem;
+  font-weight: 700;
+  line-height: 1.4;
+  color: var(--muted);
+}
+
 .month-end-card.ok,
 .projection-status-card.ok {
   background: linear-gradient(180deg, var(--state-positive-surface), rgba(252, 250, 246, 0.9));

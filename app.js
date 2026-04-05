@@ -136,6 +136,7 @@ const detailSummaryCopy = document.querySelector("#detailSummaryCopy");
 const homeBalanceCard = document.querySelector("#homeBalanceCard");
 const homeTodayCash = document.querySelector("#homeTodayCash");
 const homeTodayHint = document.querySelector("#homeTodayHint");
+const homeProgressNote = document.querySelector("#homeProgressNote");
 const homeMonthEndCash = document.querySelector("#homeMonthEndCash");
 const homeMonthEndCard = document.querySelector("#homeMonthEndCard");
 const homeMonthEndHint = document.querySelector("#homeMonthEndHint");
@@ -1407,6 +1408,12 @@ function render() {
       : assistantMessage ||
           "Agrega tu primer ingreso o gasto y te diré cuánto puedes mover esta semana."
   );
+  if (homeProgressNote) {
+    homeProgressNote.hidden = !isLearningState;
+    homeProgressNote.textContent = isLearningState
+      ? `Llevas ${state.data.transactions.length} de ${UX_RULES.progressiveVisibility.projectionTransactions} movimientos`
+      : "";
+  }
   text("#receivablePill", `${openReceivables.length} pendientes`);
   text("#payablePill", `${openPayables.length} pendientes`);
   if (detailSummaryCopy) {
