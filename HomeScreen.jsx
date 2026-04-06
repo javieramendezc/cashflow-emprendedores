@@ -8,16 +8,25 @@ export default function HomeScreen() {
   const [feedback, setFeedback] = useState("")
 
   const [movements, setMovements] = useState([])
+  const [futureMovements, setFutureMovements] = useState([
+    // ejemplo:
+    // { type: "expense", amount: 20000, day: 15 },
+  ])
   const [safeMinimum, setSafeMinimum] = useState(200000)
 
   // 🔵 CARGAR DATOS AL INICIAR
   useEffect(() => {
     try {
       const storedMovements = localStorage.getItem("movements")
+      const storedFutureMovements = localStorage.getItem("futureMovements")
       const storedMinimum = localStorage.getItem("safeMinimum")
 
       if (storedMovements) {
         setMovements(JSON.parse(storedMovements))
+      }
+
+      if (storedFutureMovements) {
+        setFutureMovements(JSON.parse(storedFutureMovements))
       }
 
       if (storedMinimum) {
@@ -34,6 +43,11 @@ export default function HomeScreen() {
     localStorage.setItem("movements", JSON.stringify(movements))
   }, [movements])
 
+  // 🟣 GUARDAR MOVIMIENTOS FUTUROS
+  useEffect(() => {
+    localStorage.setItem("futureMovements", JSON.stringify(futureMovements))
+  }, [futureMovements])
+
   // 🟡 GUARDAR MÍNIMO
   useEffect(() => {
     localStorage.setItem("safeMinimum", safeMinimum)
@@ -48,9 +62,17 @@ export default function HomeScreen() {
     }, 0)
   }, [movements])
 
+  const projectedMoney = useMemo(() => {
+    return futureMovements.reduce((acc, movement) => {
+      return movement.type === "income"
+        ? acc + movement.amount
+        : acc - movement.amount
+    }, money)
+  }, [futureMovements, money])
+
   const onboardingCount = movements.length
   const isOnboarding = onboardingCount < 3
-  const isCritical = money <= safeMinimum
+  const isCritical = money <= safeMinimum || projectedMoney <= safeMinimum
 
   // 🔁 FEEDBACK
   useEffect(() => {
@@ -150,7 +172,7 @@ export default function HomeScreen() {
           <div className="text-gray-700">
             Fin de mes:{" "}
             <span className={`font-medium ${isCritical ? "text-red-500" : "text-yellow-500"}`}>
-              ${(money - 10000).toLocaleString("es-CL")}
+              ${projectedMoney.toLocaleString("es-CL")}
             </span>
           </div>
 
