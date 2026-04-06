@@ -2,9 +2,59 @@
 import { useEffect, useMemo, useState } from "react"
 import AddMovementModal from "./AddMovementModal"
 import FutureMovementModal from "./FutureMovementModal"
+import FutureMovementItem from "./FutureMovementItem"
+
+const MOVEMENTS_KEY = "movements"
+const SAFE_MINIMUM_KEY = "safeMinimum"
+const FUTURE_MOVEMENTS_KEY = "futureMovements"
+
+function normalizeMovement(rawMovement) {
+  const amount = Number(rawMovement?.amount)
+  const label = String(rawMovement?.label || "").trim()
+  const type = rawMovement?.type === "income" ? "income" : "expense"
+
+  if (!label || !Number.isFinite(amount) || amount <= 0) {
+    return null
+  }
+
+  return {
+    id: rawMovement?.id ?? Date.now(),
+    type,
+    label,
+    amount,
+    date: rawMovement?.date || "Hoy",
+  }
+}
+
+function normalizeFutureMovement(rawMovement) {
+  const amount = Number(rawMovement?.amount)
+  const day = Number(rawMovement?.day)
+  const label = String(rawMovement?.label || "").trim()
+  const type = rawMovement?.type === "income" ? "income" : "expense"
+
+  if (
+    !label ||
+    !Number.isFinite(amount) ||
+    amount <= 0 ||
+    !Number.isFinite(day) ||
+    day < 1 ||
+    day > 31
+  ) {
+    return null
+  }
+
+  return {
+    id: rawMovement?.id ?? Date.now(),
+    type,
+    label,
+    amount,
+    day,
+  }
+}
 
 export default function HomeScreen() {
   const [error, setError] = useState(false)
+  const [isLoaded, setIsLoaded] = useState(false)
   const [modalType, setModalType] = useState(null)
   const [feedback, setFeedback] = useState("")
   const [showFutureSection, setShowFutureSection] = useState(false)
@@ -18,40 +68,42 @@ export default function HomeScreen() {
 
   // Cargar datos
   useEffect(() => {
-    try {
-      const storedMovements = localStorage.getItem("movements")
-      const storedMinimum = localStorage.getItem("safeMinimum")
-      const storedFutureMovements = localStorage.getItem("futureMovements")
-
-      if (storedMovements) {
-        setMovements(JSON.parse(storedMovements))
-      }
-
-      if (storedMinimum) {
-        setSafeMinimum(Number(storedMinimum))
-      }
-
-      if (storedFutureMovements) {
-        setFutureMovements(JSON.parse(storedFutureMovements))
-      }
-    } catch (e) {
-      console.error(e)
-      setError(true)
-    }
+    loadStoredData()
   }, [])
 
   // Guardar datos
   useEffect(() => {
-    localStorage.setItem("movements", JSON.stringify(movements))
-  }, [movements])
+    if (!isLoaded) return
+
+    try {
+      localStorage.setItem(MOVEMENTS_KEY, JSON.stringify(movements))
+    } catch (e) {
+      console.error(e)
+      setError(true)
+    }
+  }, [isLoaded, movements])
 
   useEffect(() => {
-    localStorage.setItem("safeMinimum", String(safeMinimum))
-  }, [safeMinimum])
+    if (!isLoaded) return
+
+    try {
+      localStorage.setItem(SAFE_MINIMUM_KEY, String(safeMinimum))
+    } catch (e) {
+      console.error(e)
+      setError(true)
+    }
+  }, [isLoaded, safeMinimum])
 
   useEffect(() => {
-    localStorage.setItem("futureMovements", JSON.stringify(futureMovements))
-  }, [futureMovements])
+    if (!isLoaded) return
+
+    try {
+      localStorage.setItem(FUTURE_MOVEMENTS_KEY, JSON.stringify(futureMovements))
+    } catch (e) {
+      console.error(e)
+      setError(true)
+    }
+  }, [futureMovements, isLoaded])
 
   // Feedback temporal
   useEffect(() => {
@@ -73,7 +125,10 @@ export default function HomeScreen() {
 
   const projection = useMemo(() => {
     const today = new Date().getDate()
-    const sortedFuture = [...futureMovements].sort((a, b) => a.day - b.day)
+    const sortedFuture = [...futureMovements]
+      .map(normalizeFutureMovement)
+      .filter(Boolean)
+      .sort((a, b) => a.day - b.day)
 
     let runningBalance = money
     let criticalDay = null
@@ -94,22 +149,80 @@ export default function HomeScreen() {
     }
   }, [money, futureMovements, safeMinimum])
 
-  const isCritical = projection.finalBalance <= safeMinimum
+  const isCritical =
+    money <= safeMinimum ||
+    projection.finalBalance <= safeMinimum ||
+    projection.criticalDay !== null
   const safeToSpend = Math.max(projection.finalBalance - safeMinimum, 0)
 
   const nextFutureMovement = useMemo(() => {
     const today = new Date().getDate()
     return [...futureMovements]
+      .map(normalizeFutureMovement)
+      .filter(Boolean)
       .filter((item) => item.day >= today)
       .sort((a, b) => a.day - b.day)[0]
   }, [futureMovements])
+
+  function loadStoredData() {
+    try {
+      const storedMovements = localStorage.getItem(MOVEMENTS_KEY)
+      const storedMinimum = localStorage.getItem(SAFE_MINIMUM_KEY)
+      const storedFutureMovements = localStorage.getItem(FUTURE_MOVEMENTS_KEY)
+
+      if (storedMovements) {
+        const parsedMovements = JSON.parse(storedMovements)
+        const normalizedMovements = Array.isArray(parsedMovements)
+          ? parsedMovements.map(normalizeMovement).filter(Boolean)
+          : []
+        setMovements(normalizedMovements)
+      } else {
+        setMovements([])
+      }
+
+      if (storedMinimum) {
+        setSafeMinimum(Number(storedMinimum) || 0)
+      } else {
+        setSafeMinimum(200000)
+      }
+
+      if (storedFutureMovements) {
+        const parsedFutureMovements = JSON.parse(storedFutureMovements)
+        const normalizedFutureMovements = Array.isArray(parsedFutureMovements)
+          ? parsedFutureMovements.map(normalizeFutureMovement).filter(Boolean)
+          : []
+        setFutureMovements(normalizedFutureMovements)
+      } else {
+        setFutureMovements([])
+      }
+
+      setError(false)
+    } catch (e) {
+      console.error(e)
+      setError(true)
+    } finally {
+      setIsLoaded(true)
+    }
+  }
 
   function getInsight() {
     const today = new Date().getDate()
 
     if (projection.criticalDay) {
       const daysLeft = projection.criticalDay - today
+      if (daysLeft <= 0) {
+        return "Ojo: hoy podrías tocar tu mínimo seguro"
+      }
+
+      if (daysLeft === 1) {
+        return "Ojo: mañana podrías tocar tu mínimo seguro"
+      }
+
       return `Ojo: en ${daysLeft} día${daysLeft === 1 ? "" : "s"} podrías quedar muy justa`
+    }
+
+    if (projection.finalBalance <= safeMinimum) {
+      return "Vas muy ajustada para cerrar el mes con calma"
     }
 
     if (futureMovements.length === 0) {
@@ -121,16 +234,20 @@ export default function HomeScreen() {
 
   function handleAddMovement(newMovement) {
     try {
-      const movementToSave = {
+      const movementToSave = normalizeMovement({
         id: Date.now(),
         ...newMovement,
         date: "Hoy",
+      })
+
+      if (!movementToSave) {
+        return
       }
 
       const nextMoney =
-        newMovement.type === "income"
-          ? money + newMovement.amount
-          : money - newMovement.amount
+        movementToSave.type === "income"
+          ? money + movementToSave.amount
+          : money - movementToSave.amount
 
       setMovements((prev) => [movementToSave, ...prev])
       setModalType(null)
@@ -142,7 +259,7 @@ export default function HomeScreen() {
   }
 
   function handleRetry() {
-    setError(false)
+    loadStoredData()
   }
 
   function handleOpenAddFuture() {
@@ -157,12 +274,18 @@ export default function HomeScreen() {
 
   function handleSaveFuture(item) {
     try {
+      const normalizedItem = normalizeFutureMovement(item)
+
+      if (!normalizedItem) {
+        return
+      }
+
       setFutureMovements((prev) => {
-        const exists = prev.some((x) => x.id === item.id)
+        const exists = prev.some((x) => x.id === normalizedItem.id)
         if (exists) {
-          return prev.map((x) => (x.id === item.id ? item : x))
+          return prev.map((x) => (x.id === normalizedItem.id ? normalizedItem : x))
         }
-        return [item, ...prev]
+        return [normalizedItem, ...prev]
       })
 
       setFutureModalOpen(false)
@@ -206,7 +329,10 @@ export default function HomeScreen() {
     )
   }
 
-  const sortedFutureMovements = [...futureMovements].sort((a, b) => a.day - b.day)
+  const sortedFutureMovements = [...futureMovements]
+    .map(normalizeFutureMovement)
+    .filter(Boolean)
+    .sort((a, b) => a.day - b.day)
 
   return (
     <div className="min-h-screen bg-[#FAFAF9] px-5 py-8 max-w-md mx-auto space-y-6">
@@ -353,41 +479,13 @@ export default function HomeScreen() {
               {sortedFutureMovements.map((item) => (
                 <div
                   key={item.id}
-                  className="py-3 px-4 flex items-center justify-between gap-3"
+                  className="px-4"
                 >
-                  <div className="min-w-0">
-                    <p className="text-sm font-medium text-gray-900 truncate">
-                      {item.label}
-                    </p>
-                    <p className="text-xs text-gray-500">
-                      Día {item.day} · {item.type === "income" ? "Ingreso" : "Gasto"}
-                    </p>
-                  </div>
-
-                  <div className="flex items-center gap-3 shrink-0">
-                    <span
-                      className={`text-sm font-medium ${
-                        item.type === "income" ? "text-green-600" : "text-gray-800"
-                      }`}
-                    >
-                      {item.type === "income" ? "+" : "-"}$
-                      {item.amount.toLocaleString("es-CL")}
-                    </span>
-
-                    <button
-                      onClick={() => handleEditFuture(item)}
-                      className="text-xs text-gray-500"
-                    >
-                      Editar
-                    </button>
-
-                    <button
-                      onClick={() => handleDeleteFuture(item.id)}
-                      className="text-xs text-red-500"
-                    >
-                      Eliminar
-                    </button>
-                  </div>
+                  <FutureMovementItem
+                    item={item}
+                    onEdit={handleEditFuture}
+                    onDelete={handleDeleteFuture}
+                  />
                 </div>
               ))}
             </div>
