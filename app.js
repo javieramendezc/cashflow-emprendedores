@@ -1052,6 +1052,48 @@ function getHomeViewState() {
   return "normal";
 }
 
+function syncHomeViewVisibility(homeViewState) {
+  const isErrorState = homeViewState === "error";
+  const errorMessage = state.appErrorMessage || copyText("errors.loadData");
+
+  if (homeErrorState) {
+    homeErrorState.hidden = !isErrorState;
+  }
+
+  if (homeErrorHint) {
+    homeErrorHint.hidden = !isErrorState;
+    homeErrorHint.textContent = isErrorState ? errorMessage : "";
+  }
+
+  if (homeHeroPanel) {
+    homeHeroPanel.hidden = isErrorState;
+  }
+
+  if (homeQuickGrid) {
+    homeQuickGrid.hidden = isErrorState;
+  }
+
+  if (homeTodayPanel) {
+    homeTodayPanel.hidden = isErrorState || homeViewState !== "normal";
+  }
+
+  if (homeMonthEndCard) {
+    homeMonthEndCard.hidden = isErrorState || homeViewState !== "normal";
+  }
+
+  if (homeAdviceCard) {
+    homeAdviceCard.hidden = isErrorState || homeViewState !== "normal";
+  }
+
+  if (openTransactionModalBtn) {
+    openTransactionModalBtn.hidden = isErrorState;
+  }
+
+  if (featureUnlockPanel && isErrorState) {
+    featureUnlockPanel.hidden = true;
+  }
+}
+
 function getWeeklySpendBudget(projectedBalance, cashFloor = 0) {
   const safeReserve = cashFloor > 0 ? cashFloor : 100000;
   return Math.max(0, Math.floor((projectedBalance - safeReserve) / 4 / 1000) * 1000);
@@ -1517,6 +1559,9 @@ function render() {
   const homeViewState = getHomeViewState();
   const isOnboardingState = homeViewState === "onboarding";
   const isNormalState = homeViewState === "normal";
+
+  syncHomeViewVisibility(homeViewState);
+
   const hasAnyData =
     hasMovements ||
     state.data.receivables.length > 0 ||
@@ -1667,24 +1712,13 @@ function render() {
       }
     }
   }
-  homeErrorState.hidden = homeViewState !== "error";
-  if (homeErrorHint) {
-    homeErrorHint.hidden = true;
-    homeErrorHint.textContent = "";
-  }
-  homeHeroPanel.hidden = homeViewState === "error";
   homeBalanceCard.classList.toggle("is-empty", !hasMovements && isOnboardingState);
   homeBalanceCard.classList.toggle("is-learning", hasMovements && isOnboardingState);
   homeBalanceCard.classList.toggle("is-risk", isRiskState);
   homeBalanceCard.classList.toggle("is-ok", isPositiveState);
-  homeMonthEndCard.hidden = homeViewState !== "normal";
-  homeAdviceCard.hidden = homeViewState !== "normal";
   homeAdviceCard.classList.toggle("is-learning", isOnboardingState);
   homeAdviceCard.classList.toggle("is-risk", isRiskState);
   homeAdviceCard.classList.toggle("is-ok", isPositiveState);
-  homeQuickGrid.hidden = homeViewState === "error";
-  homeTodayPanel.hidden = homeViewState !== "normal";
-  openTransactionModalBtn.hidden = homeViewState === "error";
   homeQuickGrid.classList.toggle("is-single", isLearningState);
   quickExpenseBtn.hidden = hasMovements && isOnboardingState;
   if (quickIncomeLabel) {
