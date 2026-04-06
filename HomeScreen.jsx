@@ -149,6 +149,28 @@ export default function HomeScreen() {
     setError(false)
   }
 
+  function getInsight() {
+    if (projection.criticalDay) {
+      const daysLeft = projection.criticalDay - new Date().getDate()
+
+      if (daysLeft <= 0) {
+        return "Ojo: hoy podrías tener problemas"
+      }
+
+      if (daysLeft === 1) {
+        return "Ojo: mañana podrías tener problemas"
+      }
+
+      return `Ojo: en ${daysLeft} días podrías tener problemas`
+    }
+
+    if (money > safeMinimum) {
+      return "Vas bien. Puedes gastar con tranquilidad"
+    }
+
+    return "Mantente atenta a tus gastos"
+  }
+
   // 🔴 ERROR
   if (error) {
     return (
@@ -217,13 +239,14 @@ export default function HomeScreen() {
             </span>
           </div>
 
-          {/* ⚠️ ALERTA */}
-          <div className={`text-sm ${isCritical ? "text-red-600" : "text-gray-600"}`}>
-            {isCritical
-              ? projection.criticalDay
-                ? `Ojo: el día ${projection.criticalDay} podrías quedar bajo tu mínimo seguro`
-                : "Ojo: te estás quedando sin caja para cerrar el mes con calma"
-              : `Puedes gastar hasta $${safeToSpend.toLocaleString("es-CL")} con tranquilidad`}
+          <div className="space-y-1">
+            <p className="text-sm text-gray-600">
+              {getInsight()}
+            </p>
+
+            <p className="text-sm text-gray-500">
+              Puedes usar hasta ${safeToSpend.toLocaleString("es-CL")}
+            </p>
           </div>
         </>
       )}
