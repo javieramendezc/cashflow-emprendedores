@@ -12,6 +12,10 @@ function formatMoney(value) {
   return `$${Math.abs(value).toLocaleString("es-CL")}`
 }
 
+function formatSignedMoney(value) {
+  return value < 0 ? `-${formatMoney(value)}` : formatMoney(value)
+}
+
 function getMonthEndTone(projectedMoney, safeMinimum) {
   if (projectedMoney <= 0 || projectedMoney <= safeMinimum) {
     return {
@@ -51,7 +55,7 @@ export default function HomeScreen() {
 
   const onboardingCount = movements.length
   const isOnboarding = onboardingCount < 3
-  const projectedMonthEnd = Math.max(money - 10000, 0)
+  const projectedMonthEnd = money - 10000
   const weeklyBudget = Math.max(Math.floor((projectedMonthEnd - safeMinimum) / 4 / 1000) * 1000, 0)
   const tone = getMonthEndTone(projectedMonthEnd, safeMinimum)
 
@@ -100,7 +104,7 @@ export default function HomeScreen() {
 
     setMovements((prev) => [movementToSave, ...prev])
     setModalType(null)
-    setFeedback(`Listo. Ahora tienes ${formatMoney(nextMoney)}`)
+    setFeedback(`Listo. Ahora tienes ${formatSignedMoney(nextMoney)}`)
   }
 
   if (screenState === "loading") {
@@ -136,7 +140,7 @@ export default function HomeScreen() {
 
   return (
     <>
-      <main className="min-h-screen max-w-md space-y-6 bg-[#FAFAF9] px-5 py-8">
+      <main className="mx-auto min-h-screen max-w-md space-y-6 bg-[#FAFAF9] px-5 py-8">
         {feedback ? (
           <div className="rounded-xl bg-gray-900 px-4 py-3 text-sm text-white">
             {feedback}
@@ -145,7 +149,7 @@ export default function HomeScreen() {
 
         <section>
           <h1 className="text-4xl font-semibold tracking-tight text-gray-900">
-            {money < 0 ? `-${formatMoney(money)}` : formatMoney(money)}
+            {formatSignedMoney(money)}
           </h1>
           <p className="mt-1 text-sm text-gray-500">Hoy tienes disponible</p>
         </section>
@@ -165,7 +169,7 @@ export default function HomeScreen() {
             <section className="text-gray-700">
               Fin de mes:{" "}
               <span className={`font-medium ${tone.valueClass}`}>
-                {formatMoney(projectedMonthEnd)}
+                {formatSignedMoney(projectedMonthEnd)}
               </span>
             </section>
 
