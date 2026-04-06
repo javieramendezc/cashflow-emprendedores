@@ -7,6 +7,7 @@ import FutureMovementItem from "./FutureMovementItem"
 const MOVEMENTS_KEY = "movements"
 const SAFE_MINIMUM_KEY = "safeMinimum"
 const FUTURE_MOVEMENTS_KEY = "futureMovements"
+const QUICK_SIMULATION_AMOUNTS = [20000, 50000, 100000, 200000]
 
 function normalizeMovement(rawMovement) {
   const amount = Number(rawMovement?.amount)
@@ -58,6 +59,8 @@ export default function HomeScreen() {
   const [modalType, setModalType] = useState(null)
   const [feedback, setFeedback] = useState("")
   const [showFutureSection, setShowFutureSection] = useState(false)
+  const [simulationType, setSimulationType] = useState("expense")
+  const [simulationAmount, setSimulationAmount] = useState("")
 
   const [movements, setMovements] = useState([])
   const [safeMinimum, setSafeMinimum] = useState(200000)
@@ -154,6 +157,21 @@ export default function HomeScreen() {
     projection.finalBalance <= safeMinimum ||
     projection.criticalDay !== null
   const safeToSpend = Math.max(projection.finalBalance - safeMinimum, 0)
+  const simulationResult = useMemo(() => {
+    const amount = Number(simulationAmount)
+
+    if (!amount || amount <= 0) return null
+
+    const adjustedBalance =
+      simulationType === "income"
+        ? projection.finalBalance + amount
+        : projection.finalBalance - amount
+
+    return {
+      adjustedBalance,
+      isCritical: adjustedBalance <= safeMinimum,
+    }
+  }, [simulationAmount, simulationType, projection.finalBalance, safeMinimum])
 
   const nextFutureMovement = useMemo(() => {
     const today = new Date().getDate()
@@ -230,6 +248,16 @@ export default function HomeScreen() {
     }
 
     return `Puedes usar hasta $${safeToSpend.toLocaleString("es-CL")} sin desordenarte`
+  }
+
+  function getSimulationMessage() {
+    if (!simulationResult) return "Prueba una decisión antes de hacerla"
+
+    if (simulationResult.isCritical) {
+      return "Si haces eso, quedarías en zona de riesgo"
+    }
+
+    return "Si haces eso, sigues bien"
   }
 
   function handleAddMovement(newMovement) {
@@ -492,6 +520,103 @@ export default function HomeScreen() {
           )}
         </div>
       )}
+
+      <div className="rounded-3xl border border-gray-200 bg-white p-4 space-y-4">
+        <div>
+          <p className="text-sm font-medium text-gray-900">
+            Simular una decisión
+          </p>
+          <p className="text-xs text-gray-500 mt-1">
+            Mira qué pasa antes de gastar o contar con un ingreso
+          </p>
+        </div>
+
+        <div className="flex gap-2">
+          <button
+            type="button"
+            onClick={() => setSimulationType("expense")}
+            className={`flex-1 py-2 rounded-xl border text-sm ${
+              simulationType === "expense"
+                ? "bg-gray-900 text-white border-gray-900"
+                : "bg-white text-gray-700 border-gray-200"
+            }`}
+          >
+            Gasto
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setSimulationType("income")}
+            className={`flex-1 py-2 rounded-xl border text-sm ${
+              simulationType === "income"
+                ? "bg-gray-900 text-white border-gray-900"
+                : "bg-white text-gray-700 border-gray-200"
+            }`}
+          >
+            Ingreso
+          </button>
+        </div>
+
+        <div>
+          <label className="block text-sm text-gray-500 mb-1">
+            Monto a simular
+          </label>
+          <input
+            type="number"
+            inputMode="numeric"
+            value={simulationAmount}
+            onChange={(e) => setSimulationAmount(e.target.value)}
+            placeholder="Ej. 80000"
+            className="w-full rounded-2xl border border-gray-200 px-4 py-3 outline-none"
+          />
+        </div>
+
+        <div className="space-y-2">
+          <p className="text-xs text-gray-500">
+            Botones rápidos
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {QUICK_SIMULATION_AMOUNTS.map((amount) => (
+              <button
+                key={amount}
+                type="button"
+                onClick={() => setSimulationAmount(String(amount))}
+                className={`rounded-xl border px-3 py-2 text-sm transition ${
+                  Number(simulationAmount) === amount
+                    ? "border-gray-900 bg-gray-900 text-white"
+                    : "border-gray-200 bg-white text-gray-700"
+                }`}
+              >
+                ${amount.toLocaleString("es-CL")}
+              </button>
+            ))}
+
+            <button
+              type="button"
+              onClick={() => setSimulationAmount("")}
+              className="rounded-xl border border-gray-200 px-3 py-2 text-sm text-gray-500 transition"
+            >
+              Limpiar
+            </button>
+          </div>
+        </div>
+
+        <div className="rounded-2xl bg-gray-50 border border-gray-100 p-4 space-y-2">
+          <p
+            className={`text-sm font-medium ${
+              simulationResult?.isCritical ? "text-red-600" : "text-gray-900"
+            }`}
+          >
+            {getSimulationMessage()}
+          </p>
+
+          <p className="text-sm text-gray-500">
+            {simulationResult
+              ? `Tu cierre proyectado quedaría en $${simulationResult.adjustedBalance.toLocaleString("es-CL")}`
+              : "Ingresa un monto para ver el resultado"}
+          </p>
+        </div>
+      </div>
 
       <div className="pt-4 border-t border-gray-100 text-sm">
         <p className="text-gray-500 mb-2">Hoy</p>
