@@ -237,7 +237,7 @@ export default function HomeScreen() {
             <h1 className="text-2xl font-semibold text-gray-900">
               Ups, algo no salió bien
             </h1>
-            <p className="text-sm text-gray-500">Inténtalo de nuevo</p>
+            <p className="text-sm text-gray-500">Vamos a intentarlo de nuevo</p>
             <button
               onClick={handleRetry}
               className="rounded-xl bg-gray-900 px-5 py-2 text-sm font-medium text-white transition-transform duration-150 hover:scale-105"
@@ -268,7 +268,7 @@ export default function HomeScreen() {
 
         {isOnboarding ? (
           <section className="space-y-2">
-            <p className="text-gray-700">Aún estamos aprendiendo de tu dinero</p>
+            <p className="text-gray-700">Ya partimos. Hagámoslo claro</p>
             <p className="text-sm text-gray-500">
               Llevas {onboardingCount} de 3 movimientos
             </p>
