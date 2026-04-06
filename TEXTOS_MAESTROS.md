@@ -30,7 +30,7 @@ Convenciones:
 - Tu dinero
 - Salir
 - Flujo claro
-- Tu dinero claro. Sin estrés.
+- Tu Flujo de Caja. Sin Estrés.
 - Logo
 - Subir logo
 - Quitar logo

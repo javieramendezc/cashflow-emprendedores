@@ -47,7 +47,7 @@
   const APP_COPY = {
     // General
     app: {
-      documentTitle: "Flujo Claro | Tu dinero claro. Sin estrés.",
+      documentTitle: "Flujo Claro | Tu Flujo de Caja. Sin Estrés.",
     },
 
     // Acceso
@@ -83,7 +83,7 @@
     // Marca / identidad visual
     brand: {
       eyebrow: "Flujo claro",
-      title: "Tu dinero claro. Sin estrés.",
+      title: "Tu Flujo de Caja. Sin Estrés.",
     },
 
     // Estado de conexión
