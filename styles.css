@@ -489,7 +489,8 @@ body::before {
 .projection-hero-panel {
   display: grid;
   gap: 24px;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: minmax(0, 1.15fr) minmax(320px, 0.85fr);
+  align-items: stretch;
 }
 
 #homePage.app-page {
@@ -533,6 +534,8 @@ body::before {
 .assistant-card,
 .projection-status-card,
 .projection-assistant-card {
+  min-width: 0;
+  overflow: hidden;
   border-radius: 20px;
   padding: 24px;
   background: var(--surface);
@@ -549,6 +552,35 @@ body::before {
   line-height: 0.92;
   letter-spacing: -0.06em;
   font-variant-numeric: tabular-nums;
+}
+
+.sidebar-live-cash,
+.home-balance-card strong,
+.projection-status-card strong,
+.metric strong,
+.kpi-stack strong {
+  min-width: 0;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.projection-status-card {
+  display: grid;
+  gap: 14px;
+  align-content: start;
+}
+
+.projection-status-card strong {
+  margin-top: 8px;
+  font-size: clamp(2.4rem, 5.2vw, 4.25rem);
+  line-height: 0.9;
+  letter-spacing: -0.075em;
+}
+
+#projectionAlertText {
+  max-width: 18ch;
+  font-size: 1rem;
 }
 
 .money-main-card small,
@@ -807,6 +839,16 @@ body::before {
   font-size: clamp(1.25rem, 2vw, 1.55rem);
   line-height: 1.1;
   letter-spacing: -0.05em;
+}
+
+.projection-assistant-card {
+  display: grid;
+  gap: 14px;
+  align-content: start;
+}
+
+.projection-assistant-card h2 {
+  max-width: 10ch;
 }
 
 .home-quick-grid {
@@ -2101,10 +2143,15 @@ tbody tr:hover {
   margin: 0;
   padding: 0;
   list-style: none;
+  min-width: 0;
+  display: grid;
+  gap: 12px;
 }
 
 .tips-list li {
   line-height: 1.5;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 @keyframes rise {
@@ -2366,6 +2413,24 @@ tbody tr:hover {
 
   .home-balance-card strong {
     font-size: clamp(3.4rem, 15vw, 4.6rem);
+  }
+
+  .projection-status-card {
+    gap: 12px;
+    padding: 20px;
+  }
+
+  .projection-status-card strong {
+    font-size: clamp(2.6rem, 14vw, 4rem);
+    line-height: 0.92;
+  }
+
+  .projection-assistant-card {
+    padding: 20px;
+  }
+
+  .projection-assistant-card h2 {
+    max-width: none;
   }
 
   .home-balance-card.is-empty strong {
