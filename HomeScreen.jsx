@@ -171,6 +171,10 @@ export default function HomeScreen() {
     return "Mantente atenta a tus gastos"
   }
 
+  function simulateExpense(amount) {
+    return money - amount <= safeMinimum
+  }
+
   // 🔴 ERROR
   if (error) {
     return (
@@ -246,6 +250,10 @@ export default function HomeScreen() {
 
             <p className="text-sm text-gray-500">
               Puedes usar hasta ${safeToSpend.toLocaleString("es-CL")}
+            </p>
+
+            <p className="text-xs text-gray-400">
+              Si gastas $50.000 → {simulateExpense(50000) ? "riesgo" : "ok"}
             </p>
           </div>
         </>
