@@ -62,17 +62,54 @@ export default function HomeScreen() {
     }, 0)
   }, [movements])
 
-  const projectedMoney = useMemo(() => {
-    return futureMovements.reduce((acc, movement) => {
-      return movement.type === "income"
-        ? acc + movement.amount
-        : acc - movement.amount
-    }, money)
+  const projection = useMemo(() => {
+    let balance = money
+    let criticalDay = null
+
+    const today = new Date()
+    const currentDay = today.getDate()
+    const lastDayOfMonth = new Date(
+      today.getFullYear(),
+      today.getMonth() + 1,
+      0
+    ).getDate()
+
+    const movementsByDay = futureMovements.reduce((acc, movement) => {
+      const day = Number(movement.day)
+
+      if (!day || day < currentDay || day > lastDayOfMonth) {
+        return acc
+      }
+
+      if (!acc[day]) {
+        acc[day] = []
+      }
+
+      acc[day].push(movement)
+      return acc
+    }, {})
+
+    for (let day = currentDay; day <= lastDayOfMonth; day++) {
+      const movementsToday = movementsByDay[day] || []
+
+      movementsToday.forEach((movement) => {
+        balance += movement.type === "income" ? movement.amount : -movement.amount
+      })
+
+      if (balance <= safeMinimum && criticalDay === null) {
+        criticalDay = day
+      }
+    }
+
+    return {
+      finalBalance: balance,
+      criticalDay,
+    }
   }, [futureMovements, money])
 
   const onboardingCount = movements.length
   const isOnboarding = onboardingCount < 3
-  const isCritical = money <= safeMinimum || projectedMoney <= safeMinimum
+  const isCritical = money <= safeMinimum || projection.finalBalance <= safeMinimum
 
   // 🔁 FEEDBACK
   useEffect(() => {
@@ -172,14 +209,16 @@ export default function HomeScreen() {
           <div className="text-gray-700">
             Fin de mes:{" "}
             <span className={`font-medium ${isCritical ? "text-red-500" : "text-yellow-500"}`}>
-              ${projectedMoney.toLocaleString("es-CL")}
+              ${projection.finalBalance.toLocaleString("es-CL")}
             </span>
           </div>
 
           {/* ⚠️ ALERTA */}
           <div className={`text-sm ${isCritical ? "text-red-600" : "text-gray-600"}`}>
             {isCritical
-              ? "Ojo: te estás quedando sin caja para cerrar el mes con calma"
+              ? projection.criticalDay
+                ? `Ojo: el día ${projection.criticalDay} podrías quedar bajo tu mínimo seguro`
+                : "Ojo: te estás quedando sin caja para cerrar el mes con calma"
               : "Puedes gastar hasta $5.000 esta semana"}
           </div>
         </>
