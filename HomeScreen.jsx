@@ -110,6 +110,10 @@ export default function HomeScreen() {
   const onboardingCount = movements.length
   const isOnboarding = onboardingCount < 3
   const isCritical = money <= safeMinimum || projection.finalBalance <= safeMinimum
+  const safeToSpend = Math.max(
+    money - safeMinimum,
+    0
+  )
 
   // 🔁 FEEDBACK
   useEffect(() => {
@@ -219,7 +223,7 @@ export default function HomeScreen() {
               ? projection.criticalDay
                 ? `Ojo: el día ${projection.criticalDay} podrías quedar bajo tu mínimo seguro`
                 : "Ojo: te estás quedando sin caja para cerrar el mes con calma"
-              : "Puedes gastar hasta $5.000 esta semana"}
+              : `Puedes gastar hasta $${safeToSpend.toLocaleString("es-CL")} con tranquilidad`}
           </div>
         </>
       )}
