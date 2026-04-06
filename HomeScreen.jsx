@@ -7,8 +7,6 @@ import FutureMovementItem from "./FutureMovementItem"
 const MOVEMENTS_KEY = "movements"
 const SAFE_MINIMUM_KEY = "safeMinimum"
 const FUTURE_MOVEMENTS_KEY = "futureMovements"
-const QUICK_SIMULATION_AMOUNTS = [20000, 50000, 100000, 200000]
-
 function normalizeMovement(rawMovement) {
   const amount = Number(rawMovement?.amount)
   const label = String(rawMovement?.label || "").trim()
@@ -571,34 +569,17 @@ export default function HomeScreen() {
           />
         </div>
 
-        <div className="space-y-2">
-          <p className="text-xs text-gray-500">
-            Botones rápidos
-          </p>
-          <div className="flex flex-wrap gap-2">
-            {QUICK_SIMULATION_AMOUNTS.map((amount) => (
-              <button
-                key={amount}
-                type="button"
-                onClick={() => setSimulationAmount(String(amount))}
-                className={`rounded-xl border px-3 py-2 text-sm transition ${
-                  Number(simulationAmount) === amount
-                    ? "border-gray-900 bg-gray-900 text-white"
-                    : "border-gray-200 bg-white text-gray-700"
-                }`}
-              >
-                ${amount.toLocaleString("es-CL")}
-              </button>
-            ))}
-
+        <div className="flex flex-wrap gap-2">
+          {[10000, 30000, 50000, 100000].map((value) => (
             <button
+              key={value}
               type="button"
-              onClick={() => setSimulationAmount("")}
-              className="rounded-xl border border-gray-200 px-3 py-2 text-sm text-gray-500 transition"
+              onClick={() => setSimulationAmount(String(value))}
+              className="px-3 py-1.5 rounded-full bg-gray-100 text-gray-700 text-xs"
             >
-              Limpiar
+              ${value.toLocaleString("es-CL")}
             </button>
-          </div>
+          ))}
         </div>
 
         <div className="rounded-2xl bg-gray-50 border border-gray-100 p-4 space-y-2">
