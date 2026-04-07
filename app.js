@@ -2039,7 +2039,7 @@ function createForecastWeeks(
 
 function renderForecast(weeks, cashFloor) {
   if (!weeks.length) {
-    forecastList.innerHTML = '<div class="forecast-empty">Aún no hay datos para interpretar las próximas semanas.</div>';
+    forecastList.innerHTML = '<p class="forecast-empty">Todavía no hay suficiente información para leer cómo viene tu plata estas semanas.</p>';
     return;
   }
 
@@ -2062,48 +2062,96 @@ function renderForecast(weeks, cashFloor) {
     return acc;
   }, []);
 
-  forecastList.innerHTML = zones
-    .map((zone, index) => {
-      const startWeek = zone.startIndex + 1;
-      const endWeek = zone.endIndex + 1;
-      const rangeLabel =
-        startWeek === endWeek ? `Semana ${startWeek}` : `Semanas ${startWeek} a ${endWeek}`;
-      const finalWeek = zone.weeks[zone.weeks.length - 1];
-      const recoveredAfterCritical =
-        zone.zoneTone === "stable" && zones.slice(0, index).some((item) => item.zoneTone === "critical");
+  const firstCritical = zones.find((zone) => zone.zoneTone === "critical");
+  const lastZone = zones[zones.length - 1];
+  const summaryAmount = firstCritical
+    ? firstCritical.weeks[firstCritical.weeks.length - 1].amount
+    : lastZone.weeks[lastZone.weeks.length - 1].amount;
+  const firstCriticalStartWeek = firstCritical ? firstCritical.startIndex + 1 : null;
+  const firstCriticalEndWeek = firstCritical ? firstCritical.endIndex + 1 : null;
+  const criticalRangeLabel = firstCritical
+    ? firstCriticalStartWeek === firstCriticalEndWeek
+      ? `la semana ${firstCriticalStartWeek}`
+      : `las semanas ${firstCriticalStartWeek} a ${firstCriticalEndWeek}`
+    : "";
 
-      const title =
-        zone.zoneTone === "critical"
-          ? "Estás ajustada"
-          : recoveredAfterCritical
-            ? "Ya te recuperas"
-            : "Te mantienes estable";
+  const summaryTitle = firstCritical
+    ? firstCritical.startIndex === 0
+      ? "Se te aprieta pronto"
+      : "Vas bien, pero ojo"
+    : "Vas con aire";
 
-      const copy =
-        zone.zoneTone === "critical"
-          ? cashFloor > 0
-            ? `${rangeLabel}: podrías quedar bajo tu mínimo seguro.`
-            : `${rangeLabel}: tu caja se ve apretada.`
-          : recoveredAfterCritical
-            ? cashFloor > 0
-              ? `${rangeLabel}: vuelves a quedar sobre tu mínimo seguro.`
-              : `${rangeLabel}: vuelves a ver más margen.`
-            : `${rangeLabel}: tu caja se mantiene en zona estable.`;
+  const summaryCopy = firstCritical
+    ? firstCritical.startIndex === 0
+      ? cashFloor > 0
+        ? `Si se cumple lo que ya cargaste, desde ${criticalRangeLabel} podrías quedar bajo tu mínimo seguro.`
+        : `Si se cumple lo que ya cargaste, desde ${criticalRangeLabel} tu plata se podría apretar bastante.`
+      : cashFloor > 0
+        ? `Si todo sigue como hoy, más adelante podrías bajar de tu mínimo seguro en ${criticalRangeLabel}.`
+        : `Si todo sigue como hoy, más adelante aparece un tramo donde tu plata se ve más justa.`
+    : "Con lo que ya cargaste, estas semanas no se ve una zona crítica.";
+  const summaryFootLabel = firstCritical
+    ? "Plata estimada al final del tramo más ajustado"
+    : "Plata estimada al cierre de estas semanas";
 
-      return `
-        <article class="forecast-zone ${zone.zoneTone}">
-          <div class="forecast-zone-top">
-            <div>
-              <span class="forecast-zone-range">${rangeLabel}</span>
-              <h4>${title}</h4>
+  forecastList.innerHTML = `
+    <article class="forecast-summary ${firstCritical ? "critical" : "stable"}">
+      <span class="forecast-summary-kicker">Lectura rápida</span>
+      <h4>${summaryTitle}</h4>
+      <p>${summaryCopy}</p>
+      <div class="forecast-summary-foot">
+        <span>${summaryFootLabel}</span>
+        <strong>${formatCurrency(summaryAmount)}</strong>
+      </div>
+    </article>
+    <p class="forecast-lines-intro">Cada tramo muestra la plata que te podría quedar si se cumplen tus movimientos ya cargados.</p>
+    <div class="forecast-lines">
+      ${zones
+        .map((zone, index) => {
+          const startWeek = zone.startIndex + 1;
+          const endWeek = zone.endIndex + 1;
+          const rangeLabel =
+            startWeek === endWeek ? `Semana ${startWeek}` : `Semanas ${startWeek} a ${endWeek}`;
+          const finalWeek = zone.weeks[zone.weeks.length - 1];
+          const recoveredAfterCritical =
+            zone.zoneTone === "stable" &&
+            zones.slice(0, index).some((item) => item.zoneTone === "critical");
+
+          const title =
+            zone.zoneTone === "critical"
+              ? "Te aprietas"
+              : recoveredAfterCritical
+                ? "Aquí respiras"
+                : "Sigues con margen";
+
+          const copy =
+            zone.zoneTone === "critical"
+              ? cashFloor > 0
+                ? "En este tramo podrías quedar bajo tu mínimo seguro."
+                : "En este tramo podrías quedar con muy poco margen."
+              : recoveredAfterCritical
+                ? cashFloor > 0
+                  ? "Después vuelves a quedar por sobre tu mínimo seguro."
+                  : "Después vuelves a tener más aire."
+                : "En este tramo mantienes margen para moverte.";
+
+          return `
+            <div class="forecast-line ${zone.zoneTone}">
+              <div class="forecast-line-copy">
+                <span class="forecast-line-range">${rangeLabel}</span>
+                <strong>${title}</strong>
+                <p>${copy}</p>
+              </div>
+              <div class="forecast-line-amount">
+                <span>Te quedarían aprox.</span>
+                <strong>${formatCurrency(finalWeek.amount)}</strong>
+              </div>
             </div>
-            <strong>${formatCurrency(finalWeek.amount)}</strong>
-          </div>
-          <p>${copy}</p>
-        </article>
-      `;
-    })
-    .join("");
+          `;
+        })
+        .join("")}
+    </div>
+  `;
 }
 
 function renderCashFloorStatus(balance, cashFloor, lowCashWeek, hasAnyData) {

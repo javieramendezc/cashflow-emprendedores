@@ -2025,8 +2025,6 @@ select:focus {
 
 .breakdown-row,
 .forecast-row,
-.forecast-zone,
-.forecast-empty,
 .tips-list li {
   padding: 14px 16px;
   border-radius: 18px;
@@ -2147,34 +2145,19 @@ tbody tr:hover {
 
 .forecast-list {
   display: grid;
-  gap: 12px;
+  gap: 14px;
 }
 
-.forecast-zone {
+.forecast-summary {
   display: grid;
-  gap: 10px;
+  gap: 8px;
+  padding: 16px 18px 15px;
+  border-radius: 18px;
+  border: 1px solid rgba(24, 38, 31, 0.07);
+  background: rgba(255, 255, 255, 0.7);
 }
 
-.forecast-zone-top {
-  display: flex;
-  justify-content: space-between;
-  gap: 16px;
-  align-items: start;
-}
-
-.forecast-zone-top h4 {
-  margin: 2px 0 0;
-  font-size: 1rem;
-  letter-spacing: -0.02em;
-}
-
-.forecast-zone-top strong {
-  font-size: 1rem;
-  font-variant-numeric: tabular-nums;
-  white-space: nowrap;
-}
-
-.forecast-zone-range {
+.forecast-summary-kicker {
   display: inline-block;
   font-size: 0.74rem;
   font-weight: 700;
@@ -2183,31 +2166,146 @@ tbody tr:hover {
   color: var(--muted);
 }
 
-.forecast-zone p,
-.forecast-empty {
+.forecast-summary h4 {
+  margin: 0;
+  font-size: 1.18rem;
+  letter-spacing: -0.02em;
+}
+
+.forecast-summary p {
   margin: 0;
   color: var(--muted);
   line-height: 1.45;
 }
 
-.forecast-zone.critical {
-  background: rgba(255, 247, 245, 0.92);
+.forecast-summary-foot {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: start;
+  padding-top: 6px;
+}
+
+.forecast-summary-foot span {
+  font-size: 0.78rem;
+  line-height: 1.4;
+  color: var(--muted);
+}
+
+.forecast-summary-foot strong {
+  font-size: 1rem;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.forecast-summary.critical {
+  background: rgba(255, 247, 245, 0.96);
   border-color: var(--state-critical-border);
 }
 
-.forecast-zone.critical h4,
-.forecast-zone.critical strong {
+.forecast-summary.critical h4,
+.forecast-summary.critical strong {
   color: var(--state-critical);
 }
 
-.forecast-zone.stable {
+.forecast-summary.stable {
   background: rgba(248, 255, 250, 0.96);
   border-color: var(--state-positive-border);
 }
 
-.forecast-zone.stable h4,
-.forecast-zone.stable strong {
+.forecast-summary.stable h4,
+.forecast-summary.stable strong {
   color: var(--state-positive);
+}
+
+.forecast-lines-intro {
+  margin: 0;
+  font-size: 0.9rem;
+  line-height: 1.5;
+  color: var(--muted);
+}
+
+.forecast-lines {
+  display: grid;
+  gap: 0;
+}
+
+.forecast-line {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 16px;
+  align-items: start;
+  padding: 12px 0;
+  border-top: 1px solid rgba(24, 38, 31, 0.06);
+}
+
+.forecast-lines .forecast-line:first-child {
+  padding-top: 0;
+  border-top: 0;
+}
+
+.forecast-line-copy {
+  display: grid;
+  gap: 3px;
+}
+
+.forecast-line-range {
+  display: inline-block;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.forecast-line-copy strong {
+  font-size: 0.98rem;
+  letter-spacing: -0.02em;
+  color: var(--ink);
+}
+
+.forecast-line-copy p,
+.forecast-empty {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.4;
+}
+
+.forecast-line-amount {
+  display: grid;
+  gap: 2px;
+  justify-items: end;
+  text-align: right;
+}
+
+.forecast-line-amount span {
+  font-size: 0.68rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.forecast-line-amount strong {
+  font-size: 0.96rem;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.forecast-line.critical .forecast-line-copy strong,
+.forecast-line.critical .forecast-line-amount strong {
+  color: var(--state-critical);
+}
+
+.forecast-line.stable .forecast-line-copy strong,
+.forecast-line.stable .forecast-line-amount strong {
+  color: var(--state-positive);
+}
+
+.forecast-empty {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  font-size: 0.94rem;
 }
 
 .forecast-row.alert {
@@ -2414,6 +2512,16 @@ tbody tr:hover {
   .panel-header-split,
   .transaction-panel .filters {
     flex-direction: column;
+  }
+
+  .forecast-summary-foot,
+  .forecast-line {
+    grid-template-columns: 1fr;
+  }
+
+  .forecast-line-amount {
+    justify-items: start;
+    text-align: left;
   }
 
   .primary-btn,
