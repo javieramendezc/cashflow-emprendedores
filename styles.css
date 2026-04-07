@@ -1158,6 +1158,15 @@ body::before {
   padding: 24px;
 }
 
+#detailPage > .panel {
+  align-self: start;
+  padding-bottom: 18px;
+}
+
+#detailPage > .panel .panel-header-split {
+  margin-bottom: 0;
+}
+
 .panel-header,
 .panel-header-split {
   display: flex;
