@@ -65,6 +65,7 @@ const state = {
   activePage: "home",
   activeDetailTab: "summary",
   visibility: createInitialVisibilityState(),
+  smartNotifications: [],
   lastMovementImpact: "",
   latestScenarioBalance: 0,
   payableInvoiceDraft: {
@@ -1602,6 +1603,16 @@ function render() {
     cashFloor,
     lowCashWeek
   );
+  syncSmartNotifications({
+    currentBalance,
+    projectedBalance,
+    forecastWeeks,
+    lowCashWeek,
+    latestTransactions: state.data.transactions.slice(0, 5),
+    usageMetrics: state.visibility.metrics,
+    health,
+    cashFloor,
+  });
 
   text("#incomeTotal", formatCurrency(liveIncomeTotal));
   text("#expenseTotal", formatCurrency(liveExpenseTotal));
@@ -2423,6 +2434,275 @@ function getHealth(incomeTotal, expenseTotal, balance, cashFloor = 0) {
     tone: "ok",
     description: copyText("health.descriptions.ok"),
   };
+}
+
+function getHealthToneRank(tone) {
+  const toneOrder = {
+    neutral: 0,
+    risk: 1,
+    warn: 2,
+    ok: 3,
+  };
+
+  return toneOrder[tone] ?? 0;
+}
+
+function getNotificationPriority(type) {
+  const priorityMap = {
+    critical: 0,
+    alert: 1,
+    positive: 2,
+    onboarding: 3,
+  };
+
+  return priorityMap[type] ?? 9;
+}
+
+function getUserNotificationMetaKey() {
+  return `${getUserStorageKey()}-notifications-meta`;
+}
+
+function createInitialNotificationMeta() {
+  return {
+    lastActiveDate: "",
+    activeDays: [],
+    lastProjectedBalance: null,
+    lastHealthTone: "neutral",
+    lastMovementId: "",
+  };
+}
+
+function normalizeNotificationMeta(meta) {
+  const activeDays = Array.isArray(meta?.activeDays)
+    ? [...new Set(meta.activeDays.filter((value) => /^\d{4}-\d{2}-\d{2}$/.test(String(value))))]
+        .sort()
+        .slice(-14)
+    : [];
+
+  return {
+    lastActiveDate:
+      typeof meta?.lastActiveDate === "string" && /^\d{4}-\d{2}-\d{2}$/.test(meta.lastActiveDate)
+        ? meta.lastActiveDate
+        : "",
+    activeDays,
+    lastProjectedBalance: Number.isFinite(Number(meta?.lastProjectedBalance))
+      ? Number(meta.lastProjectedBalance)
+      : null,
+    lastHealthTone: typeof meta?.lastHealthTone === "string" ? meta.lastHealthTone : "neutral",
+    lastMovementId: meta?.lastMovementId ? String(meta.lastMovementId) : "",
+  };
+}
+
+function readNotificationMeta() {
+  if (!state.session?.user) {
+    return createInitialNotificationMeta();
+  }
+
+  try {
+    const rawValue = localStorage.getItem(getUserNotificationMetaKey());
+    return rawValue
+      ? normalizeNotificationMeta(JSON.parse(rawValue))
+      : createInitialNotificationMeta();
+  } catch {
+    return createInitialNotificationMeta();
+  }
+}
+
+function writeNotificationMeta(meta) {
+  if (!state.session?.user) {
+    return;
+  }
+
+  localStorage.setItem(
+    getUserNotificationMetaKey(),
+    JSON.stringify(normalizeNotificationMeta(meta))
+  );
+}
+
+function getRecentUsageDays(meta) {
+  const cutoff = addDays(-6);
+  return [...new Set([...(meta.activeDays || []), today()])].filter((value) => value >= cutoff)
+    .length;
+}
+
+function getDaysSinceLastActive(lastActiveDate) {
+  if (!lastActiveDate) {
+    return 0;
+  }
+
+  return Math.max(0, -daysUntil(lastActiveDate));
+}
+
+function buildNotificationActiveDays(previousMeta) {
+  const cutoff = addDays(-6);
+  return [...new Set([...(previousMeta.activeDays || []), today()])]
+    .filter((value) => value >= cutoff)
+    .sort();
+}
+
+function getHighExpenseThreshold(expenses, currentBalance, cashFloor = 0) {
+  const averageExpense = expenses.length ? sum(expenses) / expenses.length : 0;
+  return Math.max(75000, averageExpense * 1.8, currentBalance * 0.18, cashFloor * 0.2);
+}
+
+function getNotificationLabel(rawValue, fallback = "ese movimiento") {
+  const label = String(rawValue || "").trim();
+
+  if (!label) {
+    return fallback;
+  }
+
+  return label.length > 28 ? `${label.slice(0, 25).trim()}...` : label;
+}
+
+function buildSmartNotifications(context, previousMeta = createInitialNotificationMeta()) {
+  const {
+    currentBalance,
+    projectedBalance,
+    forecastWeeks,
+    lowCashWeek,
+    latestTransactions,
+    usageMetrics,
+    health,
+    cashFloor,
+  } = context;
+  const notifications = [];
+  const latestMovement = latestTransactions[0] || null;
+  const latestExpense = latestMovement?.type === "expense" ? latestMovement : null;
+  const daysSinceLastActive = getDaysSinceLastActive(previousMeta.lastActiveDate);
+  const usageDays = getRecentUsageDays(previousMeta);
+  const movementExpenses = latestTransactions.filter((item) => item.type === "expense");
+  const expenseThreshold = getHighExpenseThreshold(movementExpenses, currentBalance, cashFloor);
+  const projectionDelta =
+    previousMeta.lastProjectedBalance === null
+      ? 0
+      : Math.round(projectedBalance - previousMeta.lastProjectedBalance);
+  const projectedCashFloor = cashFloor || UX_RULES.criticalProjectionAmount;
+  const criticalLabel =
+    lowCashWeek?.label ||
+    forecastWeeks.find((week) => week.tone !== "ok")?.label ||
+    "Esta semana";
+
+  if (
+    previousMeta.lastMovementId &&
+    latestExpense &&
+    String(latestExpense.id) !== previousMeta.lastMovementId &&
+    latestExpense.amount >= expenseThreshold
+  ) {
+    notifications.push({
+      type:
+        projectedBalance <= projectedCashFloor || Boolean(lowCashWeek) ? "critical" : "alert",
+      trigger: "high_expense",
+      message:
+        projectedBalance <= projectedCashFloor || Boolean(lowCashWeek)
+          ? copyText("notifications.critical.highExpense", {
+              amount: formatCurrency(latestExpense.amount),
+              label: getNotificationLabel(latestExpense.description),
+            })
+          : copyText("notifications.alert.highExpense", {
+              amount: formatCurrency(latestExpense.amount),
+              label: getNotificationLabel(latestExpense.description),
+            }),
+    });
+  }
+
+  if (previousMeta.lastProjectedBalance !== null && projectionDelta <= -50000) {
+    notifications.push({
+      type:
+        projectedBalance <= projectedCashFloor || Boolean(lowCashWeek) ? "critical" : "alert",
+      trigger: "projection_drop",
+      message:
+        projectedBalance <= projectedCashFloor || Boolean(lowCashWeek)
+          ? copyText("notifications.critical.projectionDrop", {
+              label: criticalLabel,
+            })
+          : copyText("notifications.alert.projectionDrop", {
+              amount: formatCurrency(Math.abs(projectionDelta)),
+            }),
+    });
+  }
+
+  if (daysSinceLastActive >= 3) {
+    notifications.push({
+      type:
+        usageMetrics.transactionsCount < UX_RULES.progressiveVisibility.projectionTransactions ||
+        usageDays <= 1
+          ? "onboarding"
+          : "alert",
+      trigger: "inactivity",
+      message:
+        usageMetrics.transactionsCount < UX_RULES.progressiveVisibility.projectionTransactions ||
+        usageDays <= 1
+          ? copyText("notifications.onboarding.inactive")
+          : copyText("notifications.alert.inactivity", { days: daysSinceLastActive }),
+    });
+  }
+
+  if (
+    previousMeta.lastHealthTone &&
+    getHealthToneRank(health.tone) > getHealthToneRank(previousMeta.lastHealthTone)
+  ) {
+    notifications.push({
+      type: "positive",
+      trigger: "improved_state",
+      message:
+        projectionDelta >= 50000
+          ? copyText("notifications.positive.projectionUp", {
+              amount: formatCurrency(projectionDelta),
+            })
+          : lowCashWeek
+            ? copyText("notifications.positive.recovery", {
+                label: criticalLabel,
+              })
+            : copyText("notifications.positive.improved"),
+    });
+  }
+
+  if (
+    !notifications.length &&
+    usageMetrics.transactionsCount < UX_RULES.progressiveVisibility.projectionTransactions
+  ) {
+    notifications.push({
+      type: "onboarding",
+      trigger: "first_steps",
+      message: copyText("notifications.onboarding.firstSteps", {
+        count: usageMetrics.transactionsCount,
+        remaining: Math.max(
+          1,
+          UX_RULES.progressiveVisibility.projectionTransactions - usageMetrics.transactionsCount
+        ),
+      }),
+    });
+  }
+
+  return notifications
+    .filter(
+      (item, index, collection) =>
+        collection.findIndex(
+          (candidate) => candidate.type === item.type && candidate.trigger === item.trigger
+        ) === index
+    )
+    .sort((left, right) => getNotificationPriority(left.type) - getNotificationPriority(right.type))
+    .slice(0, 4);
+}
+
+function syncSmartNotifications(context) {
+  const previousMeta = readNotificationMeta();
+  const notifications = buildSmartNotifications(context, previousMeta);
+
+  state.smartNotifications = notifications;
+  window.getSmartNotificationQueue = () => state.smartNotifications.map((item) => item.message);
+  window.getPrimarySmartNotification = () => state.smartNotifications[0]?.message || "";
+
+  writeNotificationMeta({
+    lastActiveDate: today(),
+    activeDays: buildNotificationActiveDays(previousMeta),
+    lastProjectedBalance: context.projectedBalance,
+    lastHealthTone: context.health?.tone || "neutral",
+    lastMovementId: context.latestTransactions[0]?.id ? String(context.latestTransactions[0].id) : "",
+  });
+
+  return notifications;
 }
 
 function getHomeHealthCopy(health) {

@@ -228,6 +228,29 @@
       cashFloorReady: "Mínimo seguro listo en {amount}.",
     },
 
+    // Notificaciones inteligentes listas para push
+    notifications: {
+      critical: {
+        highExpense: "Se fue {amount} en {label}.\nRevisa cómo lo compensas hoy.",
+        projectionDrop: "{label} se ve muy justa.\nCuida gastos nuevos hoy.",
+        cashFloor: "Podrías bajar de {amount}.\nPrioriza cobrar o ajustar pagos.",
+      },
+      alert: {
+        highExpense: "Se fue {amount} en {label}.\nMira si puedes ajustar algo.",
+        projectionDrop: "Tu proyección bajó {amount}.\nCuida lo que queda de semana.",
+        inactivity: "Hace {days} días que no entras.\nActualiza tu plata de hoy.",
+      },
+      positive: {
+        projectionUp: "Tu proyección subió {amount}.\nAprovecha ese aire con calma.",
+        improved: "Tu plata se ve mejor que antes.\nSigue así esta semana.",
+        recovery: "{label} ya se ve más tranquila.\nPuedes moverte con más calma.",
+      },
+      onboarding: {
+        firstSteps: "Llevas {count} movimientos.\nAgrega {remaining} más y te guío mejor.",
+        inactive: "Tu plata cambió desde la última vez.\nRegistra lo de hoy para ordenarte.",
+      },
+    },
+
     // Pantalla de proyección y simulador
     projection: {
       empty: "Aún no hay movimientos para proyectar.",
