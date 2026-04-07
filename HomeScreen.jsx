@@ -333,6 +333,8 @@ export default function HomeScreen() {
     }
   }
 
+  const shellClassName = "min-h-screen bg-[#FAFAF9] px-5 py-8 max-w-md mx-auto space-y-6"
+  const screenState = error ? "error" : isOnboarding ? "onboarding" : "normal"
   if (error) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#FAFAF9] px-6">
@@ -355,31 +357,60 @@ export default function HomeScreen() {
     )
   }
 
+  if (!isLoaded) {
+    return <div className={shellClassName} />
+  }
+
   const sortedFutureMovements = [...futureMovements]
     .map(normalizeFutureMovement)
     .filter(Boolean)
     .sort((a, b) => a.day - b.day)
 
-  return (
-    <div className="min-h-screen bg-[#FAFAF9] px-5 py-8 max-w-md mx-auto space-y-6">
-      {feedback && (
-        <div className="rounded-xl bg-gray-900 text-white text-sm px-4 py-3">
-          {feedback}
-        </div>
-      )}
+  const feedbackBlock = feedback ? (
+    <div className="rounded-xl bg-gray-900 text-white text-sm px-4 py-3">
+      {feedback}
+    </div>
+  ) : null
 
-      <div>
-        <h1 className="text-4xl font-semibold text-gray-900">
-          ${money.toLocaleString("es-CL")}
-        </h1>
-        <p className="text-sm text-gray-500 mt-1">
-          Hoy tienes disponible
-        </p>
-      </div>
+  const balanceBlock = (
+    <div className="space-y-1">
+      <h1 className="text-4xl font-semibold tracking-tight text-gray-900">
+        ${money.toLocaleString("es-CL")}
+      </h1>
+      <p className="text-sm text-gray-500">
+        Hoy tienes disponible
+      </p>
+    </div>
+  )
 
-      {isOnboarding ? (
+  const actionButtons = (
+    <div className="flex gap-3">
+      <button
+        onClick={() => setModalType("income")}
+        className="flex-1 py-2 rounded-xl bg-gray-900 text-white"
+      >
+        + Ingreso
+      </button>
+
+      <button
+        onClick={() => setModalType("expense")}
+        className="flex-1 py-2 rounded-xl bg-gray-100 text-gray-800"
+      >
+        - Gasto
+      </button>
+    </div>
+  )
+
+  if (screenState === "onboarding") {
+    return (
+      <div className={shellClassName}>
+        {feedbackBlock}
+        {balanceBlock}
+
         <div className="space-y-2">
-          <p className="text-gray-700">¡Planifiquemos algo bueno!</p>
+          <p className="text-gray-700">
+            Ya partimos. Hagámoslo claro
+          </p>
 
           <p className="text-sm text-gray-500">
             Llevas {onboardingCount} de 3 movimientos
@@ -389,40 +420,52 @@ export default function HomeScreen() {
             Agrega {3 - onboardingCount} más para ver tu proyección
           </p>
         </div>
-      ) : (
-        <>
-          <div className="text-gray-700">
-            Fin de mes:{" "}
-            <span className={`font-medium ${isCritical ? "text-red-500" : "text-yellow-500"}`}>
-              ${projection.finalBalance.toLocaleString("es-CL")}
-            </span>
-          </div>
 
-          <div className={`text-sm ${isCritical ? "text-red-600" : "text-gray-600"}`}>
-            {getInsight()}
-          </div>
+        {actionButtons}
 
-          <div className="text-sm text-gray-500">
-            Puedes usar hasta ${safeToSpend.toLocaleString("es-CL")} sin tocar tu mínimo seguro
-          </div>
-        </>
-      )}
+        <AddMovementModal
+          isOpen={modalType !== null}
+          type={modalType}
+          onClose={() => setModalType(null)}
+          onSave={handleAddMovement}
+        />
 
-      <div className="flex gap-3">
-        <button
-          onClick={() => setModalType("income")}
-          className="flex-1 py-2 rounded-xl bg-gray-900 text-white"
-        >
-          + Ingreso
-        </button>
-
-        <button
-          onClick={() => setModalType("expense")}
-          className="flex-1 py-2 rounded-xl bg-gray-100 text-gray-800"
-        >
-          - Gasto
-        </button>
+        <FutureMovementModal
+          isOpen={futureModalOpen}
+          editingItem={editingFutureMovement}
+          onClose={() => {
+            setFutureModalOpen(false)
+            setEditingFutureMovement(null)
+          }}
+          onSave={handleSaveFuture}
+        />
       </div>
+    )
+  }
+
+  return (
+    <div className={shellClassName}>
+      {feedbackBlock}
+      {balanceBlock}
+
+      <div className="space-y-1">
+        <div className="text-gray-700">
+          Fin de mes:{" "}
+          <span className={`font-medium ${isCritical ? "text-red-500" : "text-yellow-500"}`}>
+            ${projection.finalBalance.toLocaleString("es-CL")}
+          </span>
+        </div>
+
+        <div className={`text-sm ${isCritical ? "text-red-600" : "text-gray-600"}`}>
+          {getInsight()}
+        </div>
+
+        <div className="text-sm text-gray-500">
+          Puedes usar hasta ${safeToSpend.toLocaleString("es-CL")} sin tocar tu mínimo seguro
+        </div>
+      </div>
+
+      {actionButtons}
 
       <div className="rounded-3xl border border-gray-200 bg-gray-50 p-4 space-y-3">
         <p className="text-xs font-semibold uppercase tracking-[0.18em] text-gray-500">
