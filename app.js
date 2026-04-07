@@ -2018,7 +2018,7 @@ function createForecastWeeks(
   const weeklyExpense = expenses.length ? sum(expenses) / 4 : 0;
 
   let rollingBalance = balance;
-  const weeks = Array.from({ length: 8 }, (_, index) => {
+  const weeks = Array.from({ length: 4 }, (_, index) => {
     if (index === 0) {
       rollingBalance += receivableTotal * 0.35 - payableTotal * 0.45;
     }
