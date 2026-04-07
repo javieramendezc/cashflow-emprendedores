@@ -214,6 +214,7 @@ const uxToast = document.querySelector("#uxToast");
 
 let uxToastTimer = null;
 let uxToastHideTimer = null;
+let smartNotificationTimer = null;
 
 applyStaticCopy();
 
@@ -1608,6 +1609,7 @@ function render() {
     projectedBalance,
     forecastWeeks,
     lowCashWeek,
+    criticalCashDate,
     latestTransactions: state.data.transactions.slice(0, 5),
     usageMetrics: state.visibility.metrics,
     health,
@@ -2450,7 +2452,7 @@ function getHealthToneRank(tone) {
 function getNotificationPriority(type) {
   const priorityMap = {
     critical: 0,
-    alert: 1,
+    preventive: 1,
     positive: 2,
     onboarding: 3,
   };
@@ -2469,7 +2471,34 @@ function createInitialNotificationMeta() {
     lastProjectedBalance: null,
     lastHealthTone: "neutral",
     lastMovementId: "",
+    pendingNotifications: [],
   };
+}
+
+function normalizePendingNotification(item) {
+  if (!item || typeof item !== "object") {
+    return null;
+  }
+
+  const normalized = {
+    id: String(item.id || ""),
+    type: String(item.type || ""),
+    trigger: String(item.trigger || ""),
+    message: String(item.message || ""),
+    readyAt: Number(item.readyAt),
+  };
+
+  if (
+    !normalized.id ||
+    !normalized.type ||
+    !normalized.trigger ||
+    !normalized.message ||
+    !Number.isFinite(normalized.readyAt)
+  ) {
+    return null;
+  }
+
+  return normalized;
 }
 
 function normalizeNotificationMeta(meta) {
@@ -2477,6 +2506,9 @@ function normalizeNotificationMeta(meta) {
     ? [...new Set(meta.activeDays.filter((value) => /^\d{4}-\d{2}-\d{2}$/.test(String(value))))]
         .sort()
         .slice(-14)
+    : [];
+  const pendingNotifications = Array.isArray(meta?.pendingNotifications)
+    ? meta.pendingNotifications.map(normalizePendingNotification).filter(Boolean).slice(-12)
     : [];
 
   return {
@@ -2490,6 +2522,7 @@ function normalizeNotificationMeta(meta) {
       : null,
     lastHealthTone: typeof meta?.lastHealthTone === "string" ? meta.lastHealthTone : "neutral",
     lastMovementId: meta?.lastMovementId ? String(meta.lastMovementId) : "",
+    pendingNotifications,
   };
 }
 
@@ -2540,6 +2573,73 @@ function buildNotificationActiveDays(previousMeta) {
     .sort();
 }
 
+function buildScheduledNotification(type, trigger, reference, message, delayMs) {
+  return {
+    id: `${type}:${trigger}:${reference}`,
+    type,
+    trigger,
+    message,
+    readyAt: Date.now() + delayMs,
+  };
+}
+
+function mergePendingNotifications(existingNotifications, scheduledNotifications) {
+  const merged = [...existingNotifications];
+  const knownIds = new Set(existingNotifications.map((item) => item.id));
+
+  scheduledNotifications.forEach((item) => {
+    if (!knownIds.has(item.id)) {
+      merged.push(item);
+      knownIds.add(item.id);
+    }
+  });
+
+  return merged
+    .filter((item) => item.readyAt > Date.now() - 24 * 60 * 60 * 1000)
+    .sort((left, right) => left.readyAt - right.readyAt)
+    .slice(-12);
+}
+
+function splitPendingNotifications(notifications) {
+  const now = Date.now();
+
+  return notifications.reduce(
+    (acc, item) => {
+      if (item.readyAt <= now) {
+        acc.due.push(item);
+      } else {
+        acc.upcoming.push(item);
+      }
+
+      return acc;
+    },
+    { due: [], upcoming: [] }
+  );
+}
+
+function clearSmartNotificationTimer() {
+  if (smartNotificationTimer) {
+    clearTimeout(smartNotificationTimer);
+    smartNotificationTimer = null;
+  }
+}
+
+function scheduleSmartNotificationTimer(pendingNotifications) {
+  clearSmartNotificationTimer();
+
+  if (!pendingNotifications.length) {
+    return;
+  }
+
+  const nextReadyAt = pendingNotifications[0].readyAt;
+  const waitMs = Math.max(500, nextReadyAt - Date.now());
+
+  smartNotificationTimer = window.setTimeout(() => {
+    smartNotificationTimer = null;
+    render();
+  }, waitMs);
+}
+
 function getHighExpenseThreshold(expenses, currentBalance, cashFloor = 0) {
   const averageExpense = expenses.length ? sum(expenses) / expenses.length : 0;
   return Math.max(75000, averageExpense * 1.8, currentBalance * 0.18, cashFloor * 0.2);
@@ -2561,12 +2661,14 @@ function buildSmartNotifications(context, previousMeta = createInitialNotificati
     projectedBalance,
     forecastWeeks,
     lowCashWeek,
+    criticalCashDate,
     latestTransactions,
     usageMetrics,
     health,
     cashFloor,
   } = context;
-  const notifications = [];
+  const immediateNotifications = [];
+  const scheduledNotifications = [];
   const latestMovement = latestTransactions[0] || null;
   const latestExpense = latestMovement?.type === "expense" ? latestMovement : null;
   const daysSinceLastActive = getDaysSinceLastActive(previousMeta.lastActiveDate);
@@ -2578,10 +2680,10 @@ function buildSmartNotifications(context, previousMeta = createInitialNotificati
       ? 0
       : Math.round(projectedBalance - previousMeta.lastProjectedBalance);
   const projectedCashFloor = cashFloor || UX_RULES.criticalProjectionAmount;
-  const criticalLabel =
-    lowCashWeek?.label ||
-    forecastWeeks.find((week) => week.tone !== "ok")?.label ||
-    "Esta semana";
+  const daysToCritical =
+    criticalCashDate && daysUntil(criticalCashDate) >= 0
+      ? Math.max(1, daysUntil(criticalCashDate))
+      : null;
 
   if (
     previousMeta.lastMovementId &&
@@ -2589,52 +2691,68 @@ function buildSmartNotifications(context, previousMeta = createInitialNotificati
     String(latestExpense.id) !== previousMeta.lastMovementId &&
     latestExpense.amount >= expenseThreshold
   ) {
-    notifications.push({
-      type:
-        projectedBalance <= projectedCashFloor || Boolean(lowCashWeek) ? "critical" : "alert",
-      trigger: "high_expense",
-      message:
+    scheduledNotifications.push(
+      buildScheduledNotification(
+        projectedBalance <= projectedCashFloor || Boolean(lowCashWeek) ? "critical" : "preventive",
+        "high_expense",
+        latestExpense.id,
         projectedBalance <= projectedCashFloor || Boolean(lowCashWeek)
           ? copyText("notifications.critical.highExpense", {
               amount: formatCurrency(latestExpense.amount),
               label: getNotificationLabel(latestExpense.description),
             })
-          : copyText("notifications.alert.highExpense", {
+          : copyText("notifications.preventive.highExpense", {
               amount: formatCurrency(latestExpense.amount),
               label: getNotificationLabel(latestExpense.description),
             }),
+        10 * 60 * 1000
+      )
+    );
+  }
+
+  if (
+    previousMeta.lastHealthTone !== "risk" &&
+    (Boolean(lowCashWeek) || (daysToCritical !== null && daysToCritical <= 10))
+  ) {
+    immediateNotifications.push({
+      type: "critical",
+      trigger: "cash_floor",
+      message: copyText("notifications.critical.cashFloor", {
+        days: daysToCritical ?? 10,
+      }),
     });
   }
 
   if (previousMeta.lastProjectedBalance !== null && projectionDelta <= -50000) {
-    notifications.push({
+    immediateNotifications.push({
       type:
-        projectedBalance <= projectedCashFloor || Boolean(lowCashWeek) ? "critical" : "alert",
+        projectedBalance <= projectedCashFloor || Boolean(lowCashWeek) ? "critical" : "preventive",
       trigger: "projection_drop",
       message:
         projectedBalance <= projectedCashFloor || Boolean(lowCashWeek)
-          ? copyText("notifications.critical.projectionDrop", {
-              label: criticalLabel,
-            })
-          : copyText("notifications.alert.projectionDrop", {
+          ? copyText("notifications.critical.projectionDrop")
+          : copyText("notifications.preventive.projectionDrop", {
               amount: formatCurrency(Math.abs(projectionDelta)),
             }),
     });
   }
 
-  if (daysSinceLastActive >= 3) {
-    notifications.push({
+  if (daysSinceLastActive >= 1) {
+    immediateNotifications.push({
       type:
         usageMetrics.transactionsCount < UX_RULES.progressiveVisibility.projectionTransactions ||
         usageDays <= 1
           ? "onboarding"
-          : "alert",
+          : "preventive",
       trigger: "inactivity",
       message:
         usageMetrics.transactionsCount < UX_RULES.progressiveVisibility.projectionTransactions ||
         usageDays <= 1
           ? copyText("notifications.onboarding.inactive")
-          : copyText("notifications.alert.inactivity", { days: daysSinceLastActive }),
+          : copyText("notifications.preventive.inactivity", {
+              days: daysSinceLastActive,
+              suffix: daysSinceLastActive === 1 ? "" : "s",
+            }),
     });
   }
 
@@ -2642,7 +2760,7 @@ function buildSmartNotifications(context, previousMeta = createInitialNotificati
     previousMeta.lastHealthTone &&
     getHealthToneRank(health.tone) > getHealthToneRank(previousMeta.lastHealthTone)
   ) {
-    notifications.push({
+    immediateNotifications.push({
       type: "positive",
       trigger: "improved_state",
       message:
@@ -2650,32 +2768,68 @@ function buildSmartNotifications(context, previousMeta = createInitialNotificati
           ? copyText("notifications.positive.projectionUp", {
               amount: formatCurrency(projectionDelta),
             })
-          : lowCashWeek
-            ? copyText("notifications.positive.recovery", {
-                label: criticalLabel,
-              })
+          : lowCashWeek || daysToCritical !== null
+            ? copyText("notifications.positive.recovery")
             : copyText("notifications.positive.improved"),
     });
   }
 
   if (
-    !notifications.length &&
+    !immediateNotifications.length &&
     usageMetrics.transactionsCount < UX_RULES.progressiveVisibility.projectionTransactions
   ) {
-    notifications.push({
+    immediateNotifications.push({
       type: "onboarding",
       trigger: "first_steps",
       message: copyText("notifications.onboarding.firstSteps", {
-        count: usageMetrics.transactionsCount,
         remaining: Math.max(
           1,
           UX_RULES.progressiveVisibility.projectionTransactions - usageMetrics.transactionsCount
         ),
       }),
     });
+  } else if (!immediateNotifications.length && health.tone === "warn") {
+    immediateNotifications.push({
+      type: "preventive",
+      trigger: "tight_week",
+      message: copyText("notifications.preventive.tightWeek"),
+    });
+  } else if (!immediateNotifications.length && health.tone === "ok") {
+    immediateNotifications.push({
+      type: "positive",
+      trigger: "good_margin",
+      message: copyText("notifications.positive.goodMargin"),
+    });
   }
 
-  return notifications
+  return {
+    immediateNotifications: immediateNotifications
+      .filter(
+        (item, index, collection) =>
+          collection.findIndex(
+            (candidate) => candidate.type === item.type && candidate.trigger === item.trigger
+          ) === index
+      )
+      .sort(
+        (left, right) => getNotificationPriority(left.type) - getNotificationPriority(right.type)
+      )
+      .slice(0, 4),
+    scheduledNotifications,
+  };
+}
+
+function syncSmartNotifications(context) {
+  const previousMeta = readNotificationMeta();
+  const { immediateNotifications, scheduledNotifications } = buildSmartNotifications(
+    context,
+    previousMeta
+  );
+  const mergedPending = mergePendingNotifications(
+    previousMeta.pendingNotifications || [],
+    scheduledNotifications
+  );
+  const { due, upcoming } = splitPendingNotifications(mergedPending);
+  const notifications = [...due, ...immediateNotifications]
     .filter(
       (item, index, collection) =>
         collection.findIndex(
@@ -2684,15 +2838,11 @@ function buildSmartNotifications(context, previousMeta = createInitialNotificati
     )
     .sort((left, right) => getNotificationPriority(left.type) - getNotificationPriority(right.type))
     .slice(0, 4);
-}
-
-function syncSmartNotifications(context) {
-  const previousMeta = readNotificationMeta();
-  const notifications = buildSmartNotifications(context, previousMeta);
 
   state.smartNotifications = notifications;
   window.getSmartNotificationQueue = () => state.smartNotifications.map((item) => item.message);
   window.getPrimarySmartNotification = () => state.smartNotifications[0]?.message || "";
+  window.getSmartNotificationPayloads = () => state.smartNotifications.map((item) => ({ ...item }));
 
   writeNotificationMeta({
     lastActiveDate: today(),
@@ -2700,7 +2850,9 @@ function syncSmartNotifications(context) {
     lastProjectedBalance: context.projectedBalance,
     lastHealthTone: context.health?.tone || "neutral",
     lastMovementId: context.latestTransactions[0]?.id ? String(context.latestTransactions[0].id) : "",
+    pendingNotifications: upcoming,
   });
+  scheduleSmartNotificationTimer(upcoming);
 
   return notifications;
 }

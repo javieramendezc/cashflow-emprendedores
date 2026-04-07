@@ -67,7 +67,7 @@
       },
       states: {
         positive: "Tranquilidad",
-        alert: "Atención",
+        alert: "Preventiva",
         critical: "Urgencia controlada",
         onboarding: "Guía simple",
       },
@@ -231,23 +231,25 @@
     // Notificaciones inteligentes listas para push
     notifications: {
       critical: {
-        highExpense: "Se fue {amount} en {label}.\nRevisa cómo lo compensas hoy.",
-        projectionDrop: "{label} se ve muy justa.\nCuida gastos nuevos hoy.",
-        cashFloor: "Podrías bajar de {amount}.\nPrioriza cobrar o ajustar pagos.",
+        highExpense: "⚠️ Este gasto cambia tu semana\nOjo con los próximos días.",
+        projectionDrop: "⚠️ Ojo: tu margen baja esta semana\nEvita gastos grandes hoy.",
+        cashFloor: "⚠️ Podrías quedar corta en {days} días\nRevisa tus gastos ahora.",
       },
-      alert: {
-        highExpense: "Se fue {amount} en {label}.\nMira si puedes ajustar algo.",
-        projectionDrop: "Tu proyección bajó {amount}.\nCuida lo que queda de semana.",
-        inactivity: "Hace {days} días que no entras.\nActualiza tu plata de hoy.",
+      preventive: {
+        highExpense: "👀 Hoy vas bien, pero ojo con gastar de más\nAún puedes mantener el margen.",
+        projectionDrop: "💡 Tu proyección bajó {amount}\nCuida lo que queda de semana.",
+        tightWeek: "💡 Vas justo esta semana\nUn pequeño ajuste hace la diferencia.",
+        inactivity: "👀 Hace {days} día{suffix} que no registras\nActualiza tu plata de hoy.",
       },
       positive: {
-        projectionUp: "Tu proyección subió {amount}.\nAprovecha ese aire con calma.",
-        improved: "Tu plata se ve mejor que antes.\nSigue así esta semana.",
-        recovery: "{label} ya se ve más tranquila.\nPuedes moverte con más calma.",
+        goodMargin: "✔️ Vas con buen margen\nPuedes gastar con tranquilidad hoy.",
+        projectionUp: "📈 Tu proyección subió {amount}\nAprovecha ese aire con calma.",
+        improved: "📈 Estás mejor que la semana pasada\nSigue así.",
+        recovery: "✔️ Ya te recuperas\nSigue así esta semana.",
       },
       onboarding: {
-        firstSteps: "Llevas {count} movimientos.\nAgrega {remaining} más y te guío mejor.",
-        inactive: "Tu plata cambió desde la última vez.\nRegistra lo de hoy para ordenarte.",
+        firstSteps: "✨ En {remaining} movimientos vemos tu situación real\nTe falta poco.",
+        inactive: "✨ Hace un día que no registras\nAgrega lo de hoy y te guío.",
       },
     },
 
