@@ -1,6 +1,7 @@
 "use client"
 
 import { useMemo, useState } from "react"
+import { useCashflowGlobalState } from "./cashflowGlobalState"
 
 const FILTERS = [
   { id: "all", label: "Todo" },
@@ -148,9 +149,13 @@ function NotificationRow({ notification }) {
 
 export default function NotificationsScreen({ notifications = [] }) {
   const [activeFilter, setActiveFilter] = useState("all")
+  const globalState = useCashflowGlobalState()
+  const sourceNotifications = notifications.length
+    ? notifications
+    : globalState?.notifications || []
 
   const normalizedNotifications = useMemo(() => {
-    return notifications
+    return sourceNotifications
       .map(normalizeNotification)
       .filter(Boolean)
       .sort((left, right) => {
@@ -158,7 +163,7 @@ export default function NotificationsScreen({ notifications = [] }) {
         const rightTime = right.date ? right.date.getTime() : 0
         return rightTime - leftTime
       })
-  }, [notifications])
+  }, [sourceNotifications])
 
   const visibleNotifications = useMemo(() => {
     if (activeFilter === "all") return normalizedNotifications
@@ -207,6 +212,12 @@ export default function NotificationsScreen({ notifications = [] }) {
           <nav className="flex gap-2">
             {FILTERS.map((filter) => {
               const isActive = activeFilter === filter.id
+              const count =
+                filter.id === "all"
+                  ? normalizedNotifications.length
+                  : normalizedNotifications.filter(
+                      (notification) => notification.type === filter.id
+                    ).length
 
               return (
                 <button
@@ -220,6 +231,7 @@ export default function NotificationsScreen({ notifications = [] }) {
                   }`}
                 >
                   {filter.label}
+                  {count ? ` · ${count}` : ""}
                 </button>
               )
             })}
@@ -279,6 +291,12 @@ export default function NotificationsScreen({ notifications = [] }) {
                 </div>
               </section>
             ))}
+          </section>
+        ) : visibleNotifications.length === 0 && normalizedNotifications.length > 0 ? (
+          <section className="pt-2">
+            <p className="text-sm text-[#6B7280]">
+              No hay señales para este filtro ahora.
+            </p>
           </section>
         ) : normalizedNotifications.length > 1 ? null : normalizedNotifications.length > 0 ? (
           <section className="pt-2">

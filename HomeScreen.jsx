@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from "react"
 import AddMovementModal from "./AddMovementModal"
 import FutureMovementModal from "./FutureMovementModal"
 import FutureMovementItem from "./FutureMovementItem"
+import { emitCashflowStateChange } from "./cashflowGlobalState"
 
 const MOVEMENTS_KEY = "movements"
 const SAFE_MINIMUM_KEY = "safeMinimum"
@@ -22,6 +23,7 @@ function normalizeMovement(rawMovement) {
     label,
     amount,
     date: rawMovement?.date || "Hoy",
+    createdAt: rawMovement?.createdAt || new Date().toISOString(),
   }
 }
 
@@ -78,6 +80,7 @@ export default function HomeScreen() {
 
     try {
       localStorage.setItem(MOVEMENTS_KEY, JSON.stringify(movements))
+      emitCashflowStateChange()
     } catch (e) {
       console.error(e)
       setError(true)
@@ -89,6 +92,7 @@ export default function HomeScreen() {
 
     try {
       localStorage.setItem(SAFE_MINIMUM_KEY, String(safeMinimum))
+      emitCashflowStateChange()
     } catch (e) {
       console.error(e)
       setError(true)
@@ -100,6 +104,7 @@ export default function HomeScreen() {
 
     try {
       localStorage.setItem(FUTURE_MOVEMENTS_KEY, JSON.stringify(futureMovements))
+      emitCashflowStateChange()
     } catch (e) {
       console.error(e)
       setError(true)
