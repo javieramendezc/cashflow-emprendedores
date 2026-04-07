@@ -2025,6 +2025,8 @@ select:focus {
 
 .breakdown-row,
 .forecast-row,
+.forecast-zone,
+.forecast-empty,
 .tips-list li {
   padding: 14px 16px;
   border-radius: 18px;
@@ -2141,6 +2143,71 @@ tbody tr:hover {
   grid-template-columns: auto 1fr auto;
   gap: 14px;
   align-items: center;
+}
+
+.forecast-list {
+  display: grid;
+  gap: 12px;
+}
+
+.forecast-zone {
+  display: grid;
+  gap: 10px;
+}
+
+.forecast-zone-top {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: start;
+}
+
+.forecast-zone-top h4 {
+  margin: 2px 0 0;
+  font-size: 1rem;
+  letter-spacing: -0.02em;
+}
+
+.forecast-zone-top strong {
+  font-size: 1rem;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.forecast-zone-range {
+  display: inline-block;
+  font-size: 0.74rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.forecast-zone p,
+.forecast-empty {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.45;
+}
+
+.forecast-zone.critical {
+  background: rgba(255, 247, 245, 0.92);
+  border-color: var(--state-critical-border);
+}
+
+.forecast-zone.critical h4,
+.forecast-zone.critical strong {
+  color: var(--state-critical);
+}
+
+.forecast-zone.stable {
+  background: rgba(248, 255, 250, 0.96);
+  border-color: var(--state-positive-border);
+}
+
+.forecast-zone.stable h4,
+.forecast-zone.stable strong {
+  color: var(--state-positive);
 }
 
 .forecast-row.alert {

@@ -2038,16 +2038,71 @@ function createForecastWeeks(
 }
 
 function renderForecast(weeks, cashFloor) {
-  forecastList.innerHTML = weeks
-    .map(
-      (week) => `
-        <div class="forecast-row ${cashFloor > 0 && week.amount < cashFloor ? "alert" : ""}">
-          <span class="forecast-dot ${week.tone}"></span>
-          <strong>${week.label}</strong>
-          <span>${formatCurrency(week.amount)}</span>
-        </div>
-      `
-    )
+  if (!weeks.length) {
+    forecastList.innerHTML = '<div class="forecast-empty">Aún no hay datos para interpretar las próximas semanas.</div>';
+    return;
+  }
+
+  const zones = weeks.reduce((acc, week, index) => {
+    const zoneTone = week.tone === "ok" ? "stable" : "critical";
+    const previous = acc[acc.length - 1];
+
+    if (!previous || previous.zoneTone !== zoneTone) {
+      acc.push({
+        zoneTone,
+        startIndex: index,
+        endIndex: index,
+        weeks: [week],
+      });
+      return acc;
+    }
+
+    previous.endIndex = index;
+    previous.weeks.push(week);
+    return acc;
+  }, []);
+
+  forecastList.innerHTML = zones
+    .map((zone, index) => {
+      const startWeek = zone.startIndex + 1;
+      const endWeek = zone.endIndex + 1;
+      const rangeLabel =
+        startWeek === endWeek ? `Semana ${startWeek}` : `Semanas ${startWeek} a ${endWeek}`;
+      const finalWeek = zone.weeks[zone.weeks.length - 1];
+      const recoveredAfterCritical =
+        zone.zoneTone === "stable" && zones.slice(0, index).some((item) => item.zoneTone === "critical");
+
+      const title =
+        zone.zoneTone === "critical"
+          ? "Estás ajustada"
+          : recoveredAfterCritical
+            ? "Ya te recuperas"
+            : "Te mantienes estable";
+
+      const copy =
+        zone.zoneTone === "critical"
+          ? cashFloor > 0
+            ? `${rangeLabel}: podrías quedar bajo tu mínimo seguro.`
+            : `${rangeLabel}: tu caja se ve apretada.`
+          : recoveredAfterCritical
+            ? cashFloor > 0
+              ? `${rangeLabel}: vuelves a quedar sobre tu mínimo seguro.`
+              : `${rangeLabel}: vuelves a ver más margen.`
+            : `${rangeLabel}: tu caja se mantiene en zona estable.`;
+
+      return `
+        <article class="forecast-zone ${zone.zoneTone}">
+          <div class="forecast-zone-top">
+            <div>
+              <span class="forecast-zone-range">${rangeLabel}</span>
+              <h4>${title}</h4>
+            </div>
+            <strong>${formatCurrency(finalWeek.amount)}</strong>
+          </div>
+          <p>${copy}</p>
+        </article>
+      `;
+    })
     .join("");
 }
 
