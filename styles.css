@@ -1931,12 +1931,17 @@ select:focus {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   align-items: end;
-  gap: 8px;
+  gap: 10px;
+  width: 100%;
+  max-width: 176px;
+  margin: 0 auto;
   min-height: 156px;
 }
 
 .flow-column {
   position: relative;
+  width: 78%;
+  justify-self: center;
   min-height: 16px;
   border-radius: 16px 16px 6px 6px;
   transition: transform 180ms ease, filter 180ms ease;
@@ -2330,7 +2335,12 @@ tbody tr:hover {
   }
 
   .monthly-flow-stack {
+    max-width: 148px;
     min-height: 136px;
+  }
+
+  .flow-column {
+    width: 72%;
   }
 
   .panel-header,
