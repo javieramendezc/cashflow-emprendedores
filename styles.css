@@ -1896,6 +1896,7 @@ select:focus {
   gap: 16px;
   align-items: end;
   min-height: 220px;
+  padding-top: 8px;
 }
 
 .monthly-flow-empty {
@@ -1910,6 +1911,8 @@ select:focus {
   display: grid;
   gap: 12px;
   align-content: end;
+  min-width: 0;
+  padding-top: 34px;
 }
 
 .monthly-flow-stack {
@@ -1917,7 +1920,7 @@ select:focus {
   grid-template-columns: repeat(3, minmax(0, 1fr));
   align-items: end;
   gap: 8px;
-  min-height: 170px;
+  min-height: 156px;
 }
 
 .flow-column {
@@ -1951,9 +1954,9 @@ select:focus {
 .flow-column span {
   position: absolute;
   left: 50%;
-  bottom: calc(100% + 8px);
+  bottom: calc(100% + 6px);
   transform: translateX(-50%);
-  font-size: 0.72rem;
+  font-size: 0.68rem;
   font-weight: 700;
   color: var(--ink);
   white-space: nowrap;
@@ -2310,8 +2313,12 @@ tbody tr:hover {
     min-height: auto;
   }
 
+  .monthly-flow-bar {
+    padding-top: 28px;
+  }
+
   .monthly-flow-stack {
-    min-height: 150px;
+    min-height: 136px;
   }
 
   .panel-header,
