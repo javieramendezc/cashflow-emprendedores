@@ -2063,6 +2063,11 @@ function renderForecast(weeks, cashFloor) {
   }, []);
 
   const firstCritical = zones.find((zone) => zone.zoneTone === "critical");
+  const firstCriticalIndex = firstCritical ? zones.indexOf(firstCritical) : -1;
+  const recoveryZone =
+    firstCriticalIndex >= 0
+      ? zones.slice(firstCriticalIndex + 1).find((zone) => zone.zoneTone === "stable")
+      : null;
   const lastZone = zones[zones.length - 1];
   const summaryAmount = firstCritical
     ? firstCritical.weeks[firstCritical.weeks.length - 1].amount
@@ -2071,40 +2076,35 @@ function renderForecast(weeks, cashFloor) {
   const firstCriticalEndWeek = firstCritical ? firstCritical.endIndex + 1 : null;
   const criticalRangeLabel = firstCritical
     ? firstCriticalStartWeek === firstCriticalEndWeek
-      ? `la semana ${firstCriticalStartWeek}`
-      : `las semanas ${firstCriticalStartWeek} a ${firstCriticalEndWeek}`
+      ? `Semana ${firstCriticalStartWeek} crítica`
+      : `Semanas ${firstCriticalStartWeek}&ndash;${firstCriticalEndWeek} críticas`
     : "";
+  const stableRangeLabel =
+    lastZone.startIndex + 1 === lastZone.endIndex + 1
+      ? `Semana ${lastZone.startIndex + 1} estable`
+      : `Semanas ${lastZone.startIndex + 1}&ndash;${lastZone.endIndex + 1} estables`;
 
   const summaryTitle = firstCritical
     ? firstCritical.startIndex === 0
-      ? "Se te aprieta pronto"
-      : "Vas bien, pero ojo"
+      ? "Ojo esta semana"
+      : "Ojo más adelante"
     : "Vas con aire";
-
-  const summaryCopy = firstCritical
-    ? firstCritical.startIndex === 0
-      ? cashFloor > 0
-        ? `Si se cumple lo que ya cargaste, desde ${criticalRangeLabel} podrías quedar bajo tu mínimo seguro.`
-        : `Si se cumple lo que ya cargaste, desde ${criticalRangeLabel} tu plata se podría apretar bastante.`
-      : cashFloor > 0
-        ? `Si todo sigue como hoy, más adelante podrías bajar de tu mínimo seguro en ${criticalRangeLabel}.`
-        : `Si todo sigue como hoy, más adelante aparece un tramo donde tu plata se ve más justa.`
-    : "Con lo que ya cargaste, estas semanas no se ve una zona crítica.";
-  const summaryFootLabel = firstCritical
-    ? "Plata estimada al final del tramo más ajustado"
-    : "Plata estimada al cierre de estas semanas";
+  const summaryRange = firstCritical ? criticalRangeLabel : stableRangeLabel;
+  const summaryContext = firstCritical
+    ? recoveryZone
+      ? `Desde semana ${recoveryZone.startIndex + 1} te recuperas`
+      : "Sigues ajustada hacia el cierre"
+    : "Por ahora no aparece una zona crítica";
 
   forecastList.innerHTML = `
     <article class="forecast-summary ${firstCritical ? "critical" : "stable"}">
-      <span class="forecast-summary-kicker">Lectura rápida</span>
-      <h4>${summaryTitle}</h4>
-      <p>${summaryCopy}</p>
-      <div class="forecast-summary-foot">
-        <span>${summaryFootLabel}</span>
-        <strong>${formatCurrency(summaryAmount)}</strong>
+      <div class="forecast-summary-copy">
+        <h4>${summaryTitle}</h4>
+        <p class="forecast-summary-range">${summaryRange}</p>
       </div>
+      <strong class="forecast-summary-amount">${formatCurrency(summaryAmount)}</strong>
+      <p class="forecast-summary-context">${summaryContext}</p>
     </article>
-    <p class="forecast-lines-intro">Cada tramo muestra la plata que te podría quedar si se cumplen tus movimientos ya cargados.</p>
     <div class="forecast-lines">
       ${zones
         .map((zone, index) => {

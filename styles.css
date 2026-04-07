@@ -2150,52 +2150,47 @@ tbody tr:hover {
 
 .forecast-summary {
   display: grid;
-  gap: 8px;
-  padding: 16px 18px 15px;
+  gap: 12px;
+  padding: 15px 18px 16px;
   border-radius: 18px;
   border: 1px solid rgba(24, 38, 31, 0.07);
   background: rgba(255, 255, 255, 0.7);
 }
 
-.forecast-summary-kicker {
-  display: inline-block;
-  font-size: 0.74rem;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--muted);
+.forecast-summary-copy {
+  display: grid;
+  gap: 2px;
 }
 
 .forecast-summary h4 {
   margin: 0;
-  font-size: 1.18rem;
-  letter-spacing: -0.02em;
+  font-size: 1.34rem;
+  letter-spacing: -0.03em;
 }
 
-.forecast-summary p {
+.forecast-summary-range,
+.forecast-summary-context {
   margin: 0;
   color: var(--muted);
-  line-height: 1.45;
-}
-
-.forecast-summary-foot {
-  display: flex;
-  justify-content: space-between;
-  gap: 16px;
-  align-items: start;
-  padding-top: 6px;
-}
-
-.forecast-summary-foot span {
-  font-size: 0.78rem;
   line-height: 1.4;
-  color: var(--muted);
 }
 
-.forecast-summary-foot strong {
-  font-size: 1rem;
+.forecast-summary-range {
+  font-size: 0.92rem;
+  font-weight: 600;
+}
+
+.forecast-summary-amount {
+  display: block;
+  font-size: clamp(2rem, 4.4vw, 2.8rem);
+  line-height: 0.95;
+  letter-spacing: -0.05em;
   font-variant-numeric: tabular-nums;
-  white-space: nowrap;
+  overflow-wrap: anywhere;
+}
+
+.forecast-summary-context {
+  font-size: 0.94rem;
 }
 
 .forecast-summary.critical {
@@ -2204,7 +2199,7 @@ tbody tr:hover {
 }
 
 .forecast-summary.critical h4,
-.forecast-summary.critical strong {
+.forecast-summary.critical .forecast-summary-amount {
   color: var(--state-critical);
 }
 
@@ -2214,15 +2209,8 @@ tbody tr:hover {
 }
 
 .forecast-summary.stable h4,
-.forecast-summary.stable strong {
+.forecast-summary.stable .forecast-summary-amount {
   color: var(--state-positive);
-}
-
-.forecast-lines-intro {
-  margin: 0;
-  font-size: 0.9rem;
-  line-height: 1.5;
-  color: var(--muted);
 }
 
 .forecast-lines {
@@ -2514,7 +2502,6 @@ tbody tr:hover {
     flex-direction: column;
   }
 
-  .forecast-summary-foot,
   .forecast-line {
     grid-template-columns: 1fr;
   }
