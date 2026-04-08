@@ -186,6 +186,8 @@ const scenarioResultText = document.querySelector("#scenarioResultText");
 const transactionTableBody = document.querySelector("#transactionTableBody");
 const receivableTableBody = document.querySelector("#receivableTableBody");
 const payableTableBody = document.querySelector("#payableTableBody");
+const historyReceivableTableBody = document.querySelector("#historyReceivableTableBody");
+const historyPayableTableBody = document.querySelector("#historyPayableTableBody");
 const monthlyFlowChart = document.querySelector("#monthlyFlowChart");
 const monthlySummaryTableBody = document.querySelector("#monthlySummaryTableBody");
 const expenseBreakdown = document.querySelector("#expenseBreakdown");
@@ -702,7 +704,12 @@ transactionTableBody.addEventListener("click", async (event) => {
   showUXFeedback(transactionFeedback.message, transactionFeedback.tone);
 });
 
-receivableTableBody.addEventListener("click", async (event) => {
+function attachReceivableTableActions(tableBody) {
+  if (!tableBody) {
+    return;
+  }
+
+  tableBody.addEventListener("click", async (event) => {
   const editButton = event.target.closest("[data-edit-receivable]");
   if (editButton) {
     const receivable = state.data.receivables.find(
@@ -735,9 +742,18 @@ receivableTableBody.addEventListener("click", async (event) => {
     deletedReceivable?.dueDate?.slice(0, 7) || currentMonth()
   );
   showUXFeedback(receivableFeedback.message, receivableFeedback.tone);
-});
+  });
+}
 
-payableTableBody.addEventListener("click", async (event) => {
+attachReceivableTableActions(receivableTableBody);
+attachReceivableTableActions(historyReceivableTableBody);
+
+function attachPayableTableActions(tableBody) {
+  if (!tableBody) {
+    return;
+  }
+
+  tableBody.addEventListener("click", async (event) => {
   const editButton = event.target.closest("[data-edit-payable]");
   if (editButton) {
     const payable = state.data.payables.find(
@@ -770,7 +786,11 @@ payableTableBody.addEventListener("click", async (event) => {
     deletedPayable?.dueDate?.slice(0, 7) || currentMonth()
   );
   showUXFeedback(payableFeedback.message, payableFeedback.tone);
-});
+  });
+}
+
+attachPayableTableActions(payableTableBody);
+attachPayableTableActions(historyPayableTableBody);
 
 exportExcelBtn.addEventListener("click", () => {
   exportToExcel();
@@ -1774,6 +1794,8 @@ function render() {
   renderTable(allTransactions);
   renderReceivables(allReceivables);
   renderPayables(allPayables);
+  renderHistoryReceivables(receivables);
+  renderHistoryPayables(payables);
   renderMoneyCurveChart(currentBalance, cashFloor);
   renderMonthlySummary();
   renderBreakdown(liveExpenses);
@@ -1830,13 +1852,32 @@ function renderTable(transactions) {
 }
 
 function renderReceivables(receivables) {
-  if (!receivables.length) {
-    receivableTableBody.innerHTML =
-      '<tr><td colspan="8">No hay cuentas por cobrar registradas.</td></tr>';
+  renderReceivableRows(
+    receivableTableBody,
+    receivables,
+    "No hay cuentas por cobrar registradas."
+  );
+}
+
+function renderHistoryReceivables(receivables) {
+  renderReceivableRows(
+    historyReceivableTableBody,
+    receivables,
+    "No hay cuentas por cobrar registradas en este mes."
+  );
+}
+
+function renderReceivableRows(targetBody, receivables, emptyCopy) {
+  if (!targetBody) {
     return;
   }
 
-  receivableTableBody.innerHTML = receivables
+  if (!receivables.length) {
+    targetBody.innerHTML = `<tr><td colspan="8">${emptyCopy}</td></tr>`;
+    return;
+  }
+
+  targetBody.innerHTML = receivables
     .map(
       (item) => `
         <tr>
@@ -1858,13 +1899,32 @@ function renderReceivables(receivables) {
 }
 
 function renderPayables(payables) {
-  if (!payables.length) {
-    payableTableBody.innerHTML =
-      '<tr><td colspan="9">No hay facturas por pagar registradas.</td></tr>';
+  renderPayableRows(
+    payableTableBody,
+    payables,
+    "No hay facturas por pagar registradas."
+  );
+}
+
+function renderHistoryPayables(payables) {
+  renderPayableRows(
+    historyPayableTableBody,
+    payables,
+    "No hay facturas por pagar registradas en este mes."
+  );
+}
+
+function renderPayableRows(targetBody, payables, emptyCopy) {
+  if (!targetBody) {
     return;
   }
 
-  payableTableBody.innerHTML = payables
+  if (!payables.length) {
+    targetBody.innerHTML = `<tr><td colspan="9">${emptyCopy}</td></tr>`;
+    return;
+  }
+
+  targetBody.innerHTML = payables
     .map(
       (item) => `
         <tr>
