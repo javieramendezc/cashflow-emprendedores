@@ -1,13 +1,21 @@
 "use client"
+
 import { useEffect, useMemo, useState } from "react"
 import AddMovementModal from "./AddMovementModal"
-import FutureMovementModal from "./FutureMovementModal"
-import FutureMovementItem from "./FutureMovementItem"
 import { emitCashflowStateChange } from "./cashflowGlobalState"
 
 const MOVEMENTS_KEY = "movements"
 const SAFE_MINIMUM_KEY = "safeMinimum"
 const FUTURE_MOVEMENTS_KEY = "futureMovements"
+
+function formatCurrency(value) {
+  return new Intl.NumberFormat("es-CL", {
+    style: "currency",
+    currency: "CLP",
+    maximumFractionDigits: 0,
+  }).format(Number(value) || 0)
+}
+
 function normalizeMovement(rawMovement) {
   const amount = Number(rawMovement?.amount)
   const label = String(rawMovement?.label || "").trim()
@@ -53,36 +61,35 @@ function normalizeFutureMovement(rawMovement) {
   }
 }
 
+function getRemainingWeeksInMonth() {
+  const now = new Date()
+  const today = now.getDate()
+  const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate()
+  return Math.max(1, Math.ceil((lastDay - today + 1) / 7))
+}
+
 export default function HomeScreen() {
   const [error, setError] = useState(false)
   const [isLoaded, setIsLoaded] = useState(false)
   const [modalType, setModalType] = useState(null)
   const [feedback, setFeedback] = useState("")
-  const [showFutureSection, setShowFutureSection] = useState(false)
-  const [simulationType, setSimulationType] = useState("expense")
-  const [simulationAmount, setSimulationAmount] = useState("")
 
   const [movements, setMovements] = useState([])
   const [safeMinimum, setSafeMinimum] = useState(200000)
-
   const [futureMovements, setFutureMovements] = useState([])
-  const [futureModalOpen, setFutureModalOpen] = useState(false)
-  const [editingFutureMovement, setEditingFutureMovement] = useState(null)
 
-  // Cargar datos
   useEffect(() => {
     loadStoredData()
   }, [])
 
-  // Guardar datos
   useEffect(() => {
     if (!isLoaded) return
 
     try {
       localStorage.setItem(MOVEMENTS_KEY, JSON.stringify(movements))
       emitCashflowStateChange()
-    } catch (e) {
-      console.error(e)
+    } catch (caughtError) {
+      console.error(caughtError)
       setError(true)
     }
   }, [isLoaded, movements])
@@ -93,8 +100,8 @@ export default function HomeScreen() {
     try {
       localStorage.setItem(SAFE_MINIMUM_KEY, String(safeMinimum))
       emitCashflowStateChange()
-    } catch (e) {
-      console.error(e)
+    } catch (caughtError) {
+      console.error(caughtError)
       setError(true)
     }
   }, [isLoaded, safeMinimum])
@@ -105,47 +112,46 @@ export default function HomeScreen() {
     try {
       localStorage.setItem(FUTURE_MOVEMENTS_KEY, JSON.stringify(futureMovements))
       emitCashflowStateChange()
-    } catch (e) {
-      console.error(e)
+    } catch (caughtError) {
+      console.error(caughtError)
       setError(true)
     }
   }, [futureMovements, isLoaded])
 
-  // Feedback temporal
   useEffect(() => {
-    if (!feedback) return
-    const timer = setTimeout(() => setFeedback(""), 2500)
+    if (!feedback) return undefined
+
+    const timer = setTimeout(() => setFeedback(""), 2400)
     return () => clearTimeout(timer)
   }, [feedback])
 
   const money = useMemo(() => {
-    return movements.reduce((acc, movement) => {
+    return movements.reduce((total, movement) => {
       return movement.type === "income"
-        ? acc + movement.amount
-        : acc - movement.amount
+        ? total + movement.amount
+        : total - movement.amount
     }, 0)
   }, [movements])
-
-  const onboardingCount = movements.length
-  const isOnboarding = onboardingCount < 3
 
   const projection = useMemo(() => {
     const today = new Date().getDate()
     const sortedFuture = [...futureMovements]
       .map(normalizeFutureMovement)
       .filter(Boolean)
-      .sort((a, b) => a.day - b.day)
+      .sort((left, right) => left.day - right.day)
 
     let runningBalance = money
     let criticalDay = null
 
     sortedFuture.forEach((item) => {
-      if (item.day >= today) {
-        runningBalance += item.type === "income" ? item.amount : -item.amount
+      if (item.day < today) {
+        return
+      }
 
-        if (runningBalance <= safeMinimum && criticalDay === null) {
-          criticalDay = item.day
-        }
+      runningBalance += item.type === "income" ? item.amount : -item.amount
+
+      if (runningBalance <= safeMinimum && criticalDay === null) {
+        criticalDay = item.day
       }
     })
 
@@ -153,37 +159,70 @@ export default function HomeScreen() {
       finalBalance: runningBalance,
       criticalDay,
     }
-  }, [money, futureMovements, safeMinimum])
+  }, [futureMovements, money, safeMinimum])
 
-  const isCritical =
-    money <= safeMinimum ||
-    projection.finalBalance <= safeMinimum ||
-    projection.criticalDay !== null
+  const screenState = error ? "error" : movements.length < 3 ? "onboarding" : "normal"
+  const remainingWeeks = useMemo(() => getRemainingWeeksInMonth(), [])
   const safeToSpend = Math.max(projection.finalBalance - safeMinimum, 0)
-  const simulationResult = useMemo(() => {
-    const amount = Number(simulationAmount)
+  const weeklyDecisionAmount = useMemo(() => {
+    if (screenState === "onboarding") {
+      return Math.max(0, Math.floor(Math.max(money, 0) / remainingWeeks / 1000) * 1000)
+    }
 
-    if (!amount || amount <= 0) return null
+    return Math.max(0, Math.floor(safeToSpend / remainingWeeks / 1000) * 1000)
+  }, [money, remainingWeeks, safeToSpend, screenState])
 
-    const adjustedBalance =
-      simulationType === "income"
-        ? projection.finalBalance + amount
-        : projection.finalBalance - amount
+  const todayMovements = useMemo(() => {
+    const explicitToday = movements.filter((movement) => movement.date === "Hoy")
+    const visibleMovements = explicitToday.length ? explicitToday : movements
+    return visibleMovements.slice(0, 6)
+  }, [movements])
+
+  const decision = useMemo(() => {
+    if (screenState === "onboarding") {
+      const remaining = Math.max(1, 3 - movements.length)
+
+      return {
+        tone: "neutral",
+        title: "Aún no te digo si conviene gastar hoy",
+        context: `Agrega ${remaining} movimiento${remaining === 1 ? "" : "s"} más.`,
+      }
+    }
+
+    if (projection.finalBalance <= safeMinimum || projection.criticalDay !== null) {
+      return {
+        tone: "critical",
+        title: "Mejor no gastar hoy",
+        context:
+          projection.criticalDay !== null
+            ? `Podrías apretarte desde el día ${projection.criticalDay}.`
+            : "Tu semana ya viene justa.",
+      }
+    }
+
+    if (weeklyDecisionAmount <= 50000) {
+      return {
+        tone: "warning",
+        title: "Puedes gastar, pero con cuidado",
+        context: "Si gastas, que sea algo chico.",
+      }
+    }
 
     return {
-      adjustedBalance,
-      isCritical: adjustedBalance <= safeMinimum,
+      tone: "positive",
+      title: "Puedes gastar hoy sin problema",
+      context: "Tu semana todavía tiene aire.",
     }
-  }, [simulationAmount, simulationType, projection.finalBalance, safeMinimum])
+  }, [movements.length, projection.criticalDay, projection.finalBalance, safeMinimum, screenState, weeklyDecisionAmount])
 
-  const nextFutureMovement = useMemo(() => {
-    const today = new Date().getDate()
-    return [...futureMovements]
-      .map(normalizeFutureMovement)
-      .filter(Boolean)
-      .filter((item) => item.day >= today)
-      .sort((a, b) => a.day - b.day)[0]
-  }, [futureMovements])
+  const decisionToneClass =
+    decision.tone === "critical"
+      ? "text-[#EF4444]"
+      : decision.tone === "warning"
+        ? "text-[#B45309]"
+        : decision.tone === "positive"
+          ? "text-[#15803D]"
+          : "text-[#111827]"
 
   function loadStoredData() {
     try {
@@ -193,10 +232,11 @@ export default function HomeScreen() {
 
       if (storedMovements) {
         const parsedMovements = JSON.parse(storedMovements)
-        const normalizedMovements = Array.isArray(parsedMovements)
-          ? parsedMovements.map(normalizeMovement).filter(Boolean)
-          : []
-        setMovements(normalizedMovements)
+        setMovements(
+          Array.isArray(parsedMovements)
+            ? parsedMovements.map(normalizeMovement).filter(Boolean)
+            : []
+        )
       } else {
         setMovements([])
       }
@@ -209,58 +249,22 @@ export default function HomeScreen() {
 
       if (storedFutureMovements) {
         const parsedFutureMovements = JSON.parse(storedFutureMovements)
-        const normalizedFutureMovements = Array.isArray(parsedFutureMovements)
-          ? parsedFutureMovements.map(normalizeFutureMovement).filter(Boolean)
-          : []
-        setFutureMovements(normalizedFutureMovements)
+        setFutureMovements(
+          Array.isArray(parsedFutureMovements)
+            ? parsedFutureMovements.map(normalizeFutureMovement).filter(Boolean)
+            : []
+        )
       } else {
         setFutureMovements([])
       }
 
       setError(false)
-    } catch (e) {
-      console.error(e)
+    } catch (caughtError) {
+      console.error(caughtError)
       setError(true)
     } finally {
       setIsLoaded(true)
     }
-  }
-
-  function getInsight() {
-    const today = new Date().getDate()
-
-    if (projection.criticalDay) {
-      const daysLeft = projection.criticalDay - today
-      if (daysLeft <= 0) {
-        return "Ojo: hoy podrías tocar tu mínimo seguro"
-      }
-
-      if (daysLeft === 1) {
-        return "Ojo: mañana podrías tocar tu mínimo seguro"
-      }
-
-      return `Ojo: en ${daysLeft} día${daysLeft === 1 ? "" : "s"} podrías quedar muy justa`
-    }
-
-    if (projection.finalBalance <= safeMinimum) {
-      return "Vas muy ajustada para cerrar el mes con calma"
-    }
-
-    if (futureMovements.length === 0) {
-      return "Todavía no has planificado lo que viene"
-    }
-
-    return `Puedes usar hasta $${safeToSpend.toLocaleString("es-CL")} sin desordenarte`
-  }
-
-  function getSimulationMessage() {
-    if (!simulationResult) return "Prueba una decisión antes de hacerla"
-
-    if (simulationResult.isCritical) {
-      return "Si haces eso, quedarías en zona de riesgo"
-    }
-
-    return "Si haces eso, sigues bien"
   }
 
   function handleAddMovement(newMovement) {
@@ -280,11 +284,11 @@ export default function HomeScreen() {
           ? money + movementToSave.amount
           : money - movementToSave.amount
 
-      setMovements((prev) => [movementToSave, ...prev])
+      setMovements((previous) => [movementToSave, ...previous])
       setModalType(null)
-      setFeedback(`Ahora tienes $${nextMoney.toLocaleString("es-CL")}`)
-    } catch (e) {
-      console.error(e)
+      setFeedback(`Listo. Te quedan ${formatCurrency(nextMoney)}.`)
+    } catch (caughtError) {
+      console.error(caughtError)
       setError(true)
     }
   }
@@ -293,375 +297,116 @@ export default function HomeScreen() {
     loadStoredData()
   }
 
-  function handleOpenAddFuture() {
-    setEditingFutureMovement(null)
-    setFutureModalOpen(true)
-  }
-
-  function handleEditFuture(item) {
-    setEditingFutureMovement(item)
-    setFutureModalOpen(true)
-  }
-
-  function handleSaveFuture(item) {
-    try {
-      const normalizedItem = normalizeFutureMovement(item)
-
-      if (!normalizedItem) {
-        return
-      }
-
-      setFutureMovements((prev) => {
-        const exists = prev.some((x) => x.id === normalizedItem.id)
-        if (exists) {
-          return prev.map((x) => (x.id === normalizedItem.id ? normalizedItem : x))
-        }
-        return [normalizedItem, ...prev]
-      })
-
-      setFutureModalOpen(false)
-      setEditingFutureMovement(null)
-      setFeedback("Próximo movimiento guardado")
-    } catch (e) {
-      console.error(e)
-      setError(true)
-    }
-  }
-
-  function handleDeleteFuture(id) {
-    try {
-      setFutureMovements((prev) => prev.filter((item) => item.id !== id))
-      setFeedback("Próximo movimiento eliminado")
-    } catch (e) {
-      console.error(e)
-      setError(true)
-    }
-  }
-
-  const shellClassName = "min-h-screen bg-[#FAFAF9] px-5 py-8 max-w-md mx-auto space-y-6"
-  const screenState = error ? "error" : isOnboarding ? "onboarding" : "normal"
   if (error) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#FAFAF9] px-6">
-        <div className="text-center space-y-4">
-          <h1 className="text-2xl font-semibold text-gray-900">
-            Algo no funcionó bien
-          </h1>
-          <p className="text-sm text-gray-500">
-            Vamos a intentarlo de nuevo
-          </p>
-
-          <button
-            onClick={handleRetry}
-            className="mt-4 px-5 py-2 rounded-xl bg-gray-900 text-white"
-          >
-            Reintentar
-          </button>
+      <main className="min-h-screen bg-[#FAFAF9] px-5 py-6">
+        <div className="mx-auto flex min-h-[70vh] max-w-md items-center justify-center">
+          <section className="space-y-3 text-center">
+            <h1 className="text-2xl font-semibold text-[#111827]">
+              Ups, algo no salió bien
+            </h1>
+            <p className="text-sm text-[#6B7280]">
+              Reintenta y seguimos.
+            </p>
+            <button
+              onClick={handleRetry}
+              className="rounded-xl bg-[#111827] px-4 py-2 text-sm font-medium text-white transition-transform duration-150 hover:scale-105"
+            >
+              Reintentar
+            </button>
+          </section>
         </div>
-      </div>
+      </main>
     )
   }
 
   if (!isLoaded) {
-    return <div className={shellClassName} />
-  }
-
-  const sortedFutureMovements = [...futureMovements]
-    .map(normalizeFutureMovement)
-    .filter(Boolean)
-    .sort((a, b) => a.day - b.day)
-
-  const feedbackBlock = feedback ? (
-    <div className="rounded-xl bg-gray-900 text-white text-sm px-4 py-3">
-      {feedback}
-    </div>
-  ) : null
-
-  const balanceBlock = (
-    <div className="space-y-1">
-      <h1 className="text-4xl font-semibold tracking-tight text-gray-900">
-        ${money.toLocaleString("es-CL")}
-      </h1>
-      <p className="text-sm text-gray-500">
-        Hoy tienes disponible
-      </p>
-    </div>
-  )
-
-  const actionButtons = (
-    <div className="flex gap-3">
-      <button
-        onClick={() => setModalType("income")}
-        className="flex-1 py-2 rounded-xl bg-gray-900 text-white"
-      >
-        + Ingreso
-      </button>
-
-      <button
-        onClick={() => setModalType("expense")}
-        className="flex-1 py-2 rounded-xl bg-gray-100 text-gray-800"
-      >
-        - Gasto
-      </button>
-    </div>
-  )
-
-  if (screenState === "onboarding") {
-    return (
-      <div className={shellClassName}>
-        {feedbackBlock}
-        {balanceBlock}
-
-        <div className="space-y-2">
-          <p className="text-gray-700">
-            Ya partimos. Hagámoslo claro
-          </p>
-
-          <p className="text-sm text-gray-500">
-            Llevas {onboardingCount} de 3 movimientos
-          </p>
-
-          <p className="text-sm text-gray-600">
-            Agrega {3 - onboardingCount} más para ver tu proyección
-          </p>
-        </div>
-
-        {actionButtons}
-
-        <AddMovementModal
-          isOpen={modalType !== null}
-          type={modalType}
-          onClose={() => setModalType(null)}
-          onSave={handleAddMovement}
-        />
-
-        <FutureMovementModal
-          isOpen={futureModalOpen}
-          editingItem={editingFutureMovement}
-          onClose={() => {
-            setFutureModalOpen(false)
-            setEditingFutureMovement(null)
-          }}
-          onSave={handleSaveFuture}
-        />
-      </div>
-    )
+    return <main className="min-h-screen bg-[#FAFAF9] px-5 py-6" />
   }
 
   return (
-    <div className={shellClassName}>
-      {feedbackBlock}
-      {balanceBlock}
-
-      <div className="space-y-1">
-        <div className="text-gray-700">
-          Fin de mes:{" "}
-          <span className={`font-medium ${isCritical ? "text-red-500" : "text-yellow-500"}`}>
-            ${projection.finalBalance.toLocaleString("es-CL")}
-          </span>
-        </div>
-
-        <div className={`text-sm ${isCritical ? "text-red-600" : "text-gray-600"}`}>
-          {getInsight()}
-        </div>
-
-        <div className="text-sm text-gray-500">
-          Puedes usar hasta ${safeToSpend.toLocaleString("es-CL")} sin tocar tu mínimo seguro
-        </div>
-      </div>
-
-      {actionButtons}
-
-      <div className="rounded-3xl border border-gray-200 bg-gray-50 p-4 space-y-3">
-        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-gray-500">
-          Mínimo seguro
-        </p>
-
-        <input
-          type="number"
-          value={safeMinimum}
-          onChange={(e) => setSafeMinimum(Number(e.target.value) || 0)}
-          className="w-full rounded-2xl border border-gray-200 bg-white px-4 py-3 outline-none"
-        />
-
-        <p className="text-sm text-gray-500">
-          Define tu mínimo para activar alertas
-        </p>
-      </div>
-
-      <div className="rounded-3xl border border-gray-200 bg-white p-4 space-y-3">
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="text-sm font-medium text-gray-900">
-              Próximos movimientos
-            </p>
-            <p className="text-xs text-gray-500 mt-1">
-              Lo que ya sabes que viene este mes
-            </p>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <button
-              onClick={handleOpenAddFuture}
-              className="text-sm text-gray-500"
-            >
-              + Agregar
-            </button>
-
-            <button
-              onClick={() => setShowFutureSection((prev) => !prev)}
-              className="text-sm text-gray-500"
-            >
-              {showFutureSection ? "Ocultar" : "Ver"}
-            </button>
-          </div>
-        </div>
-
-        {futureMovements.length === 0 ? (
-          <p className="text-sm text-gray-500">
-            Aún no has planificado movimientos futuros
+    <main className="min-h-screen bg-[#FAFAF9] px-5 py-6">
+      <div className="mx-auto max-w-md space-y-6">
+        {feedback ? (
+          <p className="rounded-full bg-[#111827] px-4 py-2 text-sm text-white">
+            {feedback}
           </p>
-        ) : (
-          <>
-            <p className="text-sm text-gray-600">
-              Tienes {futureMovements.length} movimiento{futureMovements.length === 1 ? "" : "s"} planificado{futureMovements.length === 1 ? "" : "s"}
-            </p>
+        ) : null}
 
-            {nextFutureMovement ? (
-              <p className="text-sm text-gray-500">
-                Próximo: {nextFutureMovement.label} · día {nextFutureMovement.day}
-              </p>
-            ) : null}
-          </>
-        )}
-      </div>
+        <section className="space-y-2">
+          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#6B7280]">
+            Decisión de hoy
+          </p>
+          <h1 className={`text-4xl font-semibold leading-tight tracking-tight ${decisionToneClass}`}>
+            {decision.title}
+          </h1>
+          <p className="text-sm text-[#6B7280]">
+            {decision.context}
+          </p>
+        </section>
 
-      {showFutureSection && (
-        <div className="space-y-3">
-          <div>
-            <p className="text-sm font-medium text-gray-900">
-              Lo que viene
-            </p>
-          </div>
+        <section className="space-y-1">
+          <p className="text-4xl font-semibold tracking-tight text-[#111827]">
+            {formatCurrency(weeklyDecisionAmount)}
+          </p>
+          <p className="text-sm text-[#6B7280]">
+            Te quedan para esta semana
+          </p>
+        </section>
 
-          {sortedFutureMovements.length === 0 ? (
-            <div className="text-sm text-gray-500 rounded-2xl border border-dashed border-gray-200 p-4">
-              Todavía no hay ingresos o gastos futuros para proyectar.
-            </div>
-          ) : (
-            <div className="divide-y divide-gray-100 rounded-2xl border border-gray-100 bg-white">
-              {sortedFutureMovements.map((item) => (
+        <section className="flex gap-3">
+          <button
+            onClick={() => setModalType("income")}
+            className="flex-1 rounded-xl bg-[#111827] px-4 py-2 text-sm font-medium text-white transition-transform duration-150 hover:scale-105"
+          >
+            + Ingreso
+          </button>
+          <button
+            onClick={() => setModalType("expense")}
+            className="flex-1 rounded-xl bg-gray-100 px-4 py-2 text-sm font-medium text-[#111827] transition-transform duration-150 hover:scale-105"
+          >
+            - Gasto
+          </button>
+        </section>
+
+        <section>
+          <p className="text-sm text-[#6B7280]">
+            Si sigues así, terminas con {formatCurrency(projection.finalBalance)}
+          </p>
+        </section>
+
+        <section className="border-t border-gray-100 pt-4">
+          <p className="mb-2 text-sm text-[#6B7280]">Hoy</p>
+
+          {todayMovements.length ? (
+            <div className="divide-y divide-gray-100">
+              {todayMovements.map((movement) => (
                 <div
-                  key={item.id}
-                  className="px-4"
+                  key={movement.id}
+                  className="flex items-center justify-between py-3 text-sm"
                 >
-                  <FutureMovementItem
-                    item={item}
-                    onEdit={handleEditFuture}
-                    onDelete={handleDeleteFuture}
-                  />
+                  <span className="min-w-0 truncate pr-4 text-[#111827]">
+                    {movement.label}
+                  </span>
+                  <span
+                    className={
+                      movement.type === "income"
+                        ? "shrink-0 text-[#22C55E]"
+                        : "shrink-0 text-[#111827]"
+                    }
+                  >
+                    {movement.type === "income" ? "+" : "-"}
+                    {formatCurrency(movement.amount)}
+                  </span>
                 </div>
               ))}
             </div>
+          ) : (
+            <p className="text-sm text-[#6B7280]">
+              Agrega un movimiento y te digo qué conviene.
+            </p>
           )}
-        </div>
-      )}
-
-      <div className="rounded-3xl border border-gray-200 bg-white p-4 space-y-4">
-        <div>
-          <p className="text-sm font-medium text-gray-900">
-            Simular una decisión
-          </p>
-          <p className="text-xs text-gray-500 mt-1">
-            Mira qué pasa antes de gastar o contar con un ingreso
-          </p>
-        </div>
-
-        <div className="flex gap-2">
-          <button
-            type="button"
-            onClick={() => setSimulationType("expense")}
-            className={`flex-1 py-2 rounded-xl border text-sm ${
-              simulationType === "expense"
-                ? "bg-gray-900 text-white border-gray-900"
-                : "bg-white text-gray-700 border-gray-200"
-            }`}
-          >
-            Gasto
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setSimulationType("income")}
-            className={`flex-1 py-2 rounded-xl border text-sm ${
-              simulationType === "income"
-                ? "bg-gray-900 text-white border-gray-900"
-                : "bg-white text-gray-700 border-gray-200"
-            }`}
-          >
-            Ingreso
-          </button>
-        </div>
-
-        <div>
-          <label className="block text-sm text-gray-500 mb-1">
-            Monto a simular
-          </label>
-          <input
-            type="number"
-            inputMode="numeric"
-            value={simulationAmount}
-            onChange={(e) => setSimulationAmount(e.target.value)}
-            placeholder="Ej. 80000"
-            className="w-full rounded-2xl border border-gray-200 px-4 py-3 outline-none"
-          />
-        </div>
-
-        <div className="flex flex-wrap gap-2">
-          {[10000, 30000, 50000, 100000].map((value) => (
-            <button
-              key={value}
-              type="button"
-              onClick={() => setSimulationAmount(String(value))}
-              className="px-3 py-1.5 rounded-full bg-gray-100 text-gray-700 text-xs"
-            >
-              ${value.toLocaleString("es-CL")}
-            </button>
-          ))}
-        </div>
-
-        <div className="rounded-2xl bg-gray-50 border border-gray-100 p-4 space-y-2">
-          <p
-            className={`text-sm font-medium ${
-              simulationResult?.isCritical ? "text-red-600" : "text-gray-900"
-            }`}
-          >
-            {getSimulationMessage()}
-          </p>
-
-          <p className="text-sm text-gray-500">
-            {simulationResult
-              ? `Tu cierre proyectado quedaría en $${simulationResult.adjustedBalance.toLocaleString("es-CL")}`
-              : "Ingresa un monto para ver el resultado"}
-          </p>
-        </div>
-      </div>
-
-      <div className="pt-4 border-t border-gray-100 text-sm">
-        <p className="text-gray-500 mb-2">Hoy</p>
-
-        {movements.map((m) => (
-          <div
-            key={m.id}
-            className="flex justify-between py-2 border-b border-gray-100"
-          >
-            <span>{m.label}</span>
-            <span className={m.type === "income" ? "text-green-600" : "text-gray-800"}>
-              {m.type === "income" ? "+" : "-"}$
-              {m.amount.toLocaleString("es-CL")}
-            </span>
-          </div>
-        ))}
+        </section>
       </div>
 
       <AddMovementModal
@@ -670,16 +415,6 @@ export default function HomeScreen() {
         onClose={() => setModalType(null)}
         onSave={handleAddMovement}
       />
-
-      <FutureMovementModal
-        isOpen={futureModalOpen}
-        editingItem={editingFutureMovement}
-        onClose={() => {
-          setFutureModalOpen(false)
-          setEditingFutureMovement(null)
-        }}
-        onSave={handleSaveFuture}
-      />
-    </div>
+    </main>
   )
 }
