@@ -52,10 +52,26 @@ const seedState = {
 
 const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLIC_KEY);
 
+function createHistoryFiltersState() {
+  return {
+    transactions: {
+      month: currentMonth(),
+      showAll: false,
+    },
+    receivables: {
+      month: currentMonth(),
+      showAll: false,
+    },
+    payables: {
+      month: currentMonth(),
+      showAll: false,
+    },
+  };
+}
+
 const state = {
   data: cloneSeedState(),
-  filterMonth: currentMonth(),
-  historyShowAll: false,
+  historyFilters: createHistoryFiltersState(),
   session: null,
   appError: false,
   appErrorMessage: "",
@@ -142,6 +158,10 @@ const payableFields = getNamedFields(payableForm, [
 const categorySelect = transactionForm.querySelector('[name="category"]');
 const monthFilter = document.querySelector("#monthFilter");
 const historyShowAllBtn = document.querySelector("#historyShowAllBtn");
+const receivableMonthFilter = document.querySelector("#receivableMonthFilter");
+const historyReceivableShowAllBtn = document.querySelector("#historyReceivableShowAllBtn");
+const payableMonthFilter = document.querySelector("#payableMonthFilter");
+const historyPayableShowAllBtn = document.querySelector("#historyPayableShowAllBtn");
 const appPages = [...document.querySelectorAll("[data-app-page]")];
 const navLinks = [...document.querySelectorAll("[data-page-target]")];
 const detailTabButtons = [...document.querySelectorAll("[data-detail-tab]")];
@@ -535,8 +555,8 @@ transactionForm.addEventListener("submit", async (event) => {
     : [transaction, ...state.data.transactions].sort(sortByDateDesc);
 
   await saveData();
-  state.filterMonth = transaction.date.slice(0, 7);
-  state.historyShowAll = false;
+  state.historyFilters.transactions.month = transaction.date.slice(0, 7);
+  state.historyFilters.transactions.showAll = false;
   syncHistoryFilterInput();
   render();
 
@@ -603,8 +623,8 @@ receivableForm.addEventListener("submit", async (event) => {
     : [receivable, ...state.data.receivables].sort(sortByDueDateAsc);
 
   await saveData();
-  state.filterMonth = receivable.dueDate.slice(0, 7);
-  state.historyShowAll = false;
+  state.historyFilters.receivables.month = receivable.dueDate.slice(0, 7);
+  state.historyFilters.receivables.showAll = false;
   syncHistoryFilterInput();
   resetReceivableForm();
   render();
@@ -655,8 +675,8 @@ payableForm.addEventListener("submit", async (event) => {
     : [payable, ...state.data.payables].sort(sortByDueDateAsc);
 
   await saveData();
-  state.filterMonth = payable.dueDate.slice(0, 7);
-  state.historyShowAll = false;
+  state.historyFilters.payables.month = payable.dueDate.slice(0, 7);
+  state.historyFilters.payables.showAll = false;
   syncHistoryFilterInput();
   resetPayableForm();
   render();
@@ -668,14 +688,40 @@ payableForm.addEventListener("submit", async (event) => {
 });
 
 monthFilter.addEventListener("change", (event) => {
-  state.filterMonth = event.target.value || currentMonth();
-  state.historyShowAll = false;
+  state.historyFilters.transactions.month = event.target.value || currentMonth();
+  state.historyFilters.transactions.showAll = false;
   syncHistoryFilterInput();
   render();
 });
 
 historyShowAllBtn?.addEventListener("click", () => {
-  state.historyShowAll = !state.historyShowAll;
+  state.historyFilters.transactions.showAll = !state.historyFilters.transactions.showAll;
+  syncHistoryFilterInput();
+  render();
+});
+
+receivableMonthFilter?.addEventListener("change", (event) => {
+  state.historyFilters.receivables.month = event.target.value || currentMonth();
+  state.historyFilters.receivables.showAll = false;
+  syncHistoryFilterInput();
+  render();
+});
+
+historyReceivableShowAllBtn?.addEventListener("click", () => {
+  state.historyFilters.receivables.showAll = !state.historyFilters.receivables.showAll;
+  syncHistoryFilterInput();
+  render();
+});
+
+payableMonthFilter?.addEventListener("change", (event) => {
+  state.historyFilters.payables.month = event.target.value || currentMonth();
+  state.historyFilters.payables.showAll = false;
+  syncHistoryFilterInput();
+  render();
+});
+
+historyPayableShowAllBtn?.addEventListener("click", () => {
+  state.historyFilters.payables.showAll = !state.historyFilters.payables.showAll;
   syncHistoryFilterInput();
   render();
 });
@@ -843,7 +889,7 @@ confirmResetModalBtn.addEventListener("click", async () => {
   confirmResetModalBtn.disabled = true;
   confirmResetModalBtn.textContent = copyText("common.deleting");
   state.data = cloneSeedState();
-  state.filterMonth = currentMonth();
+  state.historyFilters = createHistoryFiltersState();
   syncHistoryFilterInput();
   syncCashFloorInputs("");
   await saveData();
@@ -924,8 +970,7 @@ async function syncSessionView() {
     authScreen.hidden = false;
     userEmailLabel.textContent = "-";
     state.data = cloneSeedState();
-    state.filterMonth = currentMonth();
-    state.historyShowAll = false;
+    state.historyFilters = createHistoryFiltersState();
     syncHistoryFilterInput();
     syncCashFloorInputs("");
     resetTransactionForm();
@@ -950,8 +995,7 @@ async function syncSessionView() {
     state.appError = true;
     state.appErrorMessage = getFriendlyErrorMessage("load_data");
   }
-  state.filterMonth = currentMonth();
-  state.historyShowAll = false;
+  state.historyFilters = createHistoryFiltersState();
   syncHistoryFilterInput();
   state.syncPending = readPendingSyncFlag();
   state.syncingPending = false;
@@ -1555,31 +1599,30 @@ function render() {
   syncProgressiveVisibility();
 
   const currentMonthKey = currentMonth();
-  const showAllHistory = state.historyShowAll;
   const allTransactions = [...state.data.transactions].sort(sortByDateDesc);
   const allReceivables = [...state.data.receivables].sort(sortByDueDateAsc);
   const allPayables = [...state.data.payables].sort(sortByDueDateAsc);
-  const transactions = allTransactions.filter((item) =>
-    item.date.startsWith(state.filterMonth)
-  );
-  const receivables = allReceivables.filter((item) =>
-    item.dueDate.startsWith(state.filterMonth)
-  );
-  const payables = allPayables.filter((item) =>
-    item.dueDate.startsWith(state.filterMonth)
-  );
-  const historyTransactions = showAllHistory ? allTransactions : transactions;
-  const historyReceivables = showAllHistory ? allReceivables : receivables;
-  const historyPayables = showAllHistory ? allPayables : payables;
-  const liveTransactions = state.data.transactions.filter((item) =>
-    item.date.startsWith(currentMonthKey)
-  );
-  const liveReceivables = state.data.receivables.filter((item) =>
-    item.dueDate.startsWith(currentMonthKey)
-  );
-  const livePayables = state.data.payables.filter((item) =>
-    item.dueDate.startsWith(currentMonthKey)
-  );
+  const transactions = allTransactions.filter((item) => item.date.startsWith(currentMonthKey));
+  const receivables = allReceivables.filter((item) => item.dueDate.startsWith(currentMonthKey));
+  const payables = allPayables.filter((item) => item.dueDate.startsWith(currentMonthKey));
+  const historyTransactions = state.historyFilters.transactions.showAll
+    ? allTransactions
+    : allTransactions.filter((item) =>
+        item.date.startsWith(state.historyFilters.transactions.month)
+      );
+  const historyReceivables = state.historyFilters.receivables.showAll
+    ? allReceivables
+    : allReceivables.filter((item) =>
+        item.dueDate.startsWith(state.historyFilters.receivables.month)
+      );
+  const historyPayables = state.historyFilters.payables.showAll
+    ? allPayables
+    : allPayables.filter((item) =>
+        item.dueDate.startsWith(state.historyFilters.payables.month)
+      );
+  const liveTransactions = transactions;
+  const liveReceivables = receivables;
+  const livePayables = payables;
   const cashFloor = Number(state.data.cashFloor) || 0;
 
   const incomes = transactions.filter((item) => item.type === "income");
@@ -1810,11 +1853,15 @@ function render() {
   applyCompanyLogo();
 
   renderTodayMovements(state.data.transactions);
-  renderTable(historyTransactions, { groupByMonth: showAllHistory });
+  renderTable(historyTransactions, { groupByMonth: state.historyFilters.transactions.showAll });
   renderReceivables(allReceivables);
   renderPayables(allPayables);
-  renderHistoryReceivables(historyReceivables, { groupByMonth: showAllHistory });
-  renderHistoryPayables(historyPayables, { groupByMonth: showAllHistory });
+  renderHistoryReceivables(historyReceivables, {
+    groupByMonth: state.historyFilters.receivables.showAll,
+  });
+  renderHistoryPayables(historyPayables, {
+    groupByMonth: state.historyFilters.payables.showAll,
+  });
   renderMoneyCurveChart(currentBalance, cashFloor);
   renderMonthlySummary();
   renderBreakdown(liveExpenses);
@@ -1848,7 +1895,7 @@ function renderTable(transactions, options = {}) {
       `<tr><td colspan="8">${
         options.groupByMonth
           ? "No hay movimientos registrados aún."
-          : "No hay movimientos para este mes aún."
+          : "No hay movimientos para ese mes aún."
       }</td></tr>`;
     return;
   }
@@ -1890,7 +1937,7 @@ function renderHistoryReceivables(receivables, options = {}) {
     receivables,
     options.groupByMonth
       ? "No hay cuentas por cobrar registradas aún."
-      : "No hay cuentas por cobrar registradas en este mes.",
+      : "No hay cuentas por cobrar registradas en ese mes.",
     options
   );
 }
@@ -1942,7 +1989,7 @@ function renderHistoryPayables(payables, options = {}) {
     payables,
     options.groupByMonth
       ? "No hay facturas por pagar registradas aún."
-      : "No hay facturas por pagar registradas en este mes.",
+      : "No hay facturas por pagar registradas en ese mes.",
     options
   );
 }
@@ -3175,15 +3222,34 @@ function labelStatus(status) {
 }
 
 function syncHistoryFilterInput() {
-  if (monthFilter) {
-    monthFilter.value = /^\d{4}-\d{2}$/.test(state.filterMonth) ? state.filterMonth : currentMonth();
-  }
+  const historyControls = [
+    {
+      filter: state.historyFilters.transactions,
+      input: monthFilter,
+      button: historyShowAllBtn,
+    },
+    {
+      filter: state.historyFilters.receivables,
+      input: receivableMonthFilter,
+      button: historyReceivableShowAllBtn,
+    },
+    {
+      filter: state.historyFilters.payables,
+      input: payableMonthFilter,
+      button: historyPayableShowAllBtn,
+    },
+  ];
 
-  if (historyShowAllBtn) {
-    const isAllSelected = state.historyShowAll;
-    historyShowAllBtn.classList.toggle("is-active", isAllSelected);
-    historyShowAllBtn.setAttribute("aria-pressed", String(isAllSelected));
-  }
+  historyControls.forEach(({ filter, input, button }) => {
+    if (input) {
+      input.value = /^\d{4}-\d{2}$/.test(filter.month) ? filter.month : currentMonth();
+    }
+
+    if (button) {
+      button.classList.toggle("is-active", filter.showAll);
+      button.setAttribute("aria-pressed", String(filter.showAll));
+    }
+  });
 }
 
 function idsMatch(leftId, rightId) {

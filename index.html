@@ -745,10 +745,19 @@
             </section>
 
             <section class="panel transaction-panel" id="historyReceivables">
-              <div class="panel-header">
+              <div class="panel-header panel-header-split">
                 <div>
                   <p class="section-label">Historial</p>
                   <h3>Cuentas por cobrar</h3>
+                </div>
+                <div class="filters">
+                  <label>
+                    Mes
+                    <input type="month" id="receivableMonthFilter" />
+                  </label>
+                  <button id="historyReceivableShowAllBtn" class="ghost-btn" type="button">
+                    Ver todo
+                  </button>
                 </div>
               </div>
 
@@ -772,10 +781,19 @@
             </section>
 
             <section class="panel transaction-panel" id="historyPayables">
-              <div class="panel-header">
+              <div class="panel-header panel-header-split">
                 <div>
                   <p class="section-label">Historial</p>
                   <h3>Facturas por pagar</h3>
+                </div>
+                <div class="filters">
+                  <label>
+                    Mes
+                    <input type="month" id="payableMonthFilter" />
+                  </label>
+                  <button id="historyPayableShowAllBtn" class="ghost-btn" type="button">
+                    Ver todo
+                  </button>
                 </div>
               </div>
 
