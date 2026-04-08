@@ -526,7 +526,7 @@ transactionForm.addEventListener("submit", async (event) => {
 
   state.data.transactions = isEditing
     ? state.data.transactions
-        .map((item) => (item.id === transaction.id ? transaction : item))
+        .map((item) => (idsMatch(item.id, transaction.id) ? transaction : item))
         .sort(sortByDateDesc)
     : [transaction, ...state.data.transactions].sort(sortByDateDesc);
 
@@ -593,7 +593,7 @@ receivableForm.addEventListener("submit", async (event) => {
 
   state.data.receivables = isEditing
     ? state.data.receivables
-        .map((item) => (item.id === receivable.id ? receivable : item))
+        .map((item) => (idsMatch(item.id, receivable.id) ? receivable : item))
         .sort(sortByDueDateAsc)
     : [receivable, ...state.data.receivables].sort(sortByDueDateAsc);
 
@@ -644,7 +644,7 @@ payableForm.addEventListener("submit", async (event) => {
 
   state.data.payables = isEditing
     ? state.data.payables
-        .map((item) => (item.id === payable.id ? payable : item))
+        .map((item) => (idsMatch(item.id, payable.id) ? payable : item))
         .sort(sortByDueDateAsc)
     : [payable, ...state.data.payables].sort(sortByDueDateAsc);
 
@@ -669,7 +669,7 @@ transactionTableBody.addEventListener("click", async (event) => {
   const editButton = event.target.closest("[data-edit-transaction]");
   if (editButton) {
     const transaction = state.data.transactions.find(
-      (item) => item.id === editButton.dataset.editTransaction
+      (item) => idsMatch(item.id, editButton.dataset.editTransaction)
     );
 
     if (transaction) {
@@ -685,10 +685,10 @@ transactionTableBody.addEventListener("click", async (event) => {
   }
 
   const deletedTransaction = state.data.transactions.find(
-    (item) => item.id === button.dataset.deleteTransaction
+    (item) => idsMatch(item.id, button.dataset.deleteTransaction)
   );
   state.data.transactions = state.data.transactions.filter(
-    (item) => item.id !== button.dataset.deleteTransaction
+    (item) => !idsMatch(item.id, button.dataset.deleteTransaction)
   );
   await saveData();
   resetTransactionForm();
@@ -706,7 +706,7 @@ receivableTableBody.addEventListener("click", async (event) => {
   const editButton = event.target.closest("[data-edit-receivable]");
   if (editButton) {
     const receivable = state.data.receivables.find(
-      (item) => item.id === editButton.dataset.editReceivable
+      (item) => idsMatch(item.id, editButton.dataset.editReceivable)
     );
 
     if (receivable) {
@@ -722,10 +722,10 @@ receivableTableBody.addEventListener("click", async (event) => {
   }
 
   const deletedReceivable = state.data.receivables.find(
-    (item) => item.id === button.dataset.deleteReceivable
+    (item) => idsMatch(item.id, button.dataset.deleteReceivable)
   );
   state.data.receivables = state.data.receivables.filter(
-    (item) => item.id !== button.dataset.deleteReceivable
+    (item) => !idsMatch(item.id, button.dataset.deleteReceivable)
   );
   await saveData();
   resetReceivableForm();
@@ -741,7 +741,7 @@ payableTableBody.addEventListener("click", async (event) => {
   const editButton = event.target.closest("[data-edit-payable]");
   if (editButton) {
     const payable = state.data.payables.find(
-      (item) => item.id === editButton.dataset.editPayable
+      (item) => idsMatch(item.id, editButton.dataset.editPayable)
     );
 
     if (payable) {
@@ -757,10 +757,10 @@ payableTableBody.addEventListener("click", async (event) => {
   }
 
   const deletedPayable = state.data.payables.find(
-    (item) => item.id === button.dataset.deletePayable
+    (item) => idsMatch(item.id, button.dataset.deletePayable)
   );
   state.data.payables = state.data.payables.filter(
-    (item) => item.id !== button.dataset.deletePayable
+    (item) => !idsMatch(item.id, button.dataset.deletePayable)
   );
   await saveData();
   resetPayableForm();
@@ -3053,6 +3053,10 @@ function labelStatus(status) {
   };
 
   return labels[status] || status;
+}
+
+function idsMatch(leftId, rightId) {
+  return String(leftId ?? "") === String(rightId ?? "");
 }
 
 function cloneSeedState() {
