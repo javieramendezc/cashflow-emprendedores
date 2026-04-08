@@ -1333,7 +1333,7 @@ async function confirmStatementImport() {
 
   try {
     const importedTransactions = validItems.map((item) => ({
-      id: crypto.randomUUID(),
+      id: createSafeId(),
       type: item.type,
       description: item.description,
       note: `Importado desde cartola ${state.statementImport.fileName}`.trim(),
@@ -1350,16 +1350,21 @@ async function confirmStatementImport() {
     state.historyFilters.transactions.month = importedTransactions[0].date.slice(0, 7);
     state.historyFilters.transactions.showAll = false;
 
-    await saveData();
     syncHistoryFilterInput();
     render();
     closeStatementImportModal();
+    await saveData();
     showUXFeedback(
       `${importedTransactions.length} movimiento${
         importedTransactions.length === 1 ? "" : "s"
       } agregado${importedTransactions.length === 1 ? "" : "s"}.`,
       "ok"
     );
+  } catch (error) {
+    console.error("No pudimos agregar los movimientos de la cartola:", error);
+    state.statementImport.error =
+      "No pudimos agregar esos movimientos ahora. Revisa la cartola e inténtalo de nuevo.";
+    renderStatementImportState();
   } finally {
     confirmStatementImportBtn.disabled = false;
   }
@@ -3552,6 +3557,14 @@ function today() {
   const month = String(now.getMonth() + 1).padStart(2, "0");
   const day = String(now.getDate()).padStart(2, "0");
   return `${year}-${month}-${day}`;
+}
+
+function createSafeId() {
+  if (globalThis.crypto?.randomUUID) {
+    return globalThis.crypto.randomUUID();
+  }
+
+  return `cf-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
 }
 
 function toISODate(date) {
