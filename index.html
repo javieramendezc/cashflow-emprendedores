@@ -706,6 +706,9 @@
                   <h3>Movimientos</h3>
                 </div>
                 <div class="filters">
+                  <button id="openStatementImportBtn" class="ghost-btn" type="button">
+                    Subir cartola
+                  </button>
                   <label>
                     Mes
                     <input type="month" id="monthFilter" />
@@ -972,6 +975,86 @@
       </div>
     </div>
 
+    <div class="statement-import-modal" id="statementImportModal" hidden>
+      <div
+        class="statement-import-card"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="statementImportTitle"
+      >
+        <div class="transaction-modal-header">
+          <div>
+            <p class="section-label">Subir cartola</p>
+            <h3 id="statementImportTitle">Importa tus movimientos</h3>
+          </div>
+          <button type="button" class="close-modal-btn" id="closeStatementImportBtn">×</button>
+        </div>
+
+        <section class="statement-import-step" id="statementImportSelectStep">
+          <p class="statement-import-copy">
+            Sube tu cartola, la leemos y te mostramos los movimientos para revisar.
+          </p>
+          <div class="statement-import-types">
+            <button type="button" class="ghost-btn statement-file-type-btn" data-statement-type="pdf">
+              PDF
+            </button>
+            <button type="button" class="ghost-btn statement-file-type-btn" data-statement-type="excel">
+              Excel
+            </button>
+            <button type="button" class="ghost-btn statement-file-type-btn" data-statement-type="csv">
+              CSV
+            </button>
+          </div>
+          <p class="statement-import-hint">
+            Después podrás revisar y corregir antes de agregar.
+          </p>
+          <input
+            type="file"
+            id="statementImportInput"
+            accept=".pdf,.csv,.xlsx,.xls,application/pdf,text/csv,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            hidden
+          />
+        </section>
+
+        <section class="statement-import-step" id="statementImportProcessingStep" hidden>
+          <div class="statement-import-processing">
+            <div class="statement-import-spinner" aria-hidden="true"></div>
+            <div>
+              <strong>Estamos leyendo tu cartola…</strong>
+              <p id="statementImportProcessingCopy">
+                Esto puede tardar unos segundos.
+              </p>
+            </div>
+          </div>
+        </section>
+
+        <section class="statement-import-step" id="statementImportReviewStep" hidden>
+          <div class="statement-import-review-header">
+            <div>
+              <strong id="statementImportResultTitle">Encontramos 0 movimientos</strong>
+              <p id="statementImportResultHint">Revísalos antes de agregarlos.</p>
+            </div>
+            <button type="button" class="ghost-btn" id="statementImportReplaceFileBtn">
+              Cambiar archivo
+            </button>
+          </div>
+
+          <div class="statement-import-review-list" id="statementImportReviewList"></div>
+        </section>
+
+        <p class="statement-import-error" id="statementImportError" hidden></p>
+
+        <div class="transaction-modal-actions statement-import-actions">
+          <button type="button" class="ghost-btn" id="cancelStatementImportBtn">
+            Cancelar
+          </button>
+          <button type="button" class="primary-btn" id="confirmStatementImportBtn" hidden>
+            Agregar movimientos
+          </button>
+        </div>
+      </div>
+    </div>
+
     <div
       class="ux-toast"
       id="uxToast"
@@ -1000,6 +1083,8 @@
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js"></script>
     <script src="./copy.js"></script>
     <script src="./app.js"></script>
   </body>
