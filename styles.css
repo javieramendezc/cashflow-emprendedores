@@ -57,8 +57,19 @@ body::before {
   grid-template-columns: 248px minmax(0, 1fr);
   gap: 40px;
   width: min(1120px, calc(100vw - 40px));
+  max-width: 100%;
   margin: 0 auto;
   padding: 24px 0 40px;
+}
+
+.app-shell > *,
+.dashboard > *,
+.app-page > *,
+.workspace-grid > *,
+.forecast-grid > *,
+.ledger-grid > * {
+  min-width: 0;
+  max-width: 100%;
 }
 
 .app-connection-banner {
@@ -430,12 +441,15 @@ body::before {
 .dashboard {
   display: grid;
   gap: 24px;
+  min-width: 0;
 }
 
 .app-page {
   display: grid;
   gap: 24px;
   animation: rise 500ms ease;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .app-page[hidden],
@@ -498,6 +512,8 @@ body::before {
   gap: 24px;
   grid-template-columns: minmax(0, 1.15fr) minmax(320px, 0.85fr);
   align-items: stretch;
+  min-width: 0;
+  max-width: 100%;
 }
 
 #homePage.app-page {
@@ -748,8 +764,8 @@ body::before {
 .home-month-status {
   display: inline-flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 8px;
-  white-space: nowrap;
   color: var(--muted);
 }
 
@@ -898,7 +914,8 @@ body::before {
 }
 
 .quick-action-text {
-  white-space: nowrap;
+  white-space: normal;
+  overflow-wrap: anywhere;
 }
 
 .quick-action-card:hover {
@@ -1138,6 +1155,8 @@ body::before {
 .ledger-grid {
   display: grid;
   gap: 24px;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .workspace-grid {
@@ -1156,6 +1175,8 @@ body::before {
 .panel {
   border-radius: 20px;
   padding: 24px;
+  min-width: 0;
+  max-width: 100%;
 }
 
 #detailPage > .panel {
@@ -1173,7 +1194,15 @@ body::before {
   justify-content: space-between;
   gap: 16px;
   align-items: start;
+  flex-wrap: wrap;
   margin-bottom: 22px;
+}
+
+.panel-header > *,
+.panel-header-split > *,
+.transaction-panel .filters > * {
+  min-width: 0;
+  max-width: 100%;
 }
 
 .transaction-form {
@@ -1885,6 +1914,8 @@ select:focus {
   border-radius: 24px;
   background: rgba(255, 255, 255, 0.5);
   border: 1px solid rgba(24, 38, 31, 0.07);
+  min-width: 0;
+  max-width: 100%;
 }
 
 .mini-chart-header {
@@ -1976,7 +2007,10 @@ select:focus {
   font-size: 0.68rem;
   font-weight: 700;
   color: var(--ink);
-  white-space: nowrap;
+  white-space: normal;
+  text-align: center;
+  width: max-content;
+  max-width: 72px;
 }
 
 .monthly-flow-label {
@@ -2055,15 +2089,21 @@ select:focus {
   display: flex;
   gap: 12px;
   flex-wrap: wrap;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .table-wrap {
+  width: 100%;
+  max-width: 100%;
   overflow: auto;
+  overflow-y: hidden;
   -webkit-overflow-scrolling: touch;
 }
 
 table {
-  width: 100%;
+  width: max-content;
+  min-width: 100%;
   border-collapse: collapse;
 }
 
@@ -2072,7 +2112,9 @@ td {
   padding: 16px 12px;
   text-align: left;
   border-bottom: 1px solid var(--line);
-  white-space: nowrap;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  vertical-align: top;
 }
 
 th {
@@ -2276,7 +2318,8 @@ tbody tr:hover {
 .forecast-line-amount strong {
   font-size: 0.96rem;
   font-variant-numeric: tabular-nums;
-  white-space: nowrap;
+  white-space: normal;
+  overflow-wrap: anywhere;
 }
 
 .forecast-line.critical .forecast-line-copy strong,
@@ -2669,7 +2712,7 @@ tbody tr:hover {
   }
 
   table {
-    min-width: 760px;
+    min-width: 640px;
   }
 
   th,
