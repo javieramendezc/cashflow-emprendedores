@@ -7,7 +7,7 @@
    * - Lenguaje humano, no técnico
    * - Sin tono negativo fuerte
    * - Sin explicaciones largas
-   * - Siempre dejar claro qué hacer o qué significa
+   * - Cada mensaje debe empujar una acción
    *
    * Edita aquí los textos visibles de la app.
    * Regla simple:
@@ -63,7 +63,7 @@
         length: "Máximo 2 líneas por mensaje",
         language: "Humano y directo",
         tone: "Claro, sin dramatizar",
-        action: "Siempre accionable",
+        action: "Cada mensaje debe empujar una acción",
       },
       states: {
         positive: "Tranquilidad",
@@ -136,20 +136,20 @@
       emptyTitle: "Aún no hay movimientos",
       today: {
         available: "Hoy tienes disponible",
-        low: "Hoy vas justa",
-        start: "Empieza con lo de hoy",
-        empty: "Agrega tu primer ingreso o gasto",
-        learning: "Ya partimos. Hagámoslo claro",
-        risk: "Ojo: vas muy justa",
-        positive: "Vas bien",
+        low: "Mejor espera antes de gastar",
+        start: "Registra lo de hoy",
+        empty: "Agrega tu primer movimiento",
+        learning: "Ya partimos. Registra uno más.",
+        risk: "Evita gastar hoy",
+        positive: "Puedes gastar hoy",
       },
       monthEnd: {
         label: "Fin de mes:",
         empty: "Sin datos",
       },
       advice: {
-        initial: "Agrega un movimiento y te digo cómo vas.",
-        starter: "Agrega uno más y te muestro cuánto puedes mover.",
+        initial: "Agrega un movimiento y te digo qué conviene.",
+        starter: "Agrega uno más y te digo si conviene gastar.",
       },
       quick: {
         income: "Ingreso",
@@ -161,19 +161,19 @@
       todaySection: "Hoy",
       onboarding: {
         progress: "{current} de {target} movimientos",
-        addOneMore: "Agrega {count} más y verás tu proyección",
-        addManyMore: "Agrega {count} más y verás tu proyección",
+        addOneMore: "Agrega {count} más y te digo qué hacer",
+        addManyMore: "Agrega {count} más y te digo qué hacer",
       },
       risk: {
-        today: "Ojo: hoy se aprieta",
-        inDays: "Ojo: en {count} día se aprieta",
-        inManyDays: "Ojo: en {count} días se aprieta",
-        month: "Ojo: este mes se aprieta",
-        soon: "Ojo: se aprieta pronto",
+        today: "Si gastas hoy, empeoras tu semana.",
+        inDays: "En {count} día podrías quedar justa. Cuida gastos.",
+        inManyDays: "En {count} días podrías quedar justa. Cuida gastos.",
+        month: "Este mes conviene apretarse. Evita gastos nuevos.",
+        soon: "Se aprieta pronto. Mejor espera antes de gastar.",
       },
       positive: {
-        hold: "Vas bien. Cuida ese margen.",
-        spend: "Vas bien. Puedes usar {amount} esta semana.",
+        hold: "Vas bien. No te salgas hoy.",
+        spend: "Puedes usar {amount} esta semana.",
         invest: "Vas bien. Puedes mover {amount} sin tocar tu mínimo.",
       },
     },
@@ -231,36 +231,60 @@
     // Notificaciones inteligentes listas para push
     notifications: {
       critical: {
-        highExpense: "⚠️ Este gasto cambia tu semana\nOjo con los próximos días.",
-        projectionDrop: "⚠️ Ojo: tu margen baja esta semana\nEvita gastos grandes hoy.",
-        cashFloor: "⚠️ Podrías quedar corta en {days} días\nRevisa tus gastos ahora.",
+        highExpense: "⚠️ Este gasto cambia tu semana\nEvita otro gasto grande hoy.",
+        projectionDrop: "⚠️ Ojo: tu margen baja esta semana\nMejor espera antes de gastar.",
+        cashFloor: "⚠️ Podrías quedar corta en {days} días\nFrena gastos y revisa cobros.",
       },
       preventive: {
-        highExpense: "👀 Hoy vas bien, pero ojo con gastar de más\nAún puedes mantener el margen.",
+        highExpense: "👀 Aún vas bien, pero ojo\nCuida lo que gastas hoy.",
         projectionDrop: "💡 Tu proyección bajó {amount}\nCuida lo que queda de semana.",
-        tightWeek: "💡 Vas justo esta semana\nUn pequeño ajuste hace la diferencia.",
+        tightWeek: "💡 Vas justo esta semana\nHaz un ajuste antes de gastar.",
         inactivity: "👀 Hace {days} día{suffix} que no registras\nActualiza tu plata de hoy.",
       },
       positive: {
-        goodMargin: "✔️ Vas con buen margen\nPuedes gastar con tranquilidad hoy.",
-        projectionUp: "📈 Tu proyección subió {amount}\nAprovecha ese aire con calma.",
-        improved: "📈 Estás mejor que la semana pasada\nSigue así.",
-        recovery: "✔️ Ya te recuperas\nSigue así esta semana.",
+        goodMargin: "✔️ Vas con buen margen\nPuedes gastar sin problema hoy.",
+        projectionUp: "📈 Tu proyección subió {amount}\nPuedes gastar con más aire hoy.",
+        improved: "📈 Vas mejor que la semana pasada\nMantén este ritmo.",
+        recovery: "✔️ Ya te recuperas\nPuedes moverte con más calma.",
       },
       onboarding: {
-        firstSteps: "✨ En {remaining} movimientos vemos tu situación real\nTe falta poco.",
-        inactive: "✨ Hace un día que no registras\nAgrega lo de hoy y te guío.",
+        firstSteps: "✨ En {remaining} movimientos te digo qué conviene\nTe falta poco.",
+        inactive: "✨ Falta poco para entender tu plata\nAgrega lo de hoy.",
       },
     },
 
     // Pantalla de proyección y simulador
     projection: {
-      empty: "Aún no hay movimientos para proyectar.",
-      criticalDay: "Día {day}: podrías bajar de {amount}.",
-      scenarioPrompt: "Ingresa un monto y mira qué pasa.",
+      empty: "Agrega más datos. Y te digo qué hacer.",
+      criticalDay: "Día {day}: si no ajustas, podrías bajar de {amount}.",
+      scenarioPrompt: "Prueba una decisión antes de hacerla.",
       scenario: {
         income: "Si vendes",
         expense: "Si gastas",
+      },
+      scenarioResult: {
+        incomeRisk: "Si vendes {amount}, alivias el mes: {balance}.",
+        incomeWarn: "Si vendes {amount}, ganas algo de aire: {balance}.",
+        incomeOk: "Si vendes {amount}, puedes seguir con aire: {balance}.",
+        expenseRisk: "Si gastas {amount}, mejor espera: cerrarías en {balance}.",
+        expenseWarn: "Si gastas {amount}, mejor espera: tu cierre queda en {balance}.",
+        expenseOk: "Si gastas {amount}, sigues bien: cerrarías en {balance}.",
+      },
+      weekly: {
+        empty: "Todavía no hay suficiente para decirte qué hacer estas semanas.",
+        summaryCriticalNow: "Cuida esta semana",
+        summaryCriticalLater: "Prepárate para frenar",
+        summaryStable: "Puedes seguir así",
+        summaryRecovery: "Desde semana {week} puedes soltar un poco",
+        summaryHold: "Evita gastos nuevos hasta cerrar el mes",
+        summarySafe: "Por ahora no necesitas ajustar",
+        lineCriticalTitle: "Frena aquí",
+        lineCriticalCopy: "Evita gastos nuevos en este tramo.",
+        lineCriticalNoFloor: "No sumes gastos grandes en este tramo.",
+        lineRecoveryTitle: "Aquí vuelves a respirar",
+        lineRecoveryCopy: "Desde aquí puedes moverte con más calma.",
+        lineStableTitle: "Aquí puedes seguir",
+        lineStableCopy: "Aquí puedes seguir sin apurarte.",
       },
     },
 
@@ -337,68 +361,68 @@
         neutral: "Sin datos",
       },
       descriptions: {
-        risk: "Ojo: vienes justa. Cuida gastos nuevos.",
-        warn: "Te alcanza, pero justo. Mira lo que viene.",
-        ok: "Vas bien. Tienes margen para decidir.",
-        neutral: "Agrega un movimiento. Y te digo cómo vas.",
+        risk: "Evita gastos nuevos hoy.",
+        warn: "Mejor espera antes de gastar.",
+        ok: "Puedes gastar sin problema hoy.",
+        neutral: "Agrega un movimiento. Y te digo qué hacer.",
       },
       home: {
-        ok: "Vas bien",
-        warn: "Vas ajustada",
-        risk: "Te falta plata",
-        neutral: "Sin datos",
+        ok: "Puedes gastar hoy",
+        warn: "Mejor espera antes de gastar",
+        risk: "Evita gastar hoy",
+        neutral: "Agrega un movimiento",
       },
     },
 
     // Asistente financiero
     advice: {
-      lowCash: "Esta semana vienes justa. Prioriza cobrar.",
-      negativeNet: "Se va más de lo que entra. Mira {category}.",
-      payablesHeavy: "Viene más salida que entrada. Cuida gastos nuevos.",
-      recurring: "Puedes usar {amount} esta semana. Sin apretarte.",
+      lowCash: "Prioriza cobrar antes de gastar.",
+      negativeNet: "Frena {category} antes de gastar más.",
+      payablesHeavy: "Ordena pagos primero. Luego decide.",
+      recurring: "Puedes usar {amount} esta semana. No más.",
       invest: "Puedes mover {amount}. Sin tocar tu mínimo.",
     },
 
     // Desbloqueo progresivo de funciones
     featureUnlocks: {
       projectionTitle: "Proyección",
-      projectionOne: "Agrega {count} más y verás cómo cierras el mes.",
-      projectionMany: "Agrega {count} más y verás cómo cierras el mes.",
-      projectionFallback: "Sigue registrando y activamos tu proyección.",
+      projectionOne: "Agrega {count} más y te digo cómo cerrar el mes.",
+      projectionMany: "Agrega {count} más y te digo cómo cerrar el mes.",
+      projectionFallback: "Sigue registrando y te diré si conviene gastar.",
       detailTitle: "Detalle",
-      detailRecurring: "Sigue registrando y se abre más detalle.",
+      detailRecurring: "Sigue registrando y te muestro dónde ajustar.",
       detailLocked: "Marca un recurrente o agrega {count} más.",
-      detailFallback: "Marca un recurrente y abrimos más detalle.",
+      detailFallback: "Marca un recurrente y verás dónde ajustar.",
       categoriesTitle: "Categorías",
-      categoriesRecurring: "Con más uso verás mejor tus categorías.",
+      categoriesRecurring: "Con más uso verás qué gasto frenar.",
       categoriesLocked: "Marca un recurrente o agrega {count} más.",
-      categoriesFallback: "Marca un recurrente y verás categorías.",
+      categoriesFallback: "Marca un recurrente y verás qué revisar.",
       summaryLocked: "Sigue registrando y abrimos este nivel.",
-      summaryWarm: "Ya abriste detalle. Con más uso verás más.",
-      summaryReady: "Aquí ves tu mes con más contexto.",
+      summaryWarm: "Ya abriste detalle. Con más uso verás qué ajustar.",
+      summaryReady: "Aquí ves qué conviene hacer con más contexto.",
     },
 
     // Bloque de mínimo seguro
     cashFloor: {
-      define: "Define tu mínimo seguro. Y te aviso.",
-      waiting: "Cuando haya más movimientos, te aviso.",
-      alertProjection: "Ojo: podrías bajar de {amount} este mes.",
+      define: "Define tu mínimo. Y te aviso cuándo frenar.",
+      waiting: "Agrega más movimientos. Y te aviso a tiempo.",
+      alertProjection: "Podrías bajar de {amount}. Frena gastos hoy.",
       alertWeek: "{label}: podrías bajar de {amount}.",
-      safe: "Por ahora sigues sobre {amount}.",
+      safe: "Sigues sobre {amount}. Puedes seguir así hoy.",
     },
 
     // Recomendaciones útiles y alertas
     tips: {
-      belowCashFloor: "Podrías bajar de {amount}. Prioriza cobrar.",
-      lowCashWeek: "{label}: podrías quedar en {amount}. Ajústalo antes.",
-      negativeNet: "Está saliendo más de lo que entra. Revisa qué frenar.",
-      recurring: "Ya tienes pagos repetidos. Eso ayuda a anticiparte.",
-      lowAvailable: "Hoy hay poco margen. Cuida gastos nuevos.",
-      overdueReceivables: "Hay cobros atrasados. Muévelos primero.",
-      dueTomorrow: "Mañana vence {document} de {name}.",
-      nearPayables: "Hay pagos cerca. Ordénalos hoy.",
-      stable: "Tu mes se ve más estable. Decide con más calma.",
-      empty: "Agrega movimientos. Y te muestro señales claras.",
+      belowCashFloor: "Podrías bajar de {amount}. Cobra antes de gastar.",
+      lowCashWeek: "{label}: podrías quedar en {amount}. Ajusta esa semana ahora.",
+      negativeNet: "Está saliendo más de lo que entra. Frena algo hoy.",
+      recurring: "Ya tienes pagos repetidos. Revísalos antes de sumar otro.",
+      lowAvailable: "Hoy hay poco margen. Evita compras nuevas.",
+      overdueReceivables: "Hay cobros atrasados. Escríbeles hoy.",
+      dueTomorrow: "Mañana vence {document} de {name}. Déjalo listo hoy.",
+      nearPayables: "Hay pagos cerca. Ordénalos antes de gastar.",
+      stable: "Tu mes se ve firme. Puedes seguir así.",
+      empty: "Agrega movimientos. Y te digo qué conviene.",
     },
   };
 

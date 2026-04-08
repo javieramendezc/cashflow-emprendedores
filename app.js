@@ -1324,9 +1324,24 @@ function renderScenarioResult() {
   );
 
   scenarioResultText.className = `scenario-result ${tone}`;
-  scenarioResultText.textContent = `${scenarioLabel} ${formatCurrency(
-    scenarioDelta
-  )}, a fin de mes quedarías con ${formatCurrency(simulatedBalance)}.`;
+  const scenarioCopyKey =
+    scenarioType.value === "income"
+      ? tone === "risk"
+        ? "projection.scenarioResult.incomeRisk"
+        : tone === "warn"
+          ? "projection.scenarioResult.incomeWarn"
+          : "projection.scenarioResult.incomeOk"
+      : tone === "risk"
+        ? "projection.scenarioResult.expenseRisk"
+        : tone === "warn"
+          ? "projection.scenarioResult.expenseWarn"
+          : "projection.scenarioResult.expenseOk";
+
+  scenarioResultText.textContent = copyText(scenarioCopyKey, {
+    label: scenarioLabel,
+    amount: formatCurrency(scenarioDelta),
+    balance: formatCurrency(simulatedBalance),
+  });
 }
 
 function updateMovementImpactPreview() {
@@ -2052,7 +2067,7 @@ function createForecastWeeks(
 
 function renderForecast(weeks, cashFloor) {
   if (!weeks.length) {
-    forecastList.innerHTML = '<p class="forecast-empty">Todavía no hay suficiente información para leer cómo viene tu plata estas semanas.</p>';
+    forecastList.innerHTML = `<p class="forecast-empty">${copyText("projection.weekly.empty")}</p>`;
     return;
   }
 
@@ -2099,15 +2114,17 @@ function renderForecast(weeks, cashFloor) {
 
   const summaryTitle = firstCritical
     ? firstCritical.startIndex === 0
-      ? "Ojo esta semana"
-      : "Ojo más adelante"
-    : "Vas con aire";
+      ? copyText("projection.weekly.summaryCriticalNow")
+      : copyText("projection.weekly.summaryCriticalLater")
+    : copyText("projection.weekly.summaryStable");
   const summaryRange = firstCritical ? criticalRangeLabel : stableRangeLabel;
   const summaryContext = firstCritical
     ? recoveryZone
-      ? `Desde semana ${recoveryZone.startIndex + 1} te recuperas`
-      : "Sigues ajustada hacia el cierre"
-    : "Por ahora no aparece una zona crítica";
+      ? copyText("projection.weekly.summaryRecovery", {
+          week: recoveryZone.startIndex + 1,
+        })
+      : copyText("projection.weekly.summaryHold")
+    : copyText("projection.weekly.summarySafe");
 
   forecastList.innerHTML = `
     <article class="forecast-summary ${firstCritical ? "critical" : "stable"}">
@@ -2132,21 +2149,19 @@ function renderForecast(weeks, cashFloor) {
 
           const title =
             zone.zoneTone === "critical"
-              ? "Te aprietas"
+              ? copyText("projection.weekly.lineCriticalTitle")
               : recoveredAfterCritical
-                ? "Aquí respiras"
-                : "Sigues con margen";
+                ? copyText("projection.weekly.lineRecoveryTitle")
+                : copyText("projection.weekly.lineStableTitle");
 
           const copy =
             zone.zoneTone === "critical"
               ? cashFloor > 0
-                ? "En este tramo podrías quedar bajo tu mínimo seguro."
-                : "En este tramo podrías quedar con muy poco margen."
+                ? copyText("projection.weekly.lineCriticalCopy")
+                : copyText("projection.weekly.lineCriticalNoFloor")
               : recoveredAfterCritical
-                ? cashFloor > 0
-                  ? "Después vuelves a quedar por sobre tu mínimo seguro."
-                  : "Después vuelves a tener más aire."
-                : "En este tramo mantienes margen para moverte.";
+                ? copyText("projection.weekly.lineRecoveryCopy")
+                : copyText("projection.weekly.lineStableCopy");
 
           return `
             <div class="forecast-line ${zone.zoneTone}">
@@ -2156,7 +2171,7 @@ function renderForecast(weeks, cashFloor) {
                 <p>${copy}</p>
               </div>
               <div class="forecast-line-amount">
-                <span>Te quedarían aprox.</span>
+                <span>Si sigues así</span>
                 <strong>${formatCurrency(finalWeek.amount)}</strong>
               </div>
             </div>
@@ -2278,7 +2293,8 @@ function renderTips(
     tips.push(copyText("tips.empty"));
   }
 
-  tipsList.innerHTML = tips.map((tip) => `<li>${tip}</li>`).join("");
+  const visibleTips = [...new Set(tips)].slice(0, 4);
+  tipsList.innerHTML = visibleTips.map((tip) => `<li>${tip}</li>`).join("");
 }
 
 async function loadData() {
@@ -2859,13 +2875,13 @@ function syncSmartNotifications(context) {
 
 function getHomeHealthCopy(health) {
   const copyMap = copyValue("health.home") || {
-    ok: "Vas bien",
-    warn: "Vas ajustada",
-    risk: "Te falta plata",
-    neutral: "Sin datos",
+    ok: "Puedes gastar hoy",
+    warn: "Mejor espera antes de gastar",
+    risk: "Evita gastar hoy",
+    neutral: "Agrega un movimiento",
   };
 
-  return copyMap[health?.tone] || health?.label || "Sin datos";
+  return copyMap[health?.tone] || health?.label || "Agrega un movimiento";
 }
 
 function getForecastTone(amount, cashFloor) {
