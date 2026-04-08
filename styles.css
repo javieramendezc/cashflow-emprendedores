@@ -1771,9 +1771,11 @@ select:focus {
 .statement-import-review-list {
   display: grid;
   gap: 12px;
-  max-height: min(48vh, 520px);
+  max-height: min(68vh, 760px);
   overflow: auto;
-  padding-right: 4px;
+  padding-right: 8px;
+  padding-bottom: 8px;
+  scrollbar-gutter: stable;
 }
 
 .statement-import-row {

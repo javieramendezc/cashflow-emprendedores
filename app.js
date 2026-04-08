@@ -1204,9 +1204,10 @@ function renderStatementImportState() {
   }
 
   if (statementImportResultHint) {
+    const overflowHint = items.length > 10 ? " Desliza para revisar todos." : "";
     statementImportResultHint.textContent = fileName
-      ? `${fileName} · revísalos antes de agregarlos.`
-      : "Revísalos antes de agregarlos.";
+      ? `${fileName} · revísalos antes de agregarlos.${overflowHint}`
+      : `Revísalos antes de agregarlos.${overflowHint}`;
   }
 
   if (confirmStatementImportBtn) {
@@ -5061,9 +5062,7 @@ async function parseSpreadsheetStatementFile(file) {
     parseSpreadsheetSheet(workbook.Sheets[sheetName])
   );
 
-  return dedupeImportedStatementItems(parsedItems).sort((left, right) =>
-    right.date.localeCompare(left.date)
-  );
+  return parsedItems.sort((left, right) => right.date.localeCompare(left.date));
 }
 
 function parseSpreadsheetSheet(sheet) {
@@ -5109,13 +5108,19 @@ function findStatementHeaderRow(rows) {
     "abono",
     "debito",
     "credito",
+    "depositos y abonos",
+    "depositos o abonos",
+    "depositos abonos",
+    "cheques y otros cargos",
+    "cheques otros cargos",
+    "otros cargos",
     "saldo",
   ];
 
   let bestIndex = -1;
   let bestScore = 0;
 
-  rows.slice(0, 12).forEach((row, index) => {
+  rows.slice(0, 24).forEach((row, index) => {
     const rowScore = row.reduce((score, cell) => {
       const normalizedCell = normalizeStatementHeader(cell);
       return score + (headerSignals.some((signal) => normalizedCell.includes(signal)) ? 1 : 0);
@@ -5175,10 +5180,19 @@ function parseSpreadsheetStatementRow(row) {
 }
 
 function resolveSpreadsheetRowAmount(row, keys) {
-  const amountValue = pickStatementValue(row, keys, ["monto", "amount", "importe", "valor"]);
-  const debitValue = pickStatementValue(row, keys, [
+  const genericAmountPatterns = [
+    "monto",
+    "amount",
+    "importe",
+    "valor",
+    "monto transaccion",
+    "monto transacción",
+    "monto movimiento",
+  ];
+  const debitPatterns = [
     "cheques y otros cargos",
     "cheques otros cargos",
+    "cheques otros",
     "otros cargos",
     "cheques",
     "cargo",
@@ -5189,10 +5203,11 @@ function resolveSpreadsheetRowAmount(row, keys) {
     "salida",
     "debit",
     "withdraw",
-  ]);
-  const creditValue = pickStatementValue(row, keys, [
+  ];
+  const creditPatterns = [
     "depositos y abonos",
     "depositos o abonos",
+    "depositos abonos",
     "depositos",
     "depósitos",
     "abono",
@@ -5203,31 +5218,15 @@ function resolveSpreadsheetRowAmount(row, keys) {
     "deposito",
     "depósito",
     "credit",
-  ]);
+  ];
+  const amountValue = pickStatementValue(row, keys, ["monto", "amount", "importe", "valor"]);
+  const debitValue = pickStatementValue(row, keys, debitPatterns);
+  const creditValue = pickStatementValue(row, keys, creditPatterns);
 
   const debitAmount = parseStatementSignedAmount(debitValue);
   const creditAmount = parseStatementSignedAmount(creditValue);
-  const hasExplicitDebitColumn = hasStatementColumn(keys, [
-    "cheques y otros cargos",
-    "cheques otros cargos",
-    "otros cargos",
-    "cheques",
-    "cargo",
-    "cargos",
-    "debito",
-    "débito",
-  ]);
-  const hasExplicitCreditColumn = hasStatementColumn(keys, [
-    "depositos y abonos",
-    "depositos o abonos",
-    "depositos",
-    "depósitos",
-    "abono",
-    "abonos",
-    "credito",
-    "crédito",
-    "ingreso",
-  ]);
+  const hasExplicitDebitColumn = hasStatementColumn(keys, debitPatterns);
+  const hasExplicitCreditColumn = hasStatementColumn(keys, creditPatterns);
 
   if (creditAmount > 0) {
     return creditAmount;
@@ -5237,25 +5236,109 @@ function resolveSpreadsheetRowAmount(row, keys) {
     return -debitAmount;
   }
 
-  if (hasExplicitCreditColumn || hasExplicitDebitColumn) {
-    return 0;
-  }
-
   const parsedAmount = parseStatementSignedAmount(amountValue);
-  if (!parsedAmount) {
+  if (parsedAmount) {
+    if (parsedAmount < 0) {
+      return parsedAmount;
+    }
+
+    if (hasExplicitCreditColumn && !hasExplicitDebitColumn) {
+      return parsedAmount;
+    }
+
+    if (hasExplicitDebitColumn && !hasExplicitCreditColumn) {
+      return -parsedAmount;
+    }
+
+    const inferredType = inferStatementTypeFromText(
+      normalizeStatementDescription(
+        pickStatementValue(row, keys, ["descripcion", "detalle", "glosa", "concepto", "movimiento"])
+      )
+    );
+    return inferredType === "income" ? parsedAmount : -parsedAmount;
+  }
+
+  const fallbackAmount = resolveSpreadsheetFallbackAmount(row, keys, {
+    hasExplicitCreditColumn,
+    hasExplicitDebitColumn,
+  });
+  if (fallbackAmount) {
+    return fallbackAmount;
+  }
+
+  return 0;
+}
+
+function resolveSpreadsheetFallbackAmount(
+  row,
+  keys,
+  { hasExplicitCreditColumn, hasExplicitDebitColumn }
+) {
+  const ignoredPatterns = [
+    "fecha",
+    "date",
+    "fec",
+    "operacion",
+    "contable",
+    "descripcion",
+    "descripción",
+    "detalle",
+    "glosa",
+    "concepto",
+    "movimiento",
+    "comercio",
+    "referencia",
+    "saldo",
+    "balance",
+    "disponible",
+    "documento",
+    "numero",
+    "nro",
+    "folio",
+    "correlativo",
+  ];
+
+  const amountCandidates = keys
+    .filter((key) => !hasStatementColumn([key], ignoredPatterns))
+    .map((key) => parseStatementSignedAmount(row[key]))
+    .filter((value) => Math.abs(value) > 0);
+
+  if (!amountCandidates.length) {
     return 0;
   }
 
-  if (parsedAmount < 0) {
-    return parsedAmount;
+  const fallbackValue = [...amountCandidates].sort(
+    (left, right) => Math.abs(left) - Math.abs(right)
+  )[0];
+
+  if (fallbackValue < 0) {
+    return fallbackValue;
+  }
+
+  if (hasExplicitCreditColumn && !hasExplicitDebitColumn) {
+    return Math.abs(fallbackValue);
+  }
+
+  if (hasExplicitDebitColumn && !hasExplicitCreditColumn) {
+    return -Math.abs(fallbackValue);
   }
 
   const inferredType = inferStatementTypeFromText(
     normalizeStatementDescription(
-      pickStatementValue(row, keys, ["descripcion", "detalle", "glosa", "concepto", "movimiento"])
+      pickStatementValue(row, keys, [
+        "descripcion",
+        "descripción",
+        "detalle",
+        "glosa",
+        "concepto",
+        "movimiento",
+        "comercio",
+        "referencia",
+      ])
     )
   );
-  return inferredType === "income" ? parsedAmount : -parsedAmount;
+
+  return inferredType === "income" ? Math.abs(fallbackValue) : -Math.abs(fallbackValue);
 }
 
 function pickStatementValue(row, keys, patterns) {
