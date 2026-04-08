@@ -1833,6 +1833,14 @@ select:focus {
   padding-top: 18px;
 }
 
+.panel-header-inline-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
 @keyframes statement-spin {
   to {
     transform: rotate(360deg);

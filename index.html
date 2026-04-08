@@ -471,7 +471,12 @@
                       <p class="section-label">Cobranza</p>
                       <h3>Cuentas por cobrar</h3>
                     </div>
-                    <span class="pill warn" id="receivablePill">0 pendientes</span>
+                    <div class="panel-header-inline-actions">
+                      <button type="button" class="ghost-btn" id="openReceivableImportBtn">
+                        Importar Excel
+                      </button>
+                      <span class="pill warn" id="receivablePill">0 pendientes</span>
+                    </div>
                   </div>
 
                   <form id="receivableForm" class="transaction-form compact-form">
@@ -1050,6 +1055,80 @@
           </button>
           <button type="button" class="primary-btn" id="confirmStatementImportBtn" hidden>
             Agregar movimientos
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div class="statement-import-modal" id="receivableImportModal" hidden>
+      <div
+        class="statement-import-card"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="receivableImportTitle"
+      >
+        <div class="transaction-modal-header">
+          <div>
+            <p class="section-label">Importar cobranza</p>
+            <h3 id="receivableImportTitle">Sube tu Excel de cuentas por cobrar</h3>
+          </div>
+          <button type="button" class="close-modal-btn" id="closeReceivableImportBtn">×</button>
+        </div>
+
+        <section class="statement-import-step" id="receivableImportSelectStep">
+          <p class="statement-import-copy">
+            Sube tu Excel, revisa las cuentas detectadas y agrégalas de una sola vez.
+          </p>
+          <div class="statement-import-types">
+            <button type="button" class="ghost-btn" id="openReceivableExcelBtn">
+              Elegir Excel
+            </button>
+          </div>
+          <p class="statement-import-hint">
+            Puedes corregir cliente, documento, monto, emisión, vencimiento y estado antes de guardar.
+          </p>
+          <input
+            type="file"
+            id="receivableImportInput"
+            accept=".csv,.xlsx,.xls,text/csv,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            hidden
+          />
+        </section>
+
+        <section class="statement-import-step" id="receivableImportProcessingStep" hidden>
+          <div class="statement-import-processing">
+            <div class="statement-import-spinner" aria-hidden="true"></div>
+            <div>
+              <strong>Estamos leyendo tu Excel…</strong>
+              <p id="receivableImportProcessingCopy">
+                Esto puede tardar unos segundos.
+              </p>
+            </div>
+          </div>
+        </section>
+
+        <section class="statement-import-step" id="receivableImportReviewStep" hidden>
+          <div class="statement-import-review-header">
+            <div>
+              <strong id="receivableImportResultTitle">Encontramos 0 cuentas por cobrar</strong>
+              <p id="receivableImportResultHint">Revísalas antes de agregarlas.</p>
+            </div>
+            <button type="button" class="ghost-btn" id="receivableImportReplaceFileBtn">
+              Cambiar archivo
+            </button>
+          </div>
+
+          <div class="statement-import-review-list" id="receivableImportReviewList"></div>
+        </section>
+
+        <p class="statement-import-error" id="receivableImportError" hidden></p>
+
+        <div class="transaction-modal-actions statement-import-actions">
+          <button type="button" class="ghost-btn" id="cancelReceivableImportBtn">
+            Cancelar
+          </button>
+          <button type="button" class="primary-btn" id="confirmReceivableImportBtn" hidden>
+            Agregar cuentas por cobrar
           </button>
         </div>
       </div>
