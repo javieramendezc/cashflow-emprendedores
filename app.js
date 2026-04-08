@@ -1540,7 +1540,6 @@ function render() {
   syncProgressiveVisibility();
 
   const currentMonthKey = currentMonth();
-  const allTransactions = [...state.data.transactions].sort(sortByDateDesc);
   const allReceivables = [...state.data.receivables].sort(sortByDueDateAsc);
   const allPayables = [...state.data.payables].sort(sortByDueDateAsc);
   const transactions = state.data.transactions.filter((item) =>
@@ -1791,7 +1790,7 @@ function render() {
   applyCompanyLogo();
 
   renderTodayMovements(state.data.transactions);
-  renderTable(allTransactions);
+  renderTable(transactions);
   renderReceivables(allReceivables);
   renderPayables(allPayables);
   renderHistoryReceivables(receivables);
@@ -1826,7 +1825,7 @@ function renderCategoryOptions(type) {
 function renderTable(transactions) {
   if (!transactions.length) {
     transactionTableBody.innerHTML =
-      '<tr><td colspan="8">No hay movimientos registrados aún.</td></tr>';
+      '<tr><td colspan="8">No hay movimientos para este mes aún.</td></tr>';
     return;
   }
 
