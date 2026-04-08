@@ -1366,12 +1366,12 @@ async function confirmStatementImport() {
 }
 
 function normalizeImportedMovement(item) {
-  const date = parseStatementDateValue(item.date);
-  const description = String(item.description || item.name || "").trim();
+  const date = parseStatementDateValue(item.date) || today();
+  const description = String(item.description || item.name || "Movimiento importado").trim();
   const amount = Math.abs(Number(item.amount) || 0);
   const type = item.type === "income" ? "income" : "expense";
 
-  if (!date || !description || !amount) {
+  if (!description || !amount) {
     return null;
   }
 
@@ -5284,8 +5284,9 @@ function parseStructuredStatementRow(row, { nameKeys, allowLooseRow = false }) {
 }
 
 function buildStatementImportPreviewItem(item, importFormat = "generic") {
-  const date = parseStatementDateValue(item.date) || "";
-  const description = normalizeStatementDescription(item.name || item.description || "");
+  const date = parseStatementDateValue(item.date) || today();
+  const description =
+    normalizeStatementDescription(item.name || item.description || "") || "Movimiento importado";
   const signedAmount = Number(item.amount) || 0;
 
   if (!description || !signedAmount) {
