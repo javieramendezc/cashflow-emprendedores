@@ -1520,6 +1520,7 @@ function render() {
   syncProgressiveVisibility();
 
   const currentMonthKey = currentMonth();
+  const allTransactions = [...state.data.transactions].sort(sortByDateDesc);
   const transactions = state.data.transactions.filter((item) =>
     item.date.startsWith(state.filterMonth)
   );
@@ -1766,7 +1767,7 @@ function render() {
   applyCompanyLogo();
 
   renderTodayMovements(state.data.transactions);
-  renderTable(transactions);
+  renderTable(allTransactions);
   renderReceivables(receivables);
   renderPayables(payables);
   renderMoneyCurveChart(currentBalance, cashFloor);
@@ -1799,7 +1800,7 @@ function renderCategoryOptions(type) {
 function renderTable(transactions) {
   if (!transactions.length) {
     transactionTableBody.innerHTML =
-      '<tr><td colspan="8">No hay movimientos para este mes aún.</td></tr>';
+      '<tr><td colspan="8">No hay movimientos registrados aún.</td></tr>';
     return;
   }
 
