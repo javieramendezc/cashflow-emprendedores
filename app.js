@@ -635,65 +635,75 @@ readInvoiceBtn.addEventListener("click", async () => {
 transactionForm.addEventListener("submit", async (event) => {
   event.preventDefault();
 
-  const formData = new FormData(transactionForm);
-  const movementType = formData.get("type");
-  const movementCategory =
-    formData.get("category") || categoryMap[movementType]?.[0] || "Sin categoría";
-  const transaction = {
-    id: formData.get("transactionId") || crypto.randomUUID(),
-    type: movementType,
-    description:
-      String(formData.get("description") || "").trim() ||
-      `${movementType === "income" ? "Ingreso" : "Gasto"} · ${movementCategory}`,
-    note: String(formData.get("note") || "").trim(),
-    amount: Number(formData.get("amount")),
-    date: formData.get("date"),
-    category: movementCategory,
-    channel: formData.get("channel") || "Transferencia",
-    recurring: formData.get("recurring") === "on",
-  };
+  try {
+    const formData = new FormData(transactionForm);
+    const movementType = formData.get("type");
+    const normalizedDate = parseStatementDateValue(formData.get("date")) || today();
+    const movementCategory =
+      formData.get("category") || categoryMap[movementType]?.[0] || "Sin categoría";
+    const transaction = {
+      id: formData.get("transactionId") || createSafeId(),
+      type: movementType,
+      description:
+        String(formData.get("description") || "").trim() ||
+        `${movementType === "income" ? "Ingreso" : "Gasto"} · ${movementCategory}`,
+      note: String(formData.get("note") || "").trim(),
+      amount: Number(formData.get("amount")),
+      date: normalizedDate,
+      category: movementCategory,
+      channel: formData.get("channel") || "Transferencia",
+      recurring: formData.get("recurring") === "on",
+    };
 
-  if (!transaction.amount || !transaction.date) {
-    return;
-  }
+    if (!transaction.amount) {
+      return;
+    }
 
-  const isEditing = Boolean(formData.get("transactionId"));
+    const isEditing = Boolean(formData.get("transactionId"));
 
-  state.data.transactions = isEditing
-    ? state.data.transactions
-        .map((item) => (idsMatch(item.id, transaction.id) ? transaction : item))
-        .sort(sortByDateDesc)
-    : [transaction, ...state.data.transactions].sort(sortByDateDesc);
+    state.data.transactions = isEditing
+      ? state.data.transactions
+          .map((item) => (idsMatch(item.id, transaction.id) ? transaction : item))
+          .sort(sortByDateDesc)
+      : [transaction, ...state.data.transactions].sort(sortByDateDesc);
 
-  await saveData();
-  state.historyFilters.transactions.month = transaction.date.slice(0, 7);
-  state.historyFilters.transactions.showAll = false;
-  syncHistoryFilterInput();
-  render();
+    await saveData();
+    state.historyFilters.transactions.month = transaction.date.slice(0, 7);
+    state.historyFilters.transactions.showAll = false;
+    syncHistoryFilterInput();
+    render();
 
-  const impactCopy = createMovementImpactCopy(transaction);
-  state.lastMovementImpact = impactCopy;
+    const impactCopy = createMovementImpactCopy(transaction);
+    state.lastMovementImpact = impactCopy;
 
-  if (isEditing) {
-    resetTransactionForm();
-    const feedback = createMovementFeedback(transaction.date.slice(0, 7), "updated", transaction.type);
+    if (isEditing) {
+      resetTransactionForm();
+      const feedback = createMovementFeedback(
+        transaction.date.slice(0, 7),
+        "updated",
+        transaction.type
+      );
+      showUXFeedback(feedback.message, feedback.tone);
+      return;
+    }
+
+    transactionFields.transactionId.value = "";
+    transactionFields.amount.value = "";
+    transactionFields.description.value = "";
+    transactionFields.note.value = "";
+    transactionFields.date.value = today();
+    transactionFields.recurring.checked = false;
+    movementExtraDetails.open = false;
+    saveTransactionBtn.textContent = copyText("movement.save");
+    cancelTransactionEditBtn.hidden = true;
+    movementImpactText.textContent = impactCopy;
+    const feedback = createMovementFeedback(transaction.date.slice(0, 7), "saved", transaction.type);
     showUXFeedback(feedback.message, feedback.tone);
-    return;
+    transactionFields.amount.focus();
+  } catch (error) {
+    console.error("No pudimos guardar ese movimiento:", error);
+    showUXFeedback("No pudimos guardar ese cambio ahora. Inténtalo de nuevo.", "warn");
   }
-
-  transactionFields.transactionId.value = "";
-  transactionFields.amount.value = "";
-  transactionFields.description.value = "";
-  transactionFields.note.value = "";
-  transactionFields.date.value = today();
-  transactionFields.recurring.checked = false;
-  movementExtraDetails.open = false;
-  saveTransactionBtn.textContent = copyText("movement.save");
-  cancelTransactionEditBtn.hidden = true;
-  movementImpactText.textContent = impactCopy;
-  const feedback = createMovementFeedback(transaction.date.slice(0, 7), "saved", transaction.type);
-  showUXFeedback(feedback.message, feedback.tone);
-  transactionFields.amount.focus();
 });
 
 receivableForm.addEventListener("submit", async (event) => {
@@ -4070,9 +4080,9 @@ function fillTransactionForm(transaction, asTemplate = false) {
   transactionFields.description.value = transaction.description;
   transactionFields.note.value = transaction.note || "";
   transactionFields.amount.value = transaction.amount;
-  transactionFields.date.value = asTemplate ? today() : transaction.date;
-  transactionFields.category.value = transaction.category;
-  transactionFields.channel.value = transaction.channel;
+  transactionFields.date.value = asTemplate ? today() : parseStatementDateValue(transaction.date) || today();
+  transactionFields.category.value = transaction.category || categoryMap[transaction.type]?.[0] || "Sin categoría";
+  transactionFields.channel.value = transaction.channel || "Transferencia";
   transactionFields.recurring.checked = Boolean(transaction.recurring);
   movementExtraDetails.open = true;
   movementImpactText.textContent = asTemplate
