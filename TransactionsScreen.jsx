@@ -8,13 +8,34 @@ const sampleTransactions = [
 
 const formatCurrency = (amount) => `$${Math.abs(amount).toLocaleString("es-CL")}`;
 
-function impactLabel(transaction) {
+function getAverageTicket(transactions) {
+  const validTransactions = transactions.filter((transaction) => Number(transaction.amount));
+
+  if (!validTransactions.length) {
+    return 0;
+  }
+
+  const totalAbsoluteAmount = validTransactions.reduce(
+    (total, transaction) => total + Math.abs(transaction.amount),
+    0
+  );
+
+  return totalAbsoluteAmount / validTransactions.length;
+}
+
+function getImpactThreshold(transaction, averageTicket) {
+  const userScale = transaction.userType === "high-volume" ? 1.35 : 1;
+  const baseThreshold = averageTicket > 0 ? averageTicket * 0.45 : 20000;
+  return Math.max(12000, Math.round(baseThreshold * userScale));
+}
+
+function impactLabel(transaction, averageTicket) {
   if (transaction.amount < 0) {
-    if (Math.abs(transaction.amount) > 20000) {
-      return "Reduce tu margen esta semana";
+    if (Math.abs(transaction.amount) >= getImpactThreshold(transaction, averageTicket)) {
+      return "Reduce tu margen";
     }
 
-    return "Impacto bajo en tu semana";
+    return "Impacto bajo";
   }
 
   return "Mejora tu proyeccion";
@@ -31,6 +52,7 @@ function impactTone(transaction) {
 export default function TransactionsScreen({ transactions = sampleTransactions }) {
   const todayTransactions = transactions.filter((transaction) => transaction.date === "hoy");
   const yesterdayTransactions = transactions.filter((transaction) => transaction.date === "ayer");
+  const averageTicket = getAverageTicket(transactions);
   const biggestExpense = todayTransactions
     .filter((transaction) => transaction.amount < 0)
     .sort((left, right) => left.amount - right.amount)[0];
@@ -48,13 +70,13 @@ export default function TransactionsScreen({ transactions = sampleTransactions }
         </div>
       ) : null}
 
-      <Section title="Hoy" items={todayTransactions} />
-      <Section title="Ayer" items={yesterdayTransactions} />
+      <Section title="Hoy" items={todayTransactions} averageTicket={averageTicket} />
+      <Section title="Ayer" items={yesterdayTransactions} averageTicket={averageTicket} />
     </div>
   );
 }
 
-function Section({ title, items }) {
+function Section({ title, items, averageTicket }) {
   if (!items.length) {
     return null;
   }
@@ -70,7 +92,7 @@ function Section({ title, items }) {
               <p className="text-gray-900">{transaction.name}</p>
               <p className="text-xs text-gray-400">{transaction.time}</p>
               <p className={`mt-1 text-xs ${impactTone(transaction)}`}>
-                {impactLabel(transaction)}
+                {impactLabel(transaction, averageTicket)}
               </p>
             </div>
 
