@@ -1205,9 +1205,12 @@ function renderStatementImportState() {
 
   if (statementImportResultHint) {
     const overflowHint = items.length > 10 ? " Desliza para revisar todos." : "";
+    const formatHint = items.some((item) => item.importFormat === "generic")
+      ? " No reconocimos el banco exacto, así que conviene revisarlos."
+      : "";
     statementImportResultHint.textContent = fileName
-      ? `${fileName} · revísalos antes de agregarlos.${overflowHint}`
-      : `Revísalos antes de agregarlos.${overflowHint}`;
+      ? `${fileName} · revísalos antes de agregarlos.${formatHint}${overflowHint}`
+      : `Revísalos antes de agregarlos.${formatHint}${overflowHint}`;
   }
 
   if (confirmStatementImportBtn) {
@@ -1364,7 +1367,7 @@ async function confirmStatementImport() {
 
 function normalizeImportedMovement(item) {
   const date = parseStatementDateValue(item.date);
-  const description = String(item.description || "").trim();
+  const description = String(item.description || item.name || "").trim();
   const amount = Math.abs(Number(item.amount) || 0);
   const type = item.type === "income" ? "income" : "expense";
 
@@ -5078,19 +5081,35 @@ function parseSpreadsheetSheet(sheet) {
   }
 
   const headerIndex = findStatementHeaderRow(rows);
-  if (headerIndex < 0) {
-    return [];
+  const hasDetectedHeader = headerIndex >= 0;
+  const dataRows = hasDetectedHeader ? rows.slice(headerIndex + 1) : rows;
+  const headers = hasDetectedHeader
+    ? rows[headerIndex].map((cell, index) => normalizeStatementHeader(cell) || `column_${index}`)
+    : buildFallbackStatementHeaders(dataRows);
+  const statementFormat = hasDetectedHeader
+    ? detectSpreadsheetStatementFormat(headers)
+    : "generic";
+  const parser = getSpreadsheetStatementParser(statementFormat);
+  const mappedRows = dataRows.map((row) => mapStatementRowToObject(headers, row));
+  const parsedRows = mappedRows
+    .map((row) => parser(row))
+    .filter(Boolean)
+    .map((item) => buildStatementImportPreviewItem(item, statementFormat))
+    .filter(Boolean);
+
+  if (parsedRows.length) {
+    return parsedRows;
   }
 
-  const headers = rows[headerIndex].map((cell, index) =>
-    normalizeStatementHeader(cell) || `column_${index}`
-  );
+  if (statementFormat !== "generic") {
+    return mappedRows
+      .map((row) => parseGenericStatementRow(row))
+      .filter(Boolean)
+      .map((item) => buildStatementImportPreviewItem(item, "generic"))
+      .filter(Boolean);
+  }
 
-  return rows
-    .slice(headerIndex + 1)
-    .map((row) => mapStatementRowToObject(headers, row))
-    .map((row) => parseSpreadsheetStatementRow(row))
-    .filter(Boolean);
+  return [];
 }
 
 function findStatementHeaderRow(rows) {
@@ -5142,32 +5161,134 @@ function mapStatementRowToObject(headers, row) {
   }, {});
 }
 
-function parseSpreadsheetStatementRow(row) {
-  const keys = Object.keys(row);
-  const date = parseStatementDateValue(
-    pickStatementValue(row, keys, ["fecha", "date", "fec", "operacion", "contable"])
-  );
+function buildFallbackStatementHeaders(rows) {
+  const maxColumns = rows.slice(0, 20).reduce((currentMax, row) => {
+    return Math.max(currentMax, Array.isArray(row) ? row.length : 0);
+  }, 0);
 
-  if (!date) {
-    return null;
+  return Array.from({ length: maxColumns }, (_, index) => `column_${index}`);
+}
+
+function detectSpreadsheetStatementFormat(headers) {
+  const normalizedHeaders = headers.map((header) => normalizeStatementHeader(header));
+
+  if (normalizedHeaders.some((header) => header.includes("descripcion"))) {
+    return "banco_chile";
   }
 
-  const description =
-    normalizeStatementDescription(
-      pickStatementValue(row, keys, [
-        "descripcion",
-        "descripción",
-        "detalle",
-        "glosa",
-        "concepto",
-        "movimiento",
-        "comercio",
-        "referencia",
-      ])
-    ) || "Movimiento importado";
+  if (normalizedHeaders.some((header) => header.includes("detalle"))) {
+    return "santander";
+  }
+
+  if (normalizedHeaders.some((header) => header.includes("glosa"))) {
+    return "bci";
+  }
+
+  return "generic";
+}
+
+function getSpreadsheetStatementParser(statementFormat) {
+  if (statementFormat === "banco_chile") {
+    return parseBancoChile;
+  }
+
+  if (statementFormat === "santander") {
+    return parseSantander;
+  }
+
+  if (statementFormat === "bci") {
+    return parseBCI;
+  }
+
+  return parseGenericStatementRow;
+}
+
+function parseBancoChile(row) {
+  return parseStructuredStatementRow(row, {
+    nameKeys: [
+      "descripcion",
+      "descripción",
+      "comercio",
+      "referencia",
+      "concepto",
+      "movimiento",
+    ],
+  });
+}
+
+function parseSantander(row) {
+  return parseStructuredStatementRow(row, {
+    nameKeys: [
+      "detalle",
+      "descripcion",
+      "descripción",
+      "referencia",
+      "concepto",
+      "movimiento",
+    ],
+  });
+}
+
+function parseBCI(row) {
+  return parseStructuredStatementRow(row, {
+    nameKeys: [
+      "glosa",
+      "descripcion",
+      "descripción",
+      "detalle",
+      "concepto",
+      "movimiento",
+    ],
+  });
+}
+
+function parseGenericStatementRow(row) {
+  return parseStructuredStatementRow(row, {
+    nameKeys: [
+      "descripcion",
+      "descripción",
+      "detalle",
+      "glosa",
+      "concepto",
+      "movimiento",
+      "comercio",
+      "referencia",
+    ],
+    allowLooseRow: true,
+  });
+}
+
+function parseStructuredStatementRow(row, { nameKeys, allowLooseRow = false }) {
+  const keys = Object.keys(row);
+  const date = resolveStatementRowDate(row, keys, allowLooseRow);
+  const name = resolveStatementRowName(row, keys, nameKeys, allowLooseRow);
 
   const signedAmount = resolveSpreadsheetRowAmount(row, keys);
   if (!signedAmount) {
+    return null;
+  }
+
+  if (!date && !allowLooseRow) {
+    return null;
+  }
+
+  if (!name) {
+    return null;
+  }
+
+  return {
+    date,
+    name,
+    amount: signedAmount,
+  };
+}
+
+function buildStatementImportPreviewItem(item, importFormat = "generic") {
+  const date = parseStatementDateValue(item.date) || "";
+  const description = normalizeStatementDescription(item.name || item.description || "");
+  const signedAmount = Number(item.amount) || 0;
+
+  if (!description || !signedAmount) {
     return null;
   }
 
@@ -5176,7 +5297,71 @@ function parseSpreadsheetStatementRow(row) {
     description,
     amount: Math.abs(signedAmount),
     type: signedAmount >= 0 ? "income" : "expense",
+    importFormat,
   };
+}
+
+function resolveStatementRowDate(row, keys, allowLooseRow = false) {
+  const directDate = parseStatementDateValue(
+    pickStatementValue(row, keys, ["fecha", "date", "fec", "operacion", "contable"])
+  );
+
+  if (directDate || !allowLooseRow) {
+    return directDate;
+  }
+
+  return (
+    Object.values(row)
+      .map((value) => parseStatementDateValue(value))
+      .find(Boolean) || ""
+  );
+}
+
+function resolveStatementRowName(row, keys, nameKeys, allowLooseRow = false) {
+  const directName = normalizeStatementDescription(pickStatementValue(row, keys, nameKeys));
+  if (directName) {
+    return directName;
+  }
+
+  if (!allowLooseRow) {
+    return "";
+  }
+
+  return (
+    Object.entries(row)
+      .filter(([key]) =>
+        !hasStatementColumn([key], [
+          "fecha",
+          "date",
+          "fec",
+          "operacion",
+          "contable",
+          "monto",
+          "amount",
+          "importe",
+          "valor",
+          "saldo",
+          "balance",
+          "abono",
+          "cargo",
+          "debito",
+          "débito",
+          "credito",
+          "crédito",
+          "depositos",
+          "depósitos",
+          "cheques",
+        ])
+      )
+      .map(([, value]) => normalizeStatementDescription(value))
+      .find(
+        (value) =>
+          value &&
+          /[a-záéíóúñ]/i.test(value) &&
+          !/\d{1,2}[/-]\d{1,2}[/-]\d{2,4}/.test(value)
+      ) ||
+    "Movimiento por revisar"
+  );
 }
 
 function resolveSpreadsheetRowAmount(row, keys) {
@@ -5219,7 +5404,7 @@ function resolveSpreadsheetRowAmount(row, keys) {
     "depósito",
     "credit",
   ];
-  const amountValue = pickStatementValue(row, keys, ["monto", "amount", "importe", "valor"]);
+  const amountValue = pickStatementValue(row, keys, genericAmountPatterns);
   const debitValue = pickStatementValue(row, keys, debitPatterns);
   const creditValue = pickStatementValue(row, keys, creditPatterns);
 
