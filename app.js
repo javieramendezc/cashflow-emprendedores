@@ -5177,7 +5177,12 @@ function parseSpreadsheetStatementRow(row) {
 function resolveSpreadsheetRowAmount(row, keys) {
   const amountValue = pickStatementValue(row, keys, ["monto", "amount", "importe", "valor"]);
   const debitValue = pickStatementValue(row, keys, [
+    "cheques y otros cargos",
+    "cheques otros cargos",
+    "otros cargos",
+    "cheques",
     "cargo",
+    "cargos",
     "debito",
     "débito",
     "egreso",
@@ -5186,7 +5191,12 @@ function resolveSpreadsheetRowAmount(row, keys) {
     "withdraw",
   ]);
   const creditValue = pickStatementValue(row, keys, [
+    "depositos y abonos",
+    "depositos o abonos",
+    "depositos",
+    "depósitos",
     "abono",
+    "abonos",
     "credito",
     "crédito",
     "ingreso",
@@ -5197,6 +5207,27 @@ function resolveSpreadsheetRowAmount(row, keys) {
 
   const debitAmount = parseStatementSignedAmount(debitValue);
   const creditAmount = parseStatementSignedAmount(creditValue);
+  const hasExplicitDebitColumn = hasStatementColumn(keys, [
+    "cheques y otros cargos",
+    "cheques otros cargos",
+    "otros cargos",
+    "cheques",
+    "cargo",
+    "cargos",
+    "debito",
+    "débito",
+  ]);
+  const hasExplicitCreditColumn = hasStatementColumn(keys, [
+    "depositos y abonos",
+    "depositos o abonos",
+    "depositos",
+    "depósitos",
+    "abono",
+    "abonos",
+    "credito",
+    "crédito",
+    "ingreso",
+  ]);
 
   if (creditAmount > 0) {
     return creditAmount;
@@ -5204,6 +5235,10 @@ function resolveSpreadsheetRowAmount(row, keys) {
 
   if (debitAmount > 0) {
     return -debitAmount;
+  }
+
+  if (hasExplicitCreditColumn || hasExplicitDebitColumn) {
+    return 0;
   }
 
   const parsedAmount = parseStatementSignedAmount(amountValue);
@@ -5231,6 +5266,14 @@ function pickStatementValue(row, keys, patterns) {
   });
 
   return key ? row[key] : "";
+}
+
+function hasStatementColumn(keys, patterns) {
+  const normalizedPatterns = patterns.map((pattern) => normalizeStatementHeader(pattern));
+  return keys.some((candidateKey) => {
+    const normalizedKey = normalizeStatementHeader(candidateKey);
+    return normalizedPatterns.some((pattern) => normalizedKey.includes(pattern));
+  });
 }
 
 async function parsePdfStatementFile(file) {
