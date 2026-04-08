@@ -4087,15 +4087,17 @@ function extractPayableInvoiceData(rawText) {
   const lines = normalizeInvoiceOcrLines(rawText);
   const fullText = lines.join(" ");
   const allDates = extractAllInvoiceDates(lines);
-  const issueDate = extractInvoiceDate(lines, fullText, [
-    "emision",
-    "emisión",
-    "fecha emision",
-    "fecha emisión",
-    "fecha",
-  ]);
+  const issueDate =
+    extractInvoiceDate(lines, [
+      "fecha emision",
+      "fecha emisión",
+      "emision",
+      "emisión",
+      "fecha",
+    ]) || allDates[0] || "";
   const dueDate =
-    extractInvoiceDate(lines, fullText, [
+    extractInvoiceDate(lines, [
+      "fecha vencimiento",
       "vencimiento",
       "vence",
       "vcto",
@@ -4160,8 +4162,8 @@ function extractInvoiceVendor(lines) {
     "servicios",
   ];
 
-  const candidate = lines
-    .slice(0, 18)
+  const topLines = lines.slice(0, 14);
+  const candidate = topLines
     .map((line, index) => {
       const cleanLine = normalizeInvoiceText(line);
       const uppercaseRatio = getUppercaseRatio(line);
@@ -4181,30 +4183,50 @@ function extractInvoiceVendor(lines) {
       }
 
       let score = 0;
-      score += hasCompanyHint ? 8 : 0;
-      score += uppercaseRatio >= 0.55 ? 5 : 0;
-      score += line.length >= 8 && line.length <= 48 ? 4 : 0;
-      score += index < 8 ? 4 : 0;
+      score += hasCompanyHint ? 12 : 0;
+      score += uppercaseRatio >= 0.72 ? 9 : uppercaseRatio >= 0.55 ? 5 : 0;
+      score += line.length >= 6 && line.length <= 42 ? 5 : 0;
+      score += index < 6 ? 7 : index < 10 ? 3 : 0;
       score += digitCount === 0 ? 2 : 0;
 
       return { line, score };
     })
     .sort((left, right) => right.score - left.score)[0];
 
-  return candidate?.score > 0 ? candidate.line : "";
+  if (!candidate?.line || candidate.score <= 0) {
+    return "";
+  }
+
+  const normalizedCandidate = normalizeInvoiceText(candidate.line);
+  const expandedCandidate = topLines.find((line) => {
+    if (line === candidate.line) {
+      return false;
+    }
+
+    const normalizedLine = normalizeInvoiceText(line);
+    return (
+      normalizedCandidate.length >= 4 &&
+      normalizedLine.includes(normalizedCandidate) &&
+      companyHints.some((word) => normalizedLine.includes(word))
+    );
+  });
+
+  return expandedCandidate || candidate.line;
 }
 
 function extractInvoiceDocument(lines, text) {
-  const joinedTopLines = lines.slice(0, 14).join(" ");
+  const joinedTopLines = normalizeOcrNumberText(lines.slice(0, 16).join(" "));
+  const normalizedText = normalizeOcrNumberText(text);
   const patterns = [
     /factura\s*electronica[\s\S]{0,40}?n[°ºo.]?\s*([a-z0-9-]{3,})/i,
+    /factura\s*electronica[\s\S]{0,40}?\b(\d{3,})\b/i,
     /factura\s*(?:n[°ºo.]*)?\s*([a-z0-9-]{3,})/i,
     /\bn[°ºo.]?\s*[:#-]?\s*(\d{3,})\b/i,
     /(?:folio|n[°ºo.])\s*[:#-]?\s*([a-z0-9-]{3,})/i,
   ];
 
   for (const pattern of patterns) {
-    const match = joinedTopLines.match(pattern) || text.match(pattern);
+    const match = joinedTopLines.match(pattern) || normalizedText.match(pattern);
     if (match?.[1]) {
       return match[1].toUpperCase();
     }
@@ -4217,14 +4239,14 @@ function extractInvoiceAmount(lines, text) {
   const priorityLines = lines.filter((line) => {
     const normalizedLine = normalizeInvoiceText(line);
     return (
-      /\btotal\b/.test(normalizedLine) &&
+      (/\btotal\b/.test(normalizedLine) || /\btotals\b/.test(normalizedLine)) &&
       !/\bsubtotal\b/.test(normalizedLine) &&
       !/\bneto\b/.test(normalizedLine) &&
       !/\biva\b/.test(normalizedLine)
     );
   });
 
-  for (const line of priorityLines) {
+  for (const line of [...priorityLines].reverse()) {
     const amount = parseInvoiceAmount(line);
     if (amount > 0) {
       return amount;
@@ -4238,7 +4260,7 @@ function extractInvoiceAmount(lines, text) {
   return matches.length ? Math.max(...matches) : "";
 }
 
-function extractInvoiceDate(lines, text, keywords) {
+function extractInvoiceDate(lines, keywords) {
   const normalizedKeywords = keywords.map((keyword) => normalizeInvoiceText(keyword));
 
   for (let index = 0; index < lines.length; index += 1) {
@@ -4260,7 +4282,7 @@ function extractInvoiceDate(lines, text, keywords) {
     }
   }
 
-  return parseInvoiceDate(text);
+  return "";
 }
 
 function parseInvoiceDate(text) {
@@ -4351,18 +4373,64 @@ function shouldEnhanceInvoiceRead(result) {
 
 function mergeInvoiceOcrResults(results) {
   const sortedResults = [...results].sort((left, right) => right.score - left.score);
-  const baseResult = sortedResults[0]?.extracted || {};
-  const merged = { ...baseResult };
+  const merged = {
+    document: pickBestInvoiceField(sortedResults, "document"),
+    amount: pickBestInvoiceField(sortedResults, "amount"),
+    issueDate: pickBestInvoiceField(sortedResults, "issueDate"),
+    dueDate: pickBestInvoiceField(sortedResults, "dueDate"),
+    vendor: pickBestInvoiceField(sortedResults, "vendor"),
+  };
 
-  sortedResults.slice(1).forEach((result) => {
-    Object.entries(result.extracted || {}).forEach(([key, value]) => {
-      if (!merged[key] && value) {
-        merged[key] = value;
-      }
-    });
-  });
+  if (merged.issueDate && merged.dueDate && merged.dueDate < merged.issueDate) {
+    merged.dueDate = "";
+  }
+
+  if (!merged.dueDate) {
+    const dates = sortedResults
+      .flatMap((result) => [result.extracted?.issueDate, result.extracted?.dueDate])
+      .filter(Boolean)
+      .filter((dateValue, index, items) => items.indexOf(dateValue) === index)
+      .sort();
+    merged.dueDate = inferDueDateFromInvoiceDates(dates, merged.issueDate);
+  }
 
   return merged;
+}
+
+function pickBestInvoiceField(results, field) {
+  const candidates = results
+    .map((result) => ({
+      value: result.extracted?.[field],
+      score: getInvoiceFieldScore(field, result.extracted?.[field], result.score),
+    }))
+    .filter((candidate) => candidate.value && candidate.score > 0)
+    .sort((left, right) => right.score - left.score);
+
+  return candidates[0]?.value || "";
+}
+
+function getInvoiceFieldScore(field, value, baseScore) {
+  if (!value) {
+    return -1;
+  }
+
+  if (field === "document") {
+    return /^[A-Z0-9-]{3,18}$/i.test(String(value)) ? baseScore + 16 : -1;
+  }
+
+  if (field === "amount") {
+    return Number(value) >= 1000 ? baseScore + 18 : -1;
+  }
+
+  if (field === "issueDate" || field === "dueDate") {
+    return /^\d{4}-\d{2}-\d{2}$/.test(String(value)) ? baseScore + 14 : -1;
+  }
+
+  if (field === "vendor") {
+    return looksLikeVendorName(String(value)) ? baseScore + 12 : baseScore + 2;
+  }
+
+  return baseScore;
 }
 
 function scoreInvoiceOcrResult(extracted, confidence, text) {
@@ -4371,23 +4439,23 @@ function scoreInvoiceOcrResult(extracted, confidence, text) {
   score += filledFields * 10;
 
   if (extracted?.vendor && looksLikeVendorName(extracted.vendor)) {
-    score += 5;
-  }
-
-  if (extracted?.amount) {
     score += 6;
   }
 
+  if (extracted?.amount) {
+    score += 14;
+  }
+
   if (extracted?.document) {
-    score += 4;
+    score += 12;
   }
 
   if (extracted?.issueDate) {
-    score += 4;
+    score += 9;
   }
 
   if (extracted?.dueDate && (!extracted?.issueDate || extracted.dueDate >= extracted.issueDate)) {
-    score += 2;
+    score += 8;
   }
 
   if (String(text || "").length > 200) {
