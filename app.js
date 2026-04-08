@@ -90,11 +90,22 @@ function createReceivableImportState() {
   };
 }
 
+function createPayableImportState() {
+  return {
+    open: false,
+    processing: false,
+    fileName: "",
+    items: [],
+    error: "",
+  };
+}
+
 const state = {
   data: cloneSeedState(),
   historyFilters: createHistoryFiltersState(),
   statementImport: createStatementImportState(),
   receivableImport: createReceivableImportState(),
+  payableImport: createPayableImportState(),
   session: null,
   appError: false,
   appErrorMessage: "",
@@ -146,6 +157,7 @@ const transactionForm = document.querySelector("#transactionForm");
 const receivableForm = document.querySelector("#receivableForm");
 const payableForm = document.querySelector("#payableForm");
 const openReceivableImportBtn = document.querySelector("#openReceivableImportBtn");
+const openPayableImportBtn = document.querySelector("#openPayableImportBtn");
 const transactionFields = getNamedFields(transactionForm, [
   "transactionId",
   "type",
@@ -252,6 +264,21 @@ const receivableImportResultHint = document.querySelector("#receivableImportResu
 const receivableImportProcessingCopy = document.querySelector("#receivableImportProcessingCopy");
 const receivableImportReplaceFileBtn = document.querySelector("#receivableImportReplaceFileBtn");
 const openReceivableExcelBtn = document.querySelector("#openReceivableExcelBtn");
+const payableImportModal = document.querySelector("#payableImportModal");
+const closePayableImportBtn = document.querySelector("#closePayableImportBtn");
+const cancelPayableImportBtn = document.querySelector("#cancelPayableImportBtn");
+const confirmPayableImportBtn = document.querySelector("#confirmPayableImportBtn");
+const payableImportInput = document.querySelector("#payableImportInput");
+const payableImportSelectStep = document.querySelector("#payableImportSelectStep");
+const payableImportProcessingStep = document.querySelector("#payableImportProcessingStep");
+const payableImportReviewStep = document.querySelector("#payableImportReviewStep");
+const payableImportReviewList = document.querySelector("#payableImportReviewList");
+const payableImportError = document.querySelector("#payableImportError");
+const payableImportResultTitle = document.querySelector("#payableImportResultTitle");
+const payableImportResultHint = document.querySelector("#payableImportResultHint");
+const payableImportProcessingCopy = document.querySelector("#payableImportProcessingCopy");
+const payableImportReplaceFileBtn = document.querySelector("#payableImportReplaceFileBtn");
+const openPayableExcelBtn = document.querySelector("#openPayableExcelBtn");
 const projectionStatusCard = document.querySelector("#projectionStatusCard");
 const projectionMonthEndValue = document.querySelector("#projectionMonthEndValue");
 const projectionAlertText = document.querySelector("#projectionAlertText");
@@ -398,6 +425,10 @@ openReceivableImportBtn?.addEventListener("click", () => {
   openReceivableImportModal();
 });
 
+openPayableImportBtn?.addEventListener("click", () => {
+  openPayableImportModal();
+});
+
 connectionBannerBtn.addEventListener("click", async () => {
   await syncPendingLocalData({ showFeedback: true });
 });
@@ -460,6 +491,14 @@ cancelReceivableImportBtn?.addEventListener("click", () => {
   closeReceivableImportModal();
 });
 
+closePayableImportBtn?.addEventListener("click", () => {
+  closePayableImportModal();
+});
+
+cancelPayableImportBtn?.addEventListener("click", () => {
+  closePayableImportModal();
+});
+
 statementImportModal?.addEventListener("click", (event) => {
   if (event.target === statementImportModal) {
     closeStatementImportModal();
@@ -469,6 +508,12 @@ statementImportModal?.addEventListener("click", (event) => {
 receivableImportModal?.addEventListener("click", (event) => {
   if (event.target === receivableImportModal) {
     closeReceivableImportModal();
+  }
+});
+
+payableImportModal?.addEventListener("click", (event) => {
+  if (event.target === payableImportModal) {
+    closePayableImportModal();
   }
 });
 
@@ -490,6 +535,14 @@ openReceivableExcelBtn?.addEventListener("click", () => {
   receivableImportInput?.click();
 });
 
+payableImportReplaceFileBtn?.addEventListener("click", () => {
+  payableImportInput?.click();
+});
+
+openPayableExcelBtn?.addEventListener("click", () => {
+  payableImportInput?.click();
+});
+
 statementImportInput?.addEventListener("change", async () => {
   const file = statementImportInput.files?.[0];
   if (!file) {
@@ -506,6 +559,15 @@ receivableImportInput?.addEventListener("change", async () => {
   }
 
   await handleReceivableImportFile(file);
+});
+
+payableImportInput?.addEventListener("change", async () => {
+  const file = payableImportInput.files?.[0];
+  if (!file) {
+    return;
+  }
+
+  await handlePayableImportFile(file);
 });
 
 statementImportReviewList?.addEventListener("input", (event) => {
@@ -610,6 +672,65 @@ receivableImportReviewList?.addEventListener("click", (event) => {
 
 confirmReceivableImportBtn?.addEventListener("click", async () => {
   await confirmReceivableImport();
+});
+
+payableImportReviewList?.addEventListener("input", (event) => {
+  const row = event.target.closest("[data-payable-import-index]");
+  if (!row) {
+    return;
+  }
+
+  const item = state.payableImport.items[Number(row.dataset.payableImportIndex)];
+  if (!item) {
+    return;
+  }
+
+  if (event.target.name === "vendor") {
+    item.vendor = event.target.value;
+  }
+
+  if (event.target.name === "document") {
+    item.document = event.target.value;
+  }
+
+  if (event.target.name === "amount") {
+    item.amount = Math.abs(Number(event.target.value) || 0);
+  }
+
+  if (event.target.name === "issueDate") {
+    item.issueDate = event.target.value;
+  }
+
+  if (event.target.name === "dueDate") {
+    item.dueDate = event.target.value;
+  }
+
+  if (event.target.name === "status") {
+    item.status = normalizePayableImportStatus(event.target.value);
+  }
+
+  if (event.target.name === "partialAmount") {
+    item.partialAmount = Math.max(Number(event.target.value) || 0, 0);
+  }
+
+  if (event.target.name === "note") {
+    item.note = event.target.value;
+  }
+});
+
+payableImportReviewList?.addEventListener("click", (event) => {
+  const removeButton = event.target.closest("[data-remove-payable-import-index]");
+  if (!removeButton) {
+    return;
+  }
+
+  const removeIndex = Number(removeButton.dataset.removePayableImportIndex);
+  state.payableImport.items = state.payableImport.items.filter((_, index) => index !== removeIndex);
+  renderPayableImportState();
+});
+
+confirmPayableImportBtn?.addEventListener("click", async () => {
+  await confirmPayableImport();
 });
 
 repeatLastMovementBtn.addEventListener("click", () => {
@@ -1136,9 +1257,11 @@ confirmResetModalBtn.addEventListener("click", async () => {
   state.historyFilters = createHistoryFiltersState();
   state.statementImport = createStatementImportState();
   state.receivableImport = createReceivableImportState();
+  state.payableImport = createPayableImportState();
   syncHistoryFilterInput();
   renderStatementImportState();
   renderReceivableImportState();
+  renderPayableImportState();
   syncCashFloorInputs("");
   await saveData();
   resetTransactionForm();
@@ -1221,9 +1344,11 @@ async function syncSessionView() {
     state.historyFilters = createHistoryFiltersState();
     state.statementImport = createStatementImportState();
     state.receivableImport = createReceivableImportState();
+    state.payableImport = createPayableImportState();
     syncHistoryFilterInput();
     renderStatementImportState();
     renderReceivableImportState();
+    renderPayableImportState();
     syncCashFloorInputs("");
     resetTransactionForm();
     resetReceivableForm();
@@ -1250,9 +1375,11 @@ async function syncSessionView() {
   state.historyFilters = createHistoryFiltersState();
   state.statementImport = createStatementImportState();
   state.receivableImport = createReceivableImportState();
+  state.payableImport = createPayableImportState();
   syncHistoryFilterInput();
   renderStatementImportState();
   renderReceivableImportState();
+  renderPayableImportState();
   state.syncPending = readPendingSyncFlag();
   state.syncingPending = false;
   syncCashFloorInputs(state.data.cashFloor);
@@ -1644,6 +1771,233 @@ async function confirmReceivableImport() {
   }
 }
 
+function openPayableImportModal() {
+  state.payableImport = {
+    ...createPayableImportState(),
+    open: true,
+  };
+  renderPayableImportState();
+}
+
+function closePayableImportModal() {
+  state.payableImport = createPayableImportState();
+  if (payableImportInput) {
+    payableImportInput.value = "";
+  }
+  renderPayableImportState();
+}
+
+function renderPayableImportState() {
+  if (!payableImportModal) {
+    return;
+  }
+
+  const { open, processing, items, error, fileName } = state.payableImport;
+  payableImportModal.hidden = !open;
+
+  if (!open) {
+    return;
+  }
+
+  const isReview = !processing && items.length > 0;
+  payableImportSelectStep.hidden = processing || isReview;
+  payableImportProcessingStep.hidden = !processing;
+  payableImportReviewStep.hidden = !isReview;
+
+  if (payableImportError) {
+    payableImportError.hidden = !error;
+    payableImportError.textContent = error || "";
+  }
+
+  if (payableImportProcessingCopy) {
+    payableImportProcessingCopy.textContent = fileName
+      ? `${fileName} se está procesando.`
+      : "Esto puede tardar unos segundos.";
+  }
+
+  if (payableImportResultTitle) {
+    payableImportResultTitle.textContent = `Encontramos ${items.length} factura${
+      items.length === 1 ? "" : "s"
+    } por pagar`;
+  }
+
+  if (payableImportResultHint) {
+    const overflowHint = items.length > 10 ? " Desliza para revisar todas." : "";
+    payableImportResultHint.textContent = fileName
+      ? `${fileName} · revísalas antes de agregarlas.${overflowHint}`
+      : `Revísalas antes de agregarlas.${overflowHint}`;
+  }
+
+  if (confirmPayableImportBtn) {
+    confirmPayableImportBtn.hidden = !isReview;
+    confirmPayableImportBtn.textContent = `Agregar factura${
+      items.length === 1 ? "" : "s"
+    } por pagar`;
+  }
+
+  if (payableImportReviewList) {
+    payableImportReviewList.innerHTML = isReview
+      ? items
+          .map(
+            (item, index) => `
+              <article class="statement-import-row" data-payable-import-index="${index}">
+                <div class="statement-import-row-head">
+                  <span class="statement-import-row-index">Factura ${index + 1}</span>
+                  <button
+                    type="button"
+                    class="ghost-btn statement-import-row-remove"
+                    data-remove-payable-import-index="${index}"
+                  >
+                    Quitar
+                  </button>
+                </div>
+                <div class="statement-import-row-grid">
+                  <label>
+                    Proveedor
+                    <input type="text" name="vendor" value="${escapeHtml(item.vendor)}" maxlength="120" />
+                  </label>
+                  <label>
+                    Factura
+                    <input type="text" name="document" value="${escapeHtml(item.document)}" maxlength="120" />
+                  </label>
+                  <label>
+                    Monto
+                    <input
+                      type="number"
+                      inputmode="decimal"
+                      step="any"
+                      min="0"
+                      name="amount"
+                      value="${escapeHtml(String(item.amount))}"
+                    />
+                  </label>
+                  <label>
+                    Estado
+                    <select name="status">
+                      <option value="pending" ${item.status === "pending" ? "selected" : ""}>Pendiente</option>
+                      <option value="partial" ${item.status === "partial" ? "selected" : ""}>Abono parcial</option>
+                      <option value="scheduled" ${item.status === "scheduled" ? "selected" : ""}>Programada</option>
+                      <option value="paid" ${item.status === "paid" ? "selected" : ""}>Pagada</option>
+                    </select>
+                  </label>
+                  <label>
+                    Emisión
+                    <input type="date" name="issueDate" value="${escapeHtml(item.issueDate)}" />
+                  </label>
+                  <label>
+                    Vencimiento
+                    <input type="date" name="dueDate" value="${escapeHtml(item.dueDate)}" />
+                  </label>
+                  <label>
+                    Abono
+                    <input
+                      type="number"
+                      inputmode="decimal"
+                      step="any"
+                      min="0"
+                      name="partialAmount"
+                      value="${escapeHtml(String(item.partialAmount || ""))}"
+                    />
+                  </label>
+                  <label>
+                    Nota
+                    <input type="text" name="note" value="${escapeHtml(item.note || "")}" maxlength="120" />
+                  </label>
+                </div>
+              </article>
+            `
+          )
+          .join("")
+      : "";
+  }
+}
+
+async function handlePayableImportFile(file) {
+  state.payableImport.processing = true;
+  state.payableImport.fileName = file.name;
+  state.payableImport.error = "";
+  state.payableImport.items = [];
+  renderPayableImportState();
+
+  try {
+    const [items] = await Promise.all([parsePayableImportFile(file), wait(1200)]);
+
+    if (!items.length) {
+      state.payableImport.error =
+        "No encontramos facturas por pagar en ese Excel. Revisa el formato o corrige el archivo.";
+      state.payableImport.processing = false;
+      renderPayableImportState();
+      return;
+    }
+
+    state.payableImport.items = items;
+    state.payableImport.processing = false;
+    renderPayableImportState();
+  } catch (error) {
+    state.payableImport.processing = false;
+    state.payableImport.error =
+      error?.message || "No pudimos leer ese Excel ahora. Inténtalo de nuevo.";
+    renderPayableImportState();
+  } finally {
+    if (payableImportInput) {
+      payableImportInput.value = "";
+    }
+  }
+}
+
+async function confirmPayableImport() {
+  const validItems = state.payableImport.items
+    .map((item) => normalizeImportedPayable(item))
+    .filter(Boolean);
+
+  if (!validItems.length) {
+    state.payableImport.error =
+      "No hay facturas listas para agregar. Revisa el Excel antes de confirmar.";
+    renderPayableImportState();
+    return;
+  }
+
+  confirmPayableImportBtn.disabled = true;
+
+  try {
+    const importedPayables = validItems.map((item) => ({
+      id: createSafeId(),
+      vendor: item.vendor,
+      document: item.document,
+      amount: item.amount,
+      pendingAmount: item.pendingAmount,
+      issueDate: item.issueDate,
+      dueDate: item.dueDate,
+      status: item.status,
+      note: item.note,
+      invoicePhoto: "",
+      invoiceText: "",
+    }));
+
+    state.data.payables = [...importedPayables, ...state.data.payables].sort(sortByDueDateAsc);
+    state.historyFilters.payables.month = importedPayables[0].dueDate.slice(0, 7);
+    state.historyFilters.payables.showAll = false;
+
+    syncHistoryFilterInput();
+    render();
+    closePayableImportModal();
+    await saveData();
+    showUXFeedback(
+      `${importedPayables.length} factura${
+        importedPayables.length === 1 ? "" : "s"
+      } por pagar agregada${importedPayables.length === 1 ? "" : "s"}.`,
+      "ok"
+    );
+  } catch (error) {
+    console.error("No pudimos agregar las facturas por pagar:", error);
+    state.payableImport.error =
+      "No pudimos agregar esas facturas ahora. Revisa el Excel e inténtalo de nuevo.";
+    renderPayableImportState();
+  } finally {
+    confirmPayableImportBtn.disabled = false;
+  }
+}
+
 async function handleStatementImportFile(file) {
   state.statementImport.processing = true;
   state.statementImport.fileName = file.name;
@@ -1767,6 +2121,32 @@ function normalizeImportedReceivable(item) {
 
   return {
     client,
+    document,
+    amount,
+    issueDate,
+    dueDate,
+    status,
+    pendingAmount: resolvePendingAmount(amount, partialAmount, status),
+    note,
+  };
+}
+
+function normalizeImportedPayable(item) {
+  const vendor = String(item.vendor || "").trim();
+  const document = String(item.document || "").trim() || "Documento pendiente";
+  const amount = Math.abs(Number(item.amount) || 0);
+  const issueDate = parseStatementDateValue(item.issueDate) || today();
+  const dueDate = parseStatementDateValue(item.dueDate) || issueDate;
+  const status = normalizePayableImportStatus(item.status);
+  const partialAmount = Math.max(Number(item.partialAmount) || 0, 0);
+  const note = String(item.note || "").trim();
+
+  if (!vendor || !amount || !dueDate) {
+    return null;
+  }
+
+  return {
+    vendor,
     document,
     amount,
     issueDate,
@@ -5966,6 +6346,25 @@ async function parseReceivableImportFile(file) {
   return parsedItems.sort((left, right) => right.dueDate.localeCompare(left.dueDate));
 }
 
+async function parsePayableImportFile(file) {
+  if (!window.XLSX?.read) {
+    throw new Error("No pudimos leer Excel ahora. Inténtalo de nuevo.");
+  }
+
+  const buffer = await readFileAsArrayBuffer(file);
+  const workbook = window.XLSX.read(buffer, {
+    type: "array",
+    raw: false,
+    cellDates: false,
+  });
+
+  const parsedItems = workbook.SheetNames.slice(0, 3).flatMap((sheetName) =>
+    parsePayableImportSheet(workbook.Sheets[sheetName])
+  );
+
+  return parsedItems.sort((left, right) => right.dueDate.localeCompare(left.dueDate));
+}
+
 function parseReceivableImportSheet(sheet) {
   const rows = window.XLSX.utils.sheet_to_json(sheet, {
     header: 1,
@@ -5991,6 +6390,31 @@ function parseReceivableImportSheet(sheet) {
     .filter(Boolean);
 }
 
+function parsePayableImportSheet(sheet) {
+  const rows = window.XLSX.utils.sheet_to_json(sheet, {
+    header: 1,
+    defval: "",
+    raw: false,
+    blankrows: false,
+  });
+
+  if (!rows.length) {
+    return [];
+  }
+
+  const headerIndex = findPayableHeaderRow(rows);
+  const hasDetectedHeader = headerIndex >= 0;
+  const dataRows = hasDetectedHeader ? rows.slice(headerIndex + 1) : rows;
+  const headers = hasDetectedHeader
+    ? rows[headerIndex].map((cell, index) => normalizeStatementHeader(cell) || `column_${index}`)
+    : buildFallbackStatementHeaders(dataRows);
+
+  return dataRows
+    .map((row) => mapStatementRowToObject(headers, row))
+    .map((row) => parsePayableImportRow(row, { allowLooseRow: !hasDetectedHeader }))
+    .filter(Boolean);
+}
+
 function findReceivableHeaderRow(rows) {
   const headerSignals = [
     "cliente",
@@ -6000,6 +6424,45 @@ function findReceivableHeaderRow(rows) {
     "documento",
     "factura",
     "folio",
+    "monto",
+    "total",
+    "emision",
+    "emisión",
+    "vencimiento",
+    "estado",
+    "nota",
+    "observacion",
+    "abono",
+    "saldo pendiente",
+  ];
+
+  let bestIndex = -1;
+  let bestScore = 0;
+
+  rows.slice(0, 24).forEach((row, index) => {
+    const rowScore = row.reduce((score, cell) => {
+      const normalizedCell = normalizeStatementHeader(cell);
+      return score + (headerSignals.some((signal) => normalizedCell.includes(signal)) ? 1 : 0);
+    }, 0);
+
+    if (rowScore > bestScore) {
+      bestScore = rowScore;
+      bestIndex = index;
+    }
+  });
+
+  return bestScore >= 2 ? bestIndex : -1;
+}
+
+function findPayableHeaderRow(rows) {
+  const headerSignals = [
+    "proveedor",
+    "razon social",
+    "razón social",
+    "empresa",
+    "factura",
+    "folio",
+    "documento",
     "monto",
     "total",
     "emision",
@@ -6132,6 +6595,107 @@ function parseReceivableImportRow(row, { allowLooseRow = false } = {}) {
   };
 }
 
+function parsePayableImportRow(row, { allowLooseRow = false } = {}) {
+  const keys = Object.keys(row);
+  const vendor =
+    normalizeStatementDescription(
+      pickStatementValue(row, keys, [
+        "proveedor",
+        "razon social",
+        "razón social",
+        "empresa",
+        "acreedor",
+        "nombre",
+      ])
+    ) || (allowLooseRow ? findLoosePayableText(row, keys) : "");
+
+  const document =
+    normalizeStatementDescription(
+      pickStatementValue(row, keys, [
+        "factura",
+        "documento",
+        "folio",
+        "referencia",
+        "ref",
+        "numero",
+        "nro",
+      ])
+    ) || "Documento pendiente";
+
+  const amount = Math.abs(
+    parseStatementSignedAmount(
+      pickStatementValue(row, keys, [
+        "monto",
+        "total",
+        "importe",
+        "valor",
+        "saldo",
+        "pendiente",
+      ])
+    )
+  );
+
+  const issueDate =
+    parseStatementDateValue(
+      pickStatementValue(row, keys, [
+        "emision",
+        "emisión",
+        "fecha emision",
+        "fecha emisión",
+        "fecha documento",
+        "fecha factura",
+        "fecha",
+      ])
+    ) || (allowLooseRow ? findLoosePayableDate(row) : "");
+  const dueDate =
+    parseStatementDateValue(
+      pickStatementValue(row, keys, [
+        "vencimiento",
+        "fecha vencimiento",
+        "vence",
+        "pago",
+        "fecha pago",
+      ])
+    ) || issueDate || today();
+  const status = normalizePayableImportStatus(
+    pickStatementValue(row, keys, ["estado", "status", "situacion", "situación"])
+  );
+  const partialAmount = Math.abs(
+    parseStatementSignedAmount(
+      pickStatementValue(row, keys, [
+        "abono",
+        "abonado",
+        "pagado",
+        "pago parcial",
+        "parcial",
+      ])
+    )
+  );
+  const pendingAmount = Math.abs(
+    parseStatementSignedAmount(
+      pickStatementValue(row, keys, ["saldo pendiente", "pendiente", "saldo"])
+    )
+  );
+  const note = normalizeStatementDescription(
+    pickStatementValue(row, keys, ["nota", "observacion", "observación", "glosa"])
+  );
+
+  if (!vendor || !amount) {
+    return null;
+  }
+
+  return {
+    vendor,
+    document,
+    amount,
+    issueDate: issueDate || today(),
+    dueDate,
+    status: derivePayableImportStatus(status, amount, partialAmount, pendingAmount),
+    partialAmount: partialAmount || derivePayablePartialAmount(amount, pendingAmount),
+    note: note || "",
+  };
+}
+
 function normalizeReceivableImportStatus(value) {
   const normalizedValue = normalizeStatementHeader(value);
 
@@ -6141,6 +6705,36 @@ function normalizeReceivableImportStatus(value) {
     )
   ) {
     return "paid";
+  }
+
+  if (
+    ["parcial", "abono parcial", "partial", "abonado"].some((label) =>
+      normalizedValue.includes(normalizeStatementHeader(label))
+    )
+  ) {
+    return "partial";
+  }
+
+  return "pending";
+}
+
+function normalizePayableImportStatus(value) {
+  const normalizedValue = normalizeStatementHeader(value);
+
+  if (
+    ["pagada", "pagado", "paid", "cancelada", "cancelado"].some((label) =>
+      normalizedValue.includes(normalizeStatementHeader(label))
+    )
+  ) {
+    return "paid";
+  }
+
+  if (
+    ["programada", "programado", "scheduled", "agendada"].some((label) =>
+      normalizedValue.includes(normalizeStatementHeader(label))
+    )
+  ) {
+    return "scheduled";
   }
 
   if (
@@ -6170,7 +6764,31 @@ function deriveReceivableImportStatus(status, amount, partialAmount, pendingAmou
   return "pending";
 }
 
+function derivePayableImportStatus(status, amount, partialAmount, pendingAmount) {
+  if (status !== "pending") {
+    return status;
+  }
+
+  if (pendingAmount === 0 && amount > 0) {
+    return "paid";
+  }
+
+  if ((partialAmount > 0 && partialAmount < amount) || (pendingAmount > 0 && pendingAmount < amount)) {
+    return "partial";
+  }
+
+  return "pending";
+}
+
 function deriveReceivablePartialAmount(amount, pendingAmount) {
+  if (!(pendingAmount > 0) || pendingAmount >= amount) {
+    return 0;
+  }
+
+  return Math.max(amount - pendingAmount, 0);
+}
+
+function derivePayablePartialAmount(amount, pendingAmount) {
   if (!(pendingAmount > 0) || pendingAmount >= amount) {
     return 0;
   }
@@ -6202,7 +6820,39 @@ function findLooseReceivableText(row, keys) {
   );
 }
 
+function findLoosePayableText(row, keys) {
+  return (
+    Object.entries(row)
+      .filter(([key]) =>
+        !hasStatementColumn([key], [
+          "fecha",
+          "emision",
+          "emisión",
+          "vencimiento",
+          "monto",
+          "total",
+          "importe",
+          "valor",
+          "saldo",
+          "pendiente",
+          "abono",
+          "estado",
+        ])
+      )
+      .map(([, value]) => normalizeStatementDescription(value))
+      .find((value) => value && /[a-záéíóúñ]/i.test(value)) || ""
+  );
+}
+
 function findLooseReceivableDate(row) {
+  return (
+    Object.values(row)
+      .map((value) => parseStatementDateValue(value))
+      .find(Boolean) || ""
+  );
+}
+
+function findLoosePayableDate(row) {
   return (
     Object.values(row)
       .map((value) => parseStatementDateValue(value))

@@ -572,7 +572,12 @@
                       <p class="section-label">Obligaciones</p>
                       <h3>Registro de facturas por pagar</h3>
                     </div>
-                    <span class="pill risk" id="payablePill">0 pendientes</span>
+                    <div class="panel-header-inline-actions">
+                      <button type="button" class="ghost-btn" id="openPayableImportBtn">
+                        Importar Excel
+                      </button>
+                      <span class="pill risk" id="payablePill">0 pendientes</span>
+                    </div>
                   </div>
 
                   <form id="payableForm" class="transaction-form compact-form">
@@ -1129,6 +1134,80 @@
           </button>
           <button type="button" class="primary-btn" id="confirmReceivableImportBtn" hidden>
             Agregar cuentas por cobrar
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div class="statement-import-modal" id="payableImportModal" hidden>
+      <div
+        class="statement-import-card"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="payableImportTitle"
+      >
+        <div class="transaction-modal-header">
+          <div>
+            <p class="section-label">Importar obligaciones</p>
+            <h3 id="payableImportTitle">Sube tu Excel de facturas por pagar</h3>
+          </div>
+          <button type="button" class="close-modal-btn" id="closePayableImportBtn">×</button>
+        </div>
+
+        <section class="statement-import-step" id="payableImportSelectStep">
+          <p class="statement-import-copy">
+            Sube tu Excel, revisa las facturas detectadas y agrégalas de una sola vez.
+          </p>
+          <div class="statement-import-types">
+            <button type="button" class="ghost-btn" id="openPayableExcelBtn">
+              Elegir Excel
+            </button>
+          </div>
+          <p class="statement-import-hint">
+            Puedes corregir proveedor, factura, monto, emisión, vencimiento y estado antes de guardar.
+          </p>
+          <input
+            type="file"
+            id="payableImportInput"
+            accept=".csv,.xlsx,.xls,text/csv,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            hidden
+          />
+        </section>
+
+        <section class="statement-import-step" id="payableImportProcessingStep" hidden>
+          <div class="statement-import-processing">
+            <div class="statement-import-spinner" aria-hidden="true"></div>
+            <div>
+              <strong>Estamos leyendo tu Excel…</strong>
+              <p id="payableImportProcessingCopy">
+                Esto puede tardar unos segundos.
+              </p>
+            </div>
+          </div>
+        </section>
+
+        <section class="statement-import-step" id="payableImportReviewStep" hidden>
+          <div class="statement-import-review-header">
+            <div>
+              <strong id="payableImportResultTitle">Encontramos 0 facturas por pagar</strong>
+              <p id="payableImportResultHint">Revísalas antes de agregarlas.</p>
+            </div>
+            <button type="button" class="ghost-btn" id="payableImportReplaceFileBtn">
+              Cambiar archivo
+            </button>
+          </div>
+
+          <div class="statement-import-review-list" id="payableImportReviewList"></div>
+        </section>
+
+        <p class="statement-import-error" id="payableImportError" hidden></p>
+
+        <div class="transaction-modal-actions statement-import-actions">
+          <button type="button" class="ghost-btn" id="cancelPayableImportBtn">
+            Cancelar
+          </button>
+          <button type="button" class="primary-btn" id="confirmPayableImportBtn" hidden>
+            Agregar facturas por pagar
           </button>
         </div>
       </div>
