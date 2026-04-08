@@ -1521,6 +1521,8 @@ function render() {
 
   const currentMonthKey = currentMonth();
   const allTransactions = [...state.data.transactions].sort(sortByDateDesc);
+  const allReceivables = [...state.data.receivables].sort(sortByDueDateAsc);
+  const allPayables = [...state.data.payables].sort(sortByDueDateAsc);
   const transactions = state.data.transactions.filter((item) =>
     item.date.startsWith(state.filterMonth)
   );
@@ -1545,6 +1547,8 @@ function render() {
   const expenses = transactions.filter((item) => item.type === "expense");
   const openReceivables = receivables.filter((item) => item.status !== "paid");
   const openPayables = payables.filter((item) => item.status !== "paid");
+  const allOpenReceivables = allReceivables.filter((item) => item.status !== "paid");
+  const allOpenPayables = allPayables.filter((item) => item.status !== "paid");
   const liveIncomes = liveTransactions.filter((item) => item.type === "income");
   const liveSalesIncomes = liveIncomes.filter((item) => item.category === "Ventas");
   const liveExpenses = liveTransactions.filter((item) => item.type === "expense");
@@ -1704,8 +1708,8 @@ function render() {
         })
       : "";
   }
-  text("#receivablePill", `${openReceivables.length} pendientes`);
-  text("#payablePill", `${openPayables.length} pendientes`);
+  text("#receivablePill", `${allOpenReceivables.length} pendientes`);
+  text("#payablePill", `${allOpenPayables.length} pendientes`);
   if (detailSummaryCopy) {
     detailSummaryCopy.textContent = buildDetailSummaryCopy();
   }
@@ -1768,8 +1772,8 @@ function render() {
 
   renderTodayMovements(state.data.transactions);
   renderTable(allTransactions);
-  renderReceivables(receivables);
-  renderPayables(payables);
+  renderReceivables(allReceivables);
+  renderPayables(allPayables);
   renderMoneyCurveChart(currentBalance, cashFloor);
   renderMonthlySummary();
   renderBreakdown(liveExpenses);
