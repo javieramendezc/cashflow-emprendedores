@@ -675,7 +675,7 @@ payableForm.addEventListener("submit", async (event) => {
     : [payable, ...state.data.payables].sort(sortByDueDateAsc);
 
   await saveData();
-  state.historyFilters.payables.month = payable.dueDate.slice(0, 7);
+  state.historyFilters.payables.month = getPayableHistoryMonthKey(payable);
   state.historyFilters.payables.showAll = false;
   syncHistoryFilterInput();
   resetPayableForm();
@@ -1602,6 +1602,7 @@ function render() {
   const allTransactions = [...state.data.transactions].sort(sortByDateDesc);
   const allReceivables = [...state.data.receivables].sort(sortByDueDateAsc);
   const allPayables = [...state.data.payables].sort(sortByDueDateAsc);
+  const allHistoryPayables = [...state.data.payables].sort(sortByPayableHistoryDateDesc);
   const transactions = allTransactions.filter((item) => item.date.startsWith(currentMonthKey));
   const receivables = allReceivables.filter((item) => item.dueDate.startsWith(currentMonthKey));
   const payables = allPayables.filter((item) => item.dueDate.startsWith(currentMonthKey));
@@ -1616,9 +1617,9 @@ function render() {
         item.dueDate.startsWith(state.historyFilters.receivables.month)
       );
   const historyPayables = state.historyFilters.payables.showAll
-    ? allPayables
-    : allPayables.filter((item) =>
-        item.dueDate.startsWith(state.historyFilters.payables.month)
+    ? allHistoryPayables
+    : allHistoryPayables.filter((item) =>
+        getPayableHistoryMonthKey(item) === state.historyFilters.payables.month
       );
   const liveTransactions = transactions;
   const liveReceivables = receivables;
@@ -2007,7 +2008,7 @@ function renderPayableRows(targetBody, payables, emptyCopy, options = {}) {
   targetBody.innerHTML = buildHistoryRows({
     items: payables,
     groupByMonth: options.groupByMonth,
-    getMonthKey: (item) => item.dueDate.slice(0, 7),
+    getMonthKey: (item) => getPayableHistoryMonthKey(item),
     colSpan: 9,
     renderRow: (item) => `
         <tr>
@@ -3208,6 +3209,21 @@ function sortByDateDesc(a, b) {
 
 function sortByDueDateAsc(a, b) {
   return a.dueDate.localeCompare(b.dueDate);
+}
+
+function getPayableHistoryMonthKey(item) {
+  return String(item.issueDate || item.dueDate || today()).slice(0, 7);
+}
+
+function sortByPayableHistoryDateDesc(a, b) {
+  const left = String(a.issueDate || a.dueDate || "");
+  const right = String(b.issueDate || b.dueDate || "");
+
+  if (right !== left) {
+    return right.localeCompare(left);
+  }
+
+  return String(b.dueDate || "").localeCompare(String(a.dueDate || ""));
 }
 
 function labelStatus(status) {
