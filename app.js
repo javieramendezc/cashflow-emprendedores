@@ -496,12 +496,10 @@ readInvoiceBtn.addEventListener("click", async () => {
   setInvoiceReadStatus(copyText("invoice.readingStatus"));
 
   try {
-    const {
-      data: { text: invoiceText = "" },
-    } = await window.Tesseract.recognize(state.payableInvoiceDraft.image, "spa+eng");
-
+    const { text: invoiceText = "", extractedData } = await readBestInvoiceData(
+      state.payableInvoiceDraft.image
+    );
     state.payableInvoiceDraft.ocrText = invoiceText.trim();
-    const extractedData = extractPayableInvoiceData(invoiceText);
     applyExtractedPayableData(extractedData);
 
     const filledFields = Object.values(extractedData).filter(Boolean).length;
@@ -4086,59 +4084,127 @@ function applyExtractedPayableData(data) {
 }
 
 function extractPayableInvoiceData(rawText) {
-  const lines = rawText
-    .split(/\r?\n/)
-    .map((line) => line.replace(/\s+/g, " ").trim())
-    .filter(Boolean);
+  const lines = normalizeInvoiceOcrLines(rawText);
   const fullText = lines.join(" ");
+  const allDates = extractAllInvoiceDates(lines);
+  const issueDate = extractInvoiceDate(lines, fullText, [
+    "emision",
+    "emisión",
+    "fecha emision",
+    "fecha emisión",
+    "fecha",
+  ]);
+  const dueDate =
+    extractInvoiceDate(lines, fullText, [
+      "vencimiento",
+      "vence",
+      "vcto",
+      "pago",
+      "condicion",
+      "condición",
+    ]) || inferDueDateFromInvoiceDates(allDates, issueDate);
 
   return {
     vendor: extractInvoiceVendor(lines),
-    document: extractInvoiceDocument(fullText),
+    document: extractInvoiceDocument(lines, fullText),
     amount: extractInvoiceAmount(lines, fullText),
-    issueDate: extractInvoiceDate(fullText, ["emisión", "emision", "fecha"]),
-    dueDate: extractInvoiceDate(fullText, ["vencimiento", "vence", "pago"]),
+    issueDate,
+    dueDate,
   };
 }
 
 function extractInvoiceVendor(lines) {
   const ignoredWords = [
+    "proveedor",
+    "numero",
+    "número",
     "factura",
+    "electronica",
+    "electrónica",
     "rut",
     "giro",
     "direccion",
     "dirección",
     "fecha",
+    "vencimiento",
+    "emision",
+    "emisión",
     "total",
     "telefono",
     "teléfono",
     "mail",
     "www",
     "sii",
+    "senores",
+    "señores",
+    "cliente",
+    "comuna",
+    "ciudad",
+    "pagado",
+    "vendedor",
+    "codigo",
+    "código",
+    "descripcion",
+    "descripción",
   ];
 
-  const candidate = lines.find((line) => {
-    const cleanLine = line.toLowerCase();
-    return (
-      line.length >= 4 &&
-      line.length <= 60 &&
-      /[a-záéíóúñ]/i.test(line) &&
-      !/\d{2,}/.test(line) &&
-      !ignoredWords.some((word) => cleanLine.includes(word))
-    );
-  });
+  const companyHints = [
+    "spa",
+    "ltda",
+    "limitada",
+    "sa",
+    "eirl",
+    "importadora",
+    "distribuidora",
+    "comercial",
+    "servicios",
+  ];
 
-  return candidate || "";
+  const candidate = lines
+    .slice(0, 18)
+    .map((line, index) => {
+      const cleanLine = normalizeInvoiceText(line);
+      const uppercaseRatio = getUppercaseRatio(line);
+      const lettersOnly = line.replace(/[^A-Za-zÁÉÍÓÚÑáéíóúñ]/g, "");
+      const hasCompanyHint = companyHints.some((word) => cleanLine.includes(word));
+      const isIgnored = ignoredWords.some((word) => cleanLine.includes(word));
+      const digitCount = (line.match(/\d/g) || []).length;
+
+      if (
+        line.length < 4 ||
+        line.length > 80 ||
+        !lettersOnly.length ||
+        digitCount > 8 ||
+        isIgnored
+      ) {
+        return { line, score: -1 };
+      }
+
+      let score = 0;
+      score += hasCompanyHint ? 8 : 0;
+      score += uppercaseRatio >= 0.55 ? 5 : 0;
+      score += line.length >= 8 && line.length <= 48 ? 4 : 0;
+      score += index < 8 ? 4 : 0;
+      score += digitCount === 0 ? 2 : 0;
+
+      return { line, score };
+    })
+    .sort((left, right) => right.score - left.score)[0];
+
+  return candidate?.score > 0 ? candidate.line : "";
 }
 
-function extractInvoiceDocument(text) {
+function extractInvoiceDocument(lines, text) {
+  const joinedTopLines = lines.slice(0, 14).join(" ");
   const patterns = [
+    /factura\s*electronica[\s\S]{0,40}?n[°ºo.]?\s*([a-z0-9-]{3,})/i,
     /factura\s*(?:n[°ºo.]*)?\s*([a-z0-9-]{3,})/i,
+    /\bn[°ºo.]?\s*[:#-]?\s*(\d{3,})\b/i,
     /(?:folio|n[°ºo.])\s*[:#-]?\s*([a-z0-9-]{3,})/i,
   ];
 
   for (const pattern of patterns) {
-    const match = text.match(pattern);
+    const match = joinedTopLines.match(pattern) || text.match(pattern);
     if (match?.[1]) {
       return match[1].toUpperCase();
     }
@@ -4148,36 +4214,48 @@ function extractInvoiceDocument(text) {
 }
 
 function extractInvoiceAmount(lines, text) {
-  const totalLine = lines.find((line) => /total|monto\s*total/i.test(line));
-  const totalValue = totalLine ? parseInvoiceAmount(totalLine) : 0;
-  if (totalValue > 0) {
-    return totalValue;
+  const priorityLines = lines.filter((line) => {
+    const normalizedLine = normalizeInvoiceText(line);
+    return (
+      /\btotal\b/.test(normalizedLine) &&
+      !/\bsubtotal\b/.test(normalizedLine) &&
+      !/\bneto\b/.test(normalizedLine) &&
+      !/\biva\b/.test(normalizedLine)
+    );
+  });
+
+  for (const line of priorityLines) {
+    const amount = parseInvoiceAmount(line);
+    if (amount > 0) {
+      return amount;
+    }
   }
 
   const matches = [...text.matchAll(/\$?\s*((?:\d{1,3}(?:[.,]\d{3})+)|\d{4,})(?:,\d{2})?/g)]
     .map((match) => parseInvoiceAmount(match[1]))
-    .filter((value) => value > 0);
+    .filter((value) => value >= 1000 && value <= 500000000);
 
   return matches.length ? Math.max(...matches) : "";
 }
 
-function extractInvoiceDate(text, keywords) {
-  const normalizedText = text
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "");
+function extractInvoiceDate(lines, text, keywords) {
+  const normalizedKeywords = keywords.map((keyword) => normalizeInvoiceText(keyword));
 
-  for (const keyword of keywords) {
-    const normalizedKeyword = keyword
-      .toLowerCase()
-      .normalize("NFD")
-      .replace(/[\u0300-\u036f]/g, "");
-    const index = normalizedText.indexOf(normalizedKeyword);
-    if (index >= 0) {
-      const nearbyText = text.slice(index, index + 80);
-      const nearbyDate = parseInvoiceDate(nearbyText);
-      if (nearbyDate) {
-        return nearbyDate;
+  for (let index = 0; index < lines.length; index += 1) {
+    const normalizedLine = normalizeInvoiceText(lines[index]);
+    if (!normalizedKeywords.some((keyword) => normalizedLine.includes(keyword))) {
+      continue;
+    }
+
+    for (let offset = 0; offset <= 2; offset += 1) {
+      const candidateLine = lines[index + offset];
+      if (!candidateLine) {
+        continue;
+      }
+
+      const date = parseInvoiceDate(candidateLine);
+      if (date) {
+        return date;
       }
     }
   }
@@ -4186,7 +4264,8 @@ function extractInvoiceDate(text, keywords) {
 }
 
 function parseInvoiceDate(text) {
-  const match = text.match(/(\d{1,2})[/-](\d{1,2})[/-](\d{2,4})/);
+  const normalizedText = normalizeOcrNumberText(text);
+  const match = normalizedText.match(/(\d{1,2})[/-](\d{1,2})[/-](\d{2,4})/);
   if (!match) {
     return "";
   }
@@ -4203,7 +4282,7 @@ function parseInvoiceDate(text) {
 }
 
 function parseInvoiceAmount(value) {
-  const digitsOnly = String(value).replace(/[^\d]/g, "");
+  const digitsOnly = normalizeOcrNumberText(String(value)).replace(/[^\d]/g, "");
   return Number(digitsOnly) || 0;
 }
 
@@ -4230,14 +4309,250 @@ async function resizeImageToDataUrl(file, maxWidth, maxBytes) {
   throw new Error("La imagen sigue siendo muy pesada. Sube una foto más liviana o recortada.");
 }
 
+async function readBestInvoiceData(dataUrl) {
+  const results = [];
+  const originalResult = await runInvoiceOcrPass(dataUrl, "original");
+  results.push(originalResult);
+
+  if (shouldEnhanceInvoiceRead(originalResult)) {
+    const enhancedImage = await buildEnhancedInvoiceOcrImage(dataUrl);
+    const enhancedResult = await runInvoiceOcrPass(enhancedImage, "enhanced");
+    results.push(enhancedResult);
+  }
+
+  const bestResult = [...results].sort((left, right) => right.score - left.score)[0];
+  const mergedData = mergeInvoiceOcrResults(results);
+
+  return {
+    text: bestResult?.text || "",
+    extractedData: mergedData,
+  };
+}
+
+async function runInvoiceOcrPass(dataUrl, modeLabel) {
+  const {
+    data: { text = "", confidence = 0 } = {},
+  } = await window.Tesseract.recognize(dataUrl, "spa+eng");
+  const extracted = extractPayableInvoiceData(text);
+
+  return {
+    mode: modeLabel,
+    text,
+    confidence,
+    extracted,
+    score: scoreInvoiceOcrResult(extracted, confidence, text),
+  };
+}
+
+function shouldEnhanceInvoiceRead(result) {
+  const extractedFields = Object.values(result?.extracted || {}).filter(Boolean).length;
+  return extractedFields < 4 || !result?.extracted?.amount || !result?.extracted?.document;
+}
+
+function mergeInvoiceOcrResults(results) {
+  const sortedResults = [...results].sort((left, right) => right.score - left.score);
+  const baseResult = sortedResults[0]?.extracted || {};
+  const merged = { ...baseResult };
+
+  sortedResults.slice(1).forEach((result) => {
+    Object.entries(result.extracted || {}).forEach(([key, value]) => {
+      if (!merged[key] && value) {
+        merged[key] = value;
+      }
+    });
+  });
+
+  return merged;
+}
+
+function scoreInvoiceOcrResult(extracted, confidence, text) {
+  let score = Number(confidence || 0) / 10;
+  const filledFields = Object.values(extracted || {}).filter(Boolean).length;
+  score += filledFields * 10;
+
+  if (extracted?.vendor && looksLikeVendorName(extracted.vendor)) {
+    score += 5;
+  }
+
+  if (extracted?.amount) {
+    score += 6;
+  }
+
+  if (extracted?.document) {
+    score += 4;
+  }
+
+  if (extracted?.issueDate) {
+    score += 4;
+  }
+
+  if (extracted?.dueDate && (!extracted?.issueDate || extracted.dueDate >= extracted.issueDate)) {
+    score += 2;
+  }
+
+  if (String(text || "").length > 200) {
+    score += 1;
+  }
+
+  return score;
+}
+
+async function buildEnhancedInvoiceOcrImage(dataUrl) {
+  const image = await loadImageFromDataUrl(dataUrl);
+  const scale = image.width < 1600 ? Math.min(1.4, 1600 / image.width) : 1;
+  const canvas = document.createElement("canvas");
+  canvas.width = Math.max(1, Math.round(image.width * scale));
+  canvas.height = Math.max(1, Math.round(image.height * scale));
+
+  const context = canvas.getContext("2d");
+  context.filter = "grayscale(1) contrast(1.3) brightness(1.08)";
+  context.drawImage(image, 0, 0, canvas.width, canvas.height);
+
+  const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
+  const { data } = imageData;
+  const histogram = new Array(256).fill(0);
+  const luminances = new Uint8ClampedArray(data.length / 4);
+
+  for (let sourceIndex = 0, luminanceIndex = 0; sourceIndex < data.length; sourceIndex += 4) {
+    const luminance = Math.round(
+      data[sourceIndex] * 0.299 + data[sourceIndex + 1] * 0.587 + data[sourceIndex + 2] * 0.114
+    );
+    luminances[luminanceIndex] = luminance;
+    histogram[luminance] += 1;
+    luminanceIndex += 1;
+  }
+
+  const threshold = getOcrThreshold(histogram, luminances.length);
+  const floor = Math.max(0, threshold - 40);
+  const ceiling = Math.min(255, threshold + 85);
+  const range = Math.max(1, ceiling - floor);
+
+  for (let sourceIndex = 0, luminanceIndex = 0; sourceIndex < data.length; sourceIndex += 4) {
+    const normalized = Math.max(
+      0,
+      Math.min(255, Math.round(((luminances[luminanceIndex] - floor) * 255) / range))
+    );
+    const binary = normalized >= threshold ? 255 : 0;
+    data[sourceIndex] = binary;
+    data[sourceIndex + 1] = binary;
+    data[sourceIndex + 2] = binary;
+    luminanceIndex += 1;
+  }
+
+  context.putImageData(imageData, 0, 0);
+  return canvas.toDataURL("image/jpeg", 0.9);
+}
+
+function getOcrThreshold(histogram, totalPixels) {
+  let sum = 0;
+  for (let index = 0; index < histogram.length; index += 1) {
+    sum += index * histogram[index];
+  }
+
+  let sumBackground = 0;
+  let weightBackground = 0;
+  let maxVariance = 0;
+  let threshold = 140;
+
+  for (let index = 0; index < histogram.length; index += 1) {
+    weightBackground += histogram[index];
+    if (!weightBackground) {
+      continue;
+    }
+
+    const weightForeground = totalPixels - weightBackground;
+    if (!weightForeground) {
+      break;
+    }
+
+    sumBackground += index * histogram[index];
+    const meanBackground = sumBackground / weightBackground;
+    const meanForeground = (sum - sumBackground) / weightForeground;
+    const betweenVariance =
+      weightBackground * weightForeground * (meanBackground - meanForeground) ** 2;
+
+    if (betweenVariance > maxVariance) {
+      maxVariance = betweenVariance;
+      threshold = index;
+    }
+  }
+
+  return Math.max(90, Math.min(190, threshold));
+}
+
 async function loadImageFromFile(file) {
   const dataUrl = await readFileAsDataUrl(file);
+  return loadImageFromDataUrl(dataUrl);
+}
+
+function loadImageFromDataUrl(dataUrl) {
   return new Promise((resolve, reject) => {
     const image = new Image();
     image.onload = () => resolve(image);
     image.onerror = () => reject(new Error("No se pudo procesar la imagen de la factura."));
     image.src = dataUrl;
   });
+}
+
+function normalizeInvoiceOcrLines(rawText) {
+  return String(rawText || "")
+    .split(/\r?\n/)
+    .map((line) => line.replace(/\s+/g, " ").trim())
+    .filter(Boolean);
+}
+
+function normalizeInvoiceText(value) {
+  return String(value || "")
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+}
+
+function normalizeOcrNumberText(value) {
+  return String(value || "")
+    .replace(/[OoQqD]/g, "0")
+    .replace(/[Il|]/g, "1");
+}
+
+function getUppercaseRatio(value) {
+  const letters = String(value || "").match(/[A-Za-zÁÉÍÓÚÑáéíóúñ]/g) || [];
+  if (!letters.length) {
+    return 0;
+  }
+
+  const uppercaseLetters = String(value || "").match(/[A-ZÁÉÍÓÚÑ]/g) || [];
+  return uppercaseLetters.length / letters.length;
+}
+
+function looksLikeVendorName(value) {
+  const normalizedValue = normalizeInvoiceText(value);
+  return (
+    getUppercaseRatio(value) >= 0.45 ||
+    /\b(spa|ltda|limitada|sa|eirl|importadora|distribuidora|comercial)\b/.test(
+      normalizedValue
+    )
+  );
+}
+
+function extractAllInvoiceDates(lines) {
+  return lines
+    .map((line) => parseInvoiceDate(line))
+    .filter(Boolean)
+    .filter((dateValue, index, items) => items.indexOf(dateValue) === index)
+    .sort();
+}
+
+function inferDueDateFromInvoiceDates(allDates, issueDate) {
+  if (!allDates.length) {
+    return "";
+  }
+
+  if (!issueDate) {
+    return allDates[allDates.length - 1];
+  }
+
+  const futureDates = allDates.filter((dateValue) => dateValue > issueDate);
+  return futureDates[0] || "";
 }
 
 function estimateDataUrlBytes(dataUrl) {
