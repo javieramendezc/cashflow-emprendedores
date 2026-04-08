@@ -1819,6 +1819,12 @@ select:focus {
   font-weight: 600;
 }
 
+.ghost-btn.is-active {
+  background: #111827;
+  color: #ffffff;
+  border-color: #111827;
+}
+
 .delete-btn {
   padding: 10px 14px;
   background: var(--state-critical-soft);
@@ -2126,6 +2132,16 @@ th {
 
 tbody tr {
   transition: background 180ms ease;
+}
+
+.history-month-row td {
+  padding: 12px 10px;
+  background: rgba(17, 24, 39, 0.04);
+  color: var(--ink);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 
 tbody tr:hover {

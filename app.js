@@ -55,6 +55,7 @@ const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLI
 const state = {
   data: cloneSeedState(),
   filterMonth: currentMonth(),
+  historyShowAll: false,
   session: null,
   appError: false,
   appErrorMessage: "",
@@ -140,6 +141,7 @@ const payableFields = getNamedFields(payableForm, [
 ]);
 const categorySelect = transactionForm.querySelector('[name="category"]');
 const monthFilter = document.querySelector("#monthFilter");
+const historyShowAllBtn = document.querySelector("#historyShowAllBtn");
 const appPages = [...document.querySelectorAll("[data-app-page]")];
 const navLinks = [...document.querySelectorAll("[data-page-target]")];
 const detailTabButtons = [...document.querySelectorAll("[data-detail-tab]")];
@@ -225,7 +227,7 @@ receivableFields.issueDate.value = today();
 receivableFields.dueDate.value = addDays(10);
 payableFields.issueDate.value = today();
 payableFields.dueDate.value = addDays(7);
-monthFilter.value = state.filterMonth;
+syncHistoryFilterInput();
 
 renderCategoryOptions(transactionFields.type.value);
 togglePartialAmountField(receivableFields, receivablePartialField);
@@ -534,7 +536,8 @@ transactionForm.addEventListener("submit", async (event) => {
 
   await saveData();
   state.filterMonth = transaction.date.slice(0, 7);
-  monthFilter.value = state.filterMonth;
+  state.historyShowAll = false;
+  syncHistoryFilterInput();
   render();
 
   const impactCopy = createMovementImpactCopy(transaction);
@@ -601,7 +604,8 @@ receivableForm.addEventListener("submit", async (event) => {
 
   await saveData();
   state.filterMonth = receivable.dueDate.slice(0, 7);
-  monthFilter.value = state.filterMonth;
+  state.historyShowAll = false;
+  syncHistoryFilterInput();
   resetReceivableForm();
   render();
   const receivableFeedback = createActionFeedback(
@@ -652,7 +656,8 @@ payableForm.addEventListener("submit", async (event) => {
 
   await saveData();
   state.filterMonth = payable.dueDate.slice(0, 7);
-  monthFilter.value = state.filterMonth;
+  state.historyShowAll = false;
+  syncHistoryFilterInput();
   resetPayableForm();
   render();
   const payableFeedback = createActionFeedback(
@@ -664,6 +669,14 @@ payableForm.addEventListener("submit", async (event) => {
 
 monthFilter.addEventListener("change", (event) => {
   state.filterMonth = event.target.value || currentMonth();
+  state.historyShowAll = false;
+  syncHistoryFilterInput();
+  render();
+});
+
+historyShowAllBtn?.addEventListener("click", () => {
+  state.historyShowAll = !state.historyShowAll;
+  syncHistoryFilterInput();
   render();
 });
 
@@ -831,7 +844,7 @@ confirmResetModalBtn.addEventListener("click", async () => {
   confirmResetModalBtn.textContent = copyText("common.deleting");
   state.data = cloneSeedState();
   state.filterMonth = currentMonth();
-  monthFilter.value = state.filterMonth;
+  syncHistoryFilterInput();
   syncCashFloorInputs("");
   await saveData();
   resetTransactionForm();
@@ -912,7 +925,8 @@ async function syncSessionView() {
     userEmailLabel.textContent = "-";
     state.data = cloneSeedState();
     state.filterMonth = currentMonth();
-    monthFilter.value = state.filterMonth;
+    state.historyShowAll = false;
+    syncHistoryFilterInput();
     syncCashFloorInputs("");
     resetTransactionForm();
     resetReceivableForm();
@@ -937,7 +951,8 @@ async function syncSessionView() {
     state.appErrorMessage = getFriendlyErrorMessage("load_data");
   }
   state.filterMonth = currentMonth();
-  monthFilter.value = state.filterMonth;
+  state.historyShowAll = false;
+  syncHistoryFilterInput();
   state.syncPending = readPendingSyncFlag();
   state.syncingPending = false;
   syncCashFloorInputs(state.data.cashFloor);
@@ -1540,17 +1555,22 @@ function render() {
   syncProgressiveVisibility();
 
   const currentMonthKey = currentMonth();
+  const showAllHistory = state.historyShowAll;
+  const allTransactions = [...state.data.transactions].sort(sortByDateDesc);
   const allReceivables = [...state.data.receivables].sort(sortByDueDateAsc);
   const allPayables = [...state.data.payables].sort(sortByDueDateAsc);
-  const transactions = state.data.transactions.filter((item) =>
+  const transactions = allTransactions.filter((item) =>
     item.date.startsWith(state.filterMonth)
   );
-  const receivables = state.data.receivables.filter((item) =>
+  const receivables = allReceivables.filter((item) =>
     item.dueDate.startsWith(state.filterMonth)
   );
-  const payables = state.data.payables.filter((item) =>
+  const payables = allPayables.filter((item) =>
     item.dueDate.startsWith(state.filterMonth)
   );
+  const historyTransactions = showAllHistory ? allTransactions : transactions;
+  const historyReceivables = showAllHistory ? allReceivables : receivables;
+  const historyPayables = showAllHistory ? allPayables : payables;
   const liveTransactions = state.data.transactions.filter((item) =>
     item.date.startsWith(currentMonthKey)
   );
@@ -1790,11 +1810,11 @@ function render() {
   applyCompanyLogo();
 
   renderTodayMovements(state.data.transactions);
-  renderTable(transactions);
+  renderTable(historyTransactions, { groupByMonth: showAllHistory });
   renderReceivables(allReceivables);
   renderPayables(allPayables);
-  renderHistoryReceivables(receivables);
-  renderHistoryPayables(payables);
+  renderHistoryReceivables(historyReceivables, { groupByMonth: showAllHistory });
+  renderHistoryPayables(historyPayables, { groupByMonth: showAllHistory });
   renderMoneyCurveChart(currentBalance, cashFloor);
   renderMonthlySummary();
   renderBreakdown(liveExpenses);
@@ -1822,16 +1842,23 @@ function renderCategoryOptions(type) {
     .join("");
 }
 
-function renderTable(transactions) {
+function renderTable(transactions, options = {}) {
   if (!transactions.length) {
     transactionTableBody.innerHTML =
-      '<tr><td colspan="8">No hay movimientos para este mes aún.</td></tr>';
+      `<tr><td colspan="8">${
+        options.groupByMonth
+          ? "No hay movimientos registrados aún."
+          : "No hay movimientos para este mes aún."
+      }</td></tr>`;
     return;
   }
 
-  transactionTableBody.innerHTML = transactions
-    .map(
-      (item) => `
+  transactionTableBody.innerHTML = buildHistoryRows({
+    items: transactions,
+    groupByMonth: options.groupByMonth,
+    getMonthKey: (item) => item.date.slice(0, 7),
+    colSpan: 8,
+    renderRow: (item) => `
         <tr>
           <td>${formatDate(item.date)}</td>
           <td>${escapeHtml(item.description)}</td>
@@ -1845,9 +1872,8 @@ function renderTable(transactions) {
             <button type="button" class="delete-btn" data-delete-transaction="${item.id}">Eliminar</button>
           </td>
         </tr>
-      `
-    )
-    .join("");
+      `,
+  });
 }
 
 function renderReceivables(receivables) {
@@ -1858,15 +1884,18 @@ function renderReceivables(receivables) {
   );
 }
 
-function renderHistoryReceivables(receivables) {
+function renderHistoryReceivables(receivables, options = {}) {
   renderReceivableRows(
     historyReceivableTableBody,
     receivables,
-    "No hay cuentas por cobrar registradas en este mes."
+    options.groupByMonth
+      ? "No hay cuentas por cobrar registradas aún."
+      : "No hay cuentas por cobrar registradas en este mes.",
+    options
   );
 }
 
-function renderReceivableRows(targetBody, receivables, emptyCopy) {
+function renderReceivableRows(targetBody, receivables, emptyCopy, options = {}) {
   if (!targetBody) {
     return;
   }
@@ -1876,9 +1905,12 @@ function renderReceivableRows(targetBody, receivables, emptyCopy) {
     return;
   }
 
-  targetBody.innerHTML = receivables
-    .map(
-      (item) => `
+  targetBody.innerHTML = buildHistoryRows({
+    items: receivables,
+    groupByMonth: options.groupByMonth,
+    getMonthKey: (item) => item.dueDate.slice(0, 7),
+    colSpan: 8,
+    renderRow: (item) => `
         <tr>
           <td>${escapeHtml(item.client)}</td>
           <td>${escapeHtml(item.document)}</td>
@@ -1892,9 +1924,8 @@ function renderReceivableRows(targetBody, receivables, emptyCopy) {
             <button type="button" class="delete-btn" data-delete-receivable="${item.id}">Eliminar</button>
           </td>
         </tr>
-      `
-    )
-    .join("");
+      `,
+  });
 }
 
 function renderPayables(payables) {
@@ -1905,15 +1936,18 @@ function renderPayables(payables) {
   );
 }
 
-function renderHistoryPayables(payables) {
+function renderHistoryPayables(payables, options = {}) {
   renderPayableRows(
     historyPayableTableBody,
     payables,
-    "No hay facturas por pagar registradas en este mes."
+    options.groupByMonth
+      ? "No hay facturas por pagar registradas aún."
+      : "No hay facturas por pagar registradas en este mes.",
+    options
   );
 }
 
-function renderPayableRows(targetBody, payables, emptyCopy) {
+function renderPayableRows(targetBody, payables, emptyCopy, options = {}) {
   if (!targetBody) {
     return;
   }
@@ -1923,9 +1957,12 @@ function renderPayableRows(targetBody, payables, emptyCopy) {
     return;
   }
 
-  targetBody.innerHTML = payables
-    .map(
-      (item) => `
+  targetBody.innerHTML = buildHistoryRows({
+    items: payables,
+    groupByMonth: options.groupByMonth,
+    getMonthKey: (item) => item.dueDate.slice(0, 7),
+    colSpan: 9,
+    renderRow: (item) => `
         <tr>
           <td>${escapeHtml(item.vendor)}</td>
           <td>${escapeHtml(item.document)}</td>
@@ -1940,8 +1977,26 @@ function renderPayableRows(targetBody, payables, emptyCopy) {
             <button type="button" class="delete-btn" data-delete-payable="${item.id}">Eliminar</button>
           </td>
         </tr>
-      `
-    )
+      `,
+  });
+}
+
+function buildHistoryRows({ items, groupByMonth = false, getMonthKey, colSpan, renderRow }) {
+  let previousMonth = "";
+
+  return items
+    .map((item) => {
+      const monthKey = getMonthKey(item);
+      const monthRow =
+        groupByMonth && monthKey !== previousMonth
+          ? `<tr class="history-month-row"><td colspan="${colSpan}">${escapeHtml(
+              formatMonthLabel(monthKey)
+            )}</td></tr>`
+          : "";
+
+      previousMonth = monthKey;
+      return `${monthRow}${renderRow(item)}`;
+    })
     .join("");
 }
 
@@ -3117,6 +3172,18 @@ function labelStatus(status) {
   };
 
   return labels[status] || status;
+}
+
+function syncHistoryFilterInput() {
+  if (monthFilter) {
+    monthFilter.value = /^\d{4}-\d{2}$/.test(state.filterMonth) ? state.filterMonth : currentMonth();
+  }
+
+  if (historyShowAllBtn) {
+    const isAllSelected = state.historyShowAll;
+    historyShowAllBtn.classList.toggle("is-active", isAllSelected);
+    historyShowAllBtn.setAttribute("aria-pressed", String(isAllSelected));
+  }
 }
 
 function idsMatch(leftId, rightId) {
