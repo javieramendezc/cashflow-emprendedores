@@ -452,7 +452,7 @@ retryHomeBtn.addEventListener("click", async () => {
 window.addEventListener("offline", () => {
   const wasOffline = state.offline;
   state.offline = true;
-  render();
+  refreshAppView();
 
   if (!wasOffline) {
     showUXFeedback(copyText("feedback.offlineShort"), "warn");
@@ -461,8 +461,23 @@ window.addEventListener("offline", () => {
 
 window.addEventListener("online", async () => {
   state.offline = false;
-  render();
+  refreshAppView();
   await syncPendingLocalData({ showFeedback: true });
+});
+
+window.addEventListener("storage", (event) => {
+  if (!state.session?.user) {
+    return;
+  }
+
+  const storageKey = getUserStorageKey();
+  const pendingKey = getUserPendingSyncKey();
+
+  if (event.key !== storageKey && event.key !== pendingKey) {
+    return;
+  }
+
+  hydrateLatestLocalState();
 });
 
 closeTransactionModalBtn.addEventListener("click", () => {
@@ -3698,18 +3713,20 @@ async function loadData() {
 
 async function saveData() {
   if (!state.session?.user) {
+    refreshAppView();
     return;
   }
 
   const normalizedData = normalizeStatePayload(state.data);
   state.data = normalizedData;
   localStorage.setItem(getUserStorageKey(), JSON.stringify(normalizedData));
+  refreshAppView();
 
   if (!hasNetworkConnection()) {
     const wasPending = state.syncPending;
     state.offline = true;
     setPendingSyncFlag(true);
-    render();
+    refreshAppView();
 
     if (!wasPending) {
       showUXFeedback(copyText("feedback.offlineAutoSave"), "warn");
@@ -3722,13 +3739,14 @@ async function saveData() {
     await saveDataToSupabase(normalizedData);
     state.offline = false;
     setPendingSyncFlag(false);
+    refreshAppView();
   } catch (error) {
     console.warn("No se pudo sincronizar con Supabase:", error.message);
     if (isConnectivityError(error)) {
       const wasPending = state.syncPending;
       state.offline = !hasNetworkConnection();
       setPendingSyncFlag(true);
-      render();
+      refreshAppView();
 
       if (!wasPending) {
         showUXFeedback(copyText("feedback.savedLocal"), "warn");
@@ -3737,6 +3755,7 @@ async function saveData() {
       return;
     }
 
+    refreshAppView();
     showUXFeedback(getFriendlyErrorMessage("save_sync", error), "warn");
   }
 }
@@ -4716,22 +4735,55 @@ function isConnectivityError(error) {
   );
 }
 
+function refreshAppView() {
+  syncHistoryFilterInput();
+  renderStatementImportState();
+  renderReceivableImportState();
+  renderPayableImportState();
+  syncCashFloorInputs(state.data.cashFloor);
+  render();
+}
+
+function hydrateLatestLocalState() {
+  if (!state.session?.user) {
+    return false;
+  }
+
+  const localBackup = localStorage.getItem(getUserStorageKey());
+  if (!localBackup) {
+    state.syncPending = readPendingSyncFlag();
+    state.offline = !hasNetworkConnection();
+    refreshAppView();
+    return false;
+  }
+
+  try {
+    state.data = normalizeStatePayload(JSON.parse(localBackup));
+    state.syncPending = readPendingSyncFlag();
+    state.offline = !hasNetworkConnection();
+    refreshAppView();
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 async function syncPendingLocalData(options = {}) {
   if (!state.session?.user || !state.syncPending || !hasNetworkConnection()) {
     state.offline = !hasNetworkConnection();
-    render();
+    refreshAppView();
     return false;
   }
 
   state.syncingPending = true;
-  render();
+  refreshAppView();
 
   try {
     await saveDataToSupabase(normalizeStatePayload(state.data));
     setPendingSyncFlag(false);
     state.offline = false;
     state.syncingPending = false;
-    render();
+    refreshAppView();
 
     if (options.showFeedback !== false) {
       showUXFeedback(copyText("feedback.synced"), "ok");
@@ -4741,7 +4793,7 @@ async function syncPendingLocalData(options = {}) {
   } catch (error) {
     state.syncingPending = false;
     state.offline = !hasNetworkConnection();
-    render();
+    refreshAppView();
 
     if (!isConnectivityError(error)) {
       showUXFeedback(getFriendlyErrorMessage("save_sync", error), "warn");
