@@ -13,9 +13,9 @@ const UX_RULES = {
   feedbackExitMs: 260,
   criticalProjectionAmount: 100000,
   progressiveVisibility: {
-    projectionTransactions: 3,
-    detailTransactions: 6,
-    categoriesTransactions: 8,
+    projectionTransactions: 0,
+    detailTransactions: 0,
+    categoriesTransactions: 0,
   },
   simpleCopyMap: [
     [/\bflujo de caja\b/gi, "plata"],
@@ -4574,12 +4574,12 @@ function cloneSeedState() {
 
 function createInitialVisibilityState() {
   return {
-    projection: false,
-    detail: false,
+    projection: true,
+    detail: true,
     detailTabs: {
       summary: true,
-      categories: false,
-      history: false,
+      categories: true,
+      history: true,
     },
     hints: [],
     metrics: {
