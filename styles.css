@@ -1216,6 +1216,28 @@ body::before {
   gap: 16px;
 }
 
+.custom-category-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: end;
+}
+
+.custom-category-label {
+  margin: 0;
+}
+
+.custom-category-row .ghost-btn {
+  white-space: nowrap;
+  min-width: 120px;
+}
+
+.custom-category-hint {
+  margin: -4px 0 0;
+  font-size: 0.82rem;
+  color: var(--muted);
+}
+
 .form-row-3 {
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
 }
@@ -2721,8 +2743,14 @@ tbody tr:hover {
 
   .hero-metrics,
   .form-row,
-  .form-row-3 {
+  .form-row-3,
+  .custom-category-row {
     grid-template-columns: 1fr;
+  }
+
+  .custom-category-row .ghost-btn {
+    width: 100%;
+    min-width: 0;
   }
 
   .metric.accent {

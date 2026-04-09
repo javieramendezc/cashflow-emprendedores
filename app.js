@@ -45,6 +45,10 @@ const categoryMap = copyValue("categories") || {
 const seedState = {
   companyLogo: "",
   cashFloor: 0,
+  customCategories: {
+    income: [],
+    expense: [],
+  },
   transactions: [],
   receivables: [],
   payables: [],
@@ -192,6 +196,9 @@ const payableFields = getNamedFields(payableForm, [
   "note",
 ]);
 const categorySelect = transactionForm.querySelector('[name="category"]');
+const customCategoryInput = document.querySelector("#customCategoryInput");
+const addCustomCategoryBtn = document.querySelector("#addCustomCategoryBtn");
+const customCategoryHint = document.querySelector("#customCategoryHint");
 const monthFilter = document.querySelector("#monthFilter");
 const historyShowAllBtn = document.querySelector("#historyShowAllBtn");
 const receivableMonthFilter = document.querySelector("#receivableMonthFilter");
@@ -337,6 +344,7 @@ payableFields.dueDate.value = addDays(7);
 syncHistoryFilterInput();
 
 renderCategoryOptions(transactionFields.type.value);
+syncCustomCategoryComposer();
 togglePartialAmountField(receivableFields, receivablePartialField);
 togglePartialAmountField(payableFields, payablePartialField);
 switchPage(state.activePage);
@@ -347,6 +355,7 @@ initializeAuth();
 
 transactionFields.type.addEventListener("change", (event) => {
   renderCategoryOptions(event.target.value);
+  syncCustomCategoryComposer();
   syncTransactionTypeButtons();
   updateMovementImpactPreview();
 });
@@ -355,10 +364,24 @@ quickTypeButtons.forEach((typeButton) => {
   typeButton.addEventListener("click", () => {
     transactionFields.type.value = typeButton.dataset.quickType;
     renderCategoryOptions(typeButton.dataset.quickType);
+    syncCustomCategoryComposer();
     syncTransactionTypeButtons();
     updateMovementImpactPreview();
     focusTransactionAmount();
   });
+});
+
+addCustomCategoryBtn?.addEventListener("click", async () => {
+  await handleCustomCategorySave();
+});
+
+customCategoryInput?.addEventListener("keydown", async (event) => {
+  if (event.key !== "Enter") {
+    return;
+  }
+
+  event.preventDefault();
+  await handleCustomCategorySave();
 });
 
 navLinks.forEach((navLink) => {
@@ -899,7 +922,7 @@ transactionForm.addEventListener("submit", async (event) => {
     const movementType = formData.get("type");
     const normalizedDate = parseStatementDateValue(formData.get("date")) || today();
     const movementCategory =
-      formData.get("category") || categoryMap[movementType]?.[0] || "Sin categoría";
+      formData.get("category") || getAvailableCategories(movementType)?.[0] || "Sin categoría";
     const transaction = {
       id: formData.get("transactionId") || createSafeId(),
       type: movementType,
@@ -3046,10 +3069,71 @@ function render() {
   switchDetailTab(state.activeDetailTab);
 }
 
-function renderCategoryOptions(type) {
-  categorySelect.innerHTML = categoryMap[type]
-    .map((category) => `<option value="${category}">${category}</option>`)
+function renderCategoryOptions(type, selectedCategory = "") {
+  const categories = getAvailableCategories(type);
+  const hasSelectedCategory = categories.some((category) =>
+    categoriesMatch(category, selectedCategory)
+  );
+  const options = hasSelectedCategory
+    ? categories
+    : selectedCategory
+      ? [selectedCategory, ...categories]
+      : categories;
+
+  categorySelect.innerHTML = options
+    .map((category) => `<option value="${escapeHtml(category)}">${escapeHtml(category)}</option>`)
     .join("");
+
+  categorySelect.value = hasSelectedCategory
+    ? categories.find((category) => categoriesMatch(category, selectedCategory)) || options[0] || ""
+    : selectedCategory || options[0] || "";
+}
+
+function syncCustomCategoryComposer() {
+  if (!customCategoryInput || !customCategoryHint) {
+    return;
+  }
+
+  const type = transactionFields.type.value === "expense" ? "expense" : "income";
+  customCategoryInput.placeholder = type === "income" ? "Ej. Comisiones" : "Ej. Bodega";
+  customCategoryHint.textContent =
+    type === "income"
+      ? "La guardamos para ingresos."
+      : "La guardamos para gastos.";
+}
+
+async function handleCustomCategorySave() {
+  const type = transactionFields.type.value === "expense" ? "expense" : "income";
+  const categoryName = sanitizeCategoryName(customCategoryInput?.value);
+
+  if (!categoryName) {
+    customCategoryInput?.focus();
+    return;
+  }
+
+  const alreadyExists = getAvailableCategories(type).some((category) =>
+    categoriesMatch(category, categoryName)
+  );
+
+  if (!alreadyExists) {
+    state.data.customCategories = normalizeCustomCategories(state.data.customCategories);
+    state.data.customCategories[type] = [
+      ...state.data.customCategories[type],
+      categoryName,
+    ].sort((left, right) => left.localeCompare(right, "es", { sensitivity: "base" }));
+    await saveData();
+    showUXFeedback(
+      `Categoría guardada para ${type === "income" ? "ingresos" : "gastos"}.`,
+      "ok"
+    );
+  } else {
+    showUXFeedback("Esa categoría ya existía. La dejamos lista.", "ok");
+  }
+
+  renderCategoryOptions(type, categoryName);
+  syncCustomCategoryComposer();
+  movementExtraDetails.open = true;
+  customCategoryInput.value = "";
 }
 
 function renderTable(transactions, options = {}) {
@@ -4446,10 +4530,42 @@ function idsMatch(leftId, rightId) {
   return String(leftId ?? "") === String(rightId ?? "");
 }
 
+function sanitizeCategoryName(value) {
+  return String(value || "")
+    .trim()
+    .replace(/\s+/g, " ")
+    .slice(0, 40);
+}
+
+function normalizeCustomCategories(customCategories) {
+  const normalizeList = (items) =>
+    [...new Set((Array.isArray(items) ? items : []).map(sanitizeCategoryName).filter(Boolean))];
+
+  return {
+    income: normalizeList(customCategories?.income),
+    expense: normalizeList(customCategories?.expense),
+  };
+}
+
+function categoriesMatch(leftCategory, rightCategory) {
+  return (
+    sanitizeCategoryName(leftCategory).toLocaleLowerCase("es-CL") ===
+    sanitizeCategoryName(rightCategory).toLocaleLowerCase("es-CL")
+  );
+}
+
+function getAvailableCategories(type) {
+  const defaults = Array.isArray(categoryMap[type]) ? categoryMap[type] : [];
+  const custom = state.data?.customCategories?.[type] || [];
+
+  return [...new Set([...defaults, ...custom].map(sanitizeCategoryName).filter(Boolean))];
+}
+
 function cloneSeedState() {
   return {
     companyLogo: seedState.companyLogo,
     cashFloor: seedState.cashFloor,
+    customCategories: normalizeCustomCategories(seedState.customCategories),
     transactions: [...seedState.transactions].sort(sortByDateDesc),
     receivables: normalizeLedgerItems([...seedState.receivables]).sort(sortByDueDateAsc),
     payables: normalizeLedgerItems([...seedState.payables]).sort(sortByDueDateAsc),
@@ -4477,6 +4593,7 @@ function normalizeStatePayload(payload) {
   return {
     companyLogo: typeof payload?.companyLogo === "string" ? payload.companyLogo : "",
     cashFloor: Math.max(0, Number(payload?.cashFloor) || 0),
+    customCategories: normalizeCustomCategories(payload?.customCategories),
     transactions: (payload?.transactions || []).sort(sortByDateDesc),
     receivables: normalizeLedgerItems(payload?.receivables || []).sort(sortByDueDateAsc),
     payables: normalizeLedgerItems(payload?.payables || []).sort(sortByDueDateAsc),
@@ -4741,6 +4858,8 @@ function refreshAppView() {
   renderReceivableImportState();
   renderPayableImportState();
   syncCashFloorInputs(state.data.cashFloor);
+  renderCategoryOptions(transactionFields.type.value, transactionFields.category.value);
+  syncCustomCategoryComposer();
   render();
 }
 
@@ -4887,12 +5006,13 @@ function setAnimatedCurrency(selector, value, options = {}) {
 function fillTransactionForm(transaction, asTemplate = false) {
   transactionFields.transactionId.value = asTemplate ? "" : transaction.id;
   transactionFields.type.value = transaction.type;
-  renderCategoryOptions(transaction.type);
+  renderCategoryOptions(transaction.type, transaction.category);
   transactionFields.description.value = transaction.description;
   transactionFields.note.value = transaction.note || "";
   transactionFields.amount.value = transaction.amount;
   transactionFields.date.value = asTemplate ? today() : parseStatementDateValue(transaction.date) || today();
-  transactionFields.category.value = transaction.category || categoryMap[transaction.type]?.[0] || "Sin categoría";
+  transactionFields.category.value =
+    transaction.category || getAvailableCategories(transaction.type)?.[0] || "Sin categoría";
   transactionFields.channel.value = transaction.channel || "Transferencia";
   transactionFields.recurring.checked = Boolean(transaction.recurring);
   movementExtraDetails.open = true;
@@ -4903,6 +5023,7 @@ function fillTransactionForm(transaction, asTemplate = false) {
     ? copyText("movement.save")
     : copyText("forms.saveChanges");
   cancelTransactionEditBtn.hidden = asTemplate;
+  syncCustomCategoryComposer();
   syncTransactionTypeButtons();
   openTransactionModal(transaction.type, { preserveForm: true });
 }
@@ -4913,6 +5034,10 @@ function resetTransactionForm() {
   transactionFields.date.value = today();
   transactionFields.type.value = "income";
   renderCategoryOptions("income");
+  if (customCategoryInput) {
+    customCategoryInput.value = "";
+  }
+  syncCustomCategoryComposer();
   syncTransactionTypeButtons();
   movementExtraDetails.open = false;
   movementImpactText.textContent = "";
