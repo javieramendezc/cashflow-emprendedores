@@ -2317,6 +2317,39 @@ select:focus {
   max-width: 100%;
 }
 
+.history-toolbar {
+  display: grid;
+  grid-template-columns: minmax(180px, 220px) minmax(180px, 220px);
+  justify-content: space-between;
+  align-items: start;
+  gap: 16px 24px;
+  width: 100%;
+}
+
+.history-toolbar-month {
+  justify-self: start;
+  width: 100%;
+  max-width: 220px;
+}
+
+.history-toolbar-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  justify-self: end;
+  width: 100%;
+  max-width: 220px;
+}
+
+.history-toolbar-actions .ghost-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: 48px;
+  text-align: center;
+}
+
 .table-wrap {
   width: 100%;
   max-width: 100%;
@@ -2783,6 +2816,16 @@ tbody tr:hover {
   .panel-header-split,
   .transaction-panel .filters {
     flex-direction: column;
+  }
+
+  .history-toolbar {
+    grid-template-columns: 1fr;
+  }
+
+  .history-toolbar-month,
+  .history-toolbar-actions {
+    justify-self: stretch;
+    max-width: none;
   }
 
   .forecast-line {
