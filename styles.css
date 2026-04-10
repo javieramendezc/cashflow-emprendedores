@@ -2327,7 +2327,8 @@ select:focus {
 }
 
 .history-toolbar--transactions {
-  grid-template-columns: minmax(0, 1fr) 180px;
+  grid-template-columns: minmax(220px, 320px) minmax(280px, 360px);
+  justify-content: start;
 }
 
 .history-toolbar-month {
@@ -2341,21 +2342,25 @@ select:focus {
 }
 
 .history-toolbar-actions {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 12px;
-  justify-self: end;
+  justify-self: start;
   width: 100%;
-  max-width: 180px;
+  max-width: 360px;
 }
 
 .history-toolbar-actions .ghost-btn {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 100%;
+  width: auto;
   min-height: 48px;
   text-align: center;
+}
+
+.history-toolbar-actions .ghost-btn:last-child {
+  grid-column: 1 / -1;
 }
 
 .table-wrap {
@@ -2830,6 +2835,10 @@ tbody tr:hover {
     grid-template-columns: minmax(0, 1fr) 180px;
   }
 
+  .history-toolbar--transactions {
+    grid-template-columns: minmax(220px, 320px) minmax(280px, 360px);
+  }
+
   .history-toolbar-month,
   .history-toolbar-actions {
     max-width: none;
@@ -2840,7 +2849,8 @@ tbody tr:hover {
   }
 
   .history-toolbar-actions {
-    justify-self: end;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    justify-self: start;
   }
 
   .forecast-line {
@@ -3030,6 +3040,10 @@ tbody tr:hover {
   .history-toolbar-actions {
     justify-self: stretch;
     max-width: none;
+  }
+
+  .history-toolbar-actions {
+    grid-template-columns: 1fr;
   }
 }
 
