@@ -1517,7 +1517,7 @@ function getStatementAcceptValue(type) {
 
 function buildStatementImportMeta(item) {
   const dateLabel = item.date ? formatDate(item.date) : "Sin fecha";
-  return `${dateLabel} · ${item.type === "income" ? "Ingreso" : "Gasto"}`;
+  return `Fecha: ${dateLabel}`;
 }
 
 function buildStatementImportSignedAmount(item) {
@@ -1658,11 +1658,7 @@ function renderStatementImportState() {
                   ${state.statementImport.editingIndex === index ? "" : "hidden"}
                 >
                   <label>
-                    Fecha
-                    <input type="date" name="date" value="${escapeHtml(item.date)}" />
-                  </label>
-                  <label>
-                    Concepto
+                    Nombre
                     <input
                       type="text"
                       name="description"
@@ -1680,6 +1676,10 @@ function renderStatementImportState() {
                       name="amount"
                       value="${escapeHtml(String(item.amount))}"
                     />
+                  </label>
+                  <label>
+                    Fecha
+                    <input type="date" name="date" value="${escapeHtml(item.date)}" />
                   </label>
                   <label>
                     Tipo
