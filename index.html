@@ -710,36 +710,37 @@
 
           <section class="detail-tab-panel" data-detail-panel="history" data-ux-progressive hidden>
             <section class="panel transaction-panel" id="transactions">
-              <div class="panel-header panel-header-split">
+              <div class="panel-header">
                 <div>
                   <p class="section-label">Historial</p>
                   <h3>Movimientos</h3>
                 </div>
-                <div class="filters history-toolbar history-toolbar--transactions">
-                  <div class="history-toolbar-month">
-                    <label>
-                      Mes
-                      <input type="month" id="monthFilter" />
-                    </label>
-                  </div>
+              </div>
 
-                  <div class="history-toolbar-actions history-actions-grid">
-                    <button id="openStatementImportBtn" class="ghost-btn" type="button">
-                      Subir cartola
-                    </button>
-                    <button id="historyShowAllBtn" class="ghost-btn" type="button">
-                      Ver todo
-                    </button>
-                    <button id="exportExcelBtn" class="ghost-btn" type="button">
-                      Descargar Excel
-                    </button>
-                    <button id="exportPdfBtn" class="ghost-btn" type="button">
-                      Descargar PDF
-                    </button>
-                    <button id="resetDataBtn" class="ghost-btn history-action-full" type="button">
-                      Reiniciar en cero
-                    </button>
-                  </div>
+              <div class="transaction-history-controls">
+                <div class="transaction-history-month">
+                  <label>
+                    Mes
+                    <input type="month" id="monthFilter" />
+                  </label>
+                </div>
+
+                <div class="transaction-history-actions">
+                  <button id="openStatementImportBtn" class="ghost-btn" type="button">
+                    Subir cartola
+                  </button>
+                  <button id="historyShowAllBtn" class="ghost-btn" type="button">
+                    Ver todo
+                  </button>
+                  <button id="exportExcelBtn" class="ghost-btn" type="button">
+                    Descargar Excel
+                  </button>
+                  <button id="exportPdfBtn" class="ghost-btn" type="button">
+                    Descargar PDF
+                  </button>
+                  <button id="resetDataBtn" class="ghost-btn transaction-history-action-full" type="button">
+                    Reiniciar en cero
+                  </button>
                 </div>
               </div>
 

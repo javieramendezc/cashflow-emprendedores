@@ -2317,51 +2317,36 @@ select:focus {
   max-width: 100%;
 }
 
-.history-toolbar {
+.transaction-history-controls {
   display: grid;
-  grid-template-columns: minmax(180px, 220px) minmax(180px, 220px);
-  justify-content: space-between;
-  align-items: start;
-  gap: 16px 24px;
+  gap: 16px;
+  margin-bottom: 22px;
+}
+
+.transaction-history-month {
   width: 100%;
+  max-width: 320px;
 }
 
-.history-toolbar--transactions {
-  grid-template-columns: minmax(220px, 320px) minmax(280px, 448px);
-  justify-content: start;
-}
-
-.history-toolbar-month {
-  justify-self: start;
-  width: 100%;
-  max-width: 220px;
-}
-
-.history-toolbar--transactions .history-toolbar-month {
-  max-width: 420px;
-}
-
-.history-toolbar-actions,
-.history-actions-grid {
+.transaction-history-actions {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 12px;
-  justify-self: start;
   width: 100%;
   max-width: 448px;
+  justify-content: start;
 }
 
-.history-toolbar-actions .ghost-btn,
-.history-actions-grid .ghost-btn {
+.transaction-history-actions .ghost-btn {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: auto;
+  width: 100%;
   min-height: 48px;
   text-align: center;
 }
 
-.history-action-full {
+.transaction-history-action-full {
   grid-column: 1 / -1;
 }
 
@@ -2833,26 +2818,9 @@ tbody tr:hover {
     flex-direction: column;
   }
 
-  .history-toolbar {
-    grid-template-columns: minmax(0, 1fr) 180px;
-  }
-
-  .history-toolbar--transactions {
-    grid-template-columns: minmax(220px, 320px) minmax(280px, 448px);
-  }
-
-  .history-toolbar-month,
-  .history-toolbar-actions {
+  .transaction-history-month,
+  .transaction-history-actions {
     max-width: none;
-  }
-
-  .history-toolbar-month {
-    justify-self: start;
-  }
-
-  .history-toolbar-actions {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    justify-self: start;
   }
 
   .forecast-line {
@@ -3033,18 +3001,7 @@ tbody tr:hover {
 }
 
 @media (max-width: 760px) {
-  .history-toolbar,
-  .history-toolbar--transactions {
-    grid-template-columns: 1fr;
-  }
-
-  .history-toolbar-month,
-  .history-toolbar-actions {
-    justify-self: stretch;
-    max-width: none;
-  }
-
-  .history-toolbar-actions {
+  .transaction-history-actions {
     grid-template-columns: 1fr;
   }
 }
