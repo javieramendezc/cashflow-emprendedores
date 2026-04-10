@@ -1735,6 +1735,10 @@ select:focus {
   box-shadow: var(--shadow);
 }
 
+.statement-import-card.is-busy {
+  cursor: progress;
+}
+
 .statement-import-step {
   display: grid;
   gap: 18px;
@@ -1762,6 +1766,15 @@ select:focus {
 
 .statement-import-picker-btn {
   min-width: 220px;
+}
+
+.statement-import-card .ghost-btn:disabled,
+.statement-import-card .primary-btn:disabled,
+.statement-import-card .close-modal-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  transform: none;
+  pointer-events: none;
 }
 
 .statement-import-hint--compact {

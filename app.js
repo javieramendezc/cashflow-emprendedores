@@ -247,6 +247,7 @@ const cancelStatementImportBtn = document.querySelector("#cancelStatementImportB
 const confirmStatementImportBtn = document.querySelector("#confirmStatementImportBtn");
 const statementImportInput = document.querySelector("#statementImportInput");
 const openStatementFilePickerBtn = document.querySelector("#openStatementFilePickerBtn");
+const statementImportCard = statementImportModal?.querySelector(".statement-import-card");
 const statementImportSelectStep = document.querySelector("#statementImportSelectStep");
 const statementImportProcessingStep = document.querySelector("#statementImportProcessingStep");
 const statementImportReviewStep = document.querySelector("#statementImportReviewStep");
@@ -515,10 +516,18 @@ transactionModal.addEventListener("click", (event) => {
 });
 
 closeStatementImportBtn?.addEventListener("click", () => {
+  if (state.statementImport.processing) {
+    return;
+  }
+
   closeStatementImportModal();
 });
 
 cancelStatementImportBtn?.addEventListener("click", () => {
+  if (state.statementImport.processing) {
+    return;
+  }
+
   closeStatementImportModal();
 });
 
@@ -539,6 +548,10 @@ cancelPayableImportBtn?.addEventListener("click", () => {
 });
 
 statementImportModal?.addEventListener("click", (event) => {
+  if (state.statementImport.processing) {
+    return;
+  }
+
   if (event.target === statementImportModal) {
     closeStatementImportModal();
   }
@@ -1494,6 +1507,32 @@ function renderStatementImportState() {
   statementImportSelectStep.hidden = processing || isReview;
   statementImportProcessingStep.hidden = !processing;
   statementImportReviewStep.hidden = !isReview;
+  statementImportModal.classList.toggle("is-busy", processing);
+  statementImportModal.setAttribute("aria-busy", String(processing));
+
+  if (statementImportCard) {
+    statementImportCard.classList.toggle("is-busy", processing);
+  }
+
+  if (closeStatementImportBtn) {
+    closeStatementImportBtn.disabled = processing;
+  }
+
+  if (cancelStatementImportBtn) {
+    cancelStatementImportBtn.disabled = processing;
+  }
+
+  if (openStatementFilePickerBtn) {
+    openStatementFilePickerBtn.disabled = processing;
+  }
+
+  if (statementImportReplaceFileBtn) {
+    statementImportReplaceFileBtn.disabled = processing;
+  }
+
+  if (statementImportInput) {
+    statementImportInput.disabled = processing;
+  }
 
   if (statementImportError) {
     statementImportError.hidden = !error;
