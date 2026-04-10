@@ -80,6 +80,7 @@ function createStatementImportState() {
     fileType: "",
     fileName: "",
     items: [],
+    editingIndex: null,
     error: "",
   };
 }
@@ -643,18 +644,40 @@ statementImportReviewList?.addEventListener("input", (event) => {
 
   if (event.target.name === "description") {
     item.description = event.target.value;
+    const summaryNode = row.querySelector("[data-import-description]");
+    if (summaryNode) {
+      summaryNode.textContent = item.description || "Movimiento";
+    }
   }
 
   if (event.target.name === "amount") {
     item.amount = Math.abs(Number(event.target.value) || 0);
+    updateStatementImportPreviewRow(row, item);
   }
 
   if (event.target.name === "type") {
     item.type = event.target.value === "income" ? "income" : "expense";
+    updateStatementImportPreviewRow(row, item);
+  }
+
+  if (event.target.name === "date") {
+    const metaNode = row.querySelector("[data-import-meta]");
+    if (metaNode) {
+      metaNode.textContent = buildStatementImportMeta(item);
+    }
   }
 });
 
 statementImportReviewList?.addEventListener("click", (event) => {
+  const editButton = event.target.closest("[data-toggle-import-edit-index]");
+  if (editButton) {
+    const nextIndex = Number(editButton.dataset.toggleImportEditIndex);
+    state.statementImport.editingIndex =
+      state.statementImport.editingIndex === nextIndex ? null : nextIndex;
+    renderStatementImportState();
+    return;
+  }
+
   const removeButton = event.target.closest("[data-remove-import-index]");
   if (!removeButton) {
     return;
@@ -662,6 +685,7 @@ statementImportReviewList?.addEventListener("click", (event) => {
 
   const removeIndex = Number(removeButton.dataset.removeImportIndex);
   state.statementImport.items = state.statementImport.items.filter((_, index) => index !== removeIndex);
+  state.statementImport.editingIndex = null;
   renderStatementImportState();
 });
 
@@ -1491,6 +1515,30 @@ function getStatementAcceptValue(type) {
   return ".pdf,.csv,.xlsx,.xls,application/pdf,text/csv,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
 }
 
+function buildStatementImportMeta(item) {
+  const dateLabel = item.date ? formatDate(item.date) : "Sin fecha";
+  return `${dateLabel} · ${item.type === "income" ? "Ingreso" : "Gasto"}`;
+}
+
+function buildStatementImportSignedAmount(item) {
+  const sign = item.type === "income" ? "+" : "-";
+  return `${sign}${formatCurrency(item.amount)}`;
+}
+
+function updateStatementImportPreviewRow(row, item) {
+  const amountNode = row.querySelector("[data-import-amount]");
+  if (amountNode) {
+    amountNode.textContent = buildStatementImportSignedAmount(item);
+    amountNode.classList.toggle("income", item.type === "income");
+    amountNode.classList.toggle("expense", item.type !== "income");
+  }
+
+  const metaNode = row.querySelector("[data-import-meta]");
+  if (metaNode) {
+    metaNode.textContent = buildStatementImportMeta(item);
+  }
+}
+
 function renderStatementImportState() {
   if (!statementImportModal) {
     return;
@@ -1573,18 +1621,42 @@ function renderStatementImportState() {
       ? items
           .map(
             (item, index) => `
-              <article class="statement-import-row" data-import-index="${index}">
-                <div class="statement-import-row-head">
-                  <span class="statement-import-row-index">Movimiento ${index + 1}</span>
+              <article
+                class="statement-import-preview-row ${state.statementImport.editingIndex === index ? "is-editing" : ""}"
+                data-import-index="${index}"
+              >
+                <div class="statement-import-preview-main">
+                  <div class="statement-import-preview-copy">
+                    <strong data-import-description>${escapeHtml(item.description || "Movimiento")}</strong>
+                    <p data-import-meta>${escapeHtml(buildStatementImportMeta(item))}</p>
+                  </div>
+                  <span
+                    class="statement-import-preview-amount ${item.type === "income" ? "income" : "expense"}"
+                    data-import-amount
+                  >
+                    ${escapeHtml(buildStatementImportSignedAmount(item))}
+                  </span>
+                </div>
+                <div class="statement-import-preview-actions">
+                  <button
+                    type="button"
+                    class="ghost-btn statement-import-edit-btn"
+                    data-toggle-import-edit-index="${index}"
+                  >
+                    ${state.statementImport.editingIndex === index ? "Cerrar" : "Editar"}
+                  </button>
                   <button
                     type="button"
                     class="ghost-btn statement-import-row-remove"
                     data-remove-import-index="${index}"
                   >
-                    Quitar
+                    Eliminar
                   </button>
                 </div>
-                <div class="statement-import-row-grid">
+                <div
+                  class="statement-import-row-grid statement-import-preview-editor"
+                  ${state.statementImport.editingIndex === index ? "" : "hidden"}
+                >
                   <label>
                     Fecha
                     <input type="date" name="date" value="${escapeHtml(item.date)}" />

@@ -1848,15 +1848,19 @@ select:focus {
   scrollbar-gutter: stable;
 }
 
-.statement-import-row {
+.statement-import-row,
+.statement-import-preview-row {
   display: grid;
   gap: 12px;
-  padding: 14px 0;
-  border-top: 1px solid var(--line);
+  padding: 14px 16px;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.72);
 }
 
-.statement-import-row:first-child {
-  border-top: 0;
+.statement-import-preview-row.is-editing {
+  border-color: rgba(17, 24, 39, 0.14);
+  background: rgba(255, 255, 255, 0.94);
 }
 
 .statement-import-row-head {
@@ -1871,6 +1875,61 @@ select:focus {
   font-size: 0.76rem;
   letter-spacing: 0.08em;
   text-transform: uppercase;
+}
+
+.statement-import-preview-main {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: start;
+}
+
+.statement-import-preview-copy {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.statement-import-preview-copy strong {
+  font-size: 1rem;
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+
+.statement-import-preview-copy p {
+  margin: 0;
+  font-size: 0.84rem;
+  color: var(--muted);
+}
+
+.statement-import-preview-amount {
+  font-size: 1rem;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.statement-import-preview-amount.income {
+  color: var(--state-positive);
+}
+
+.statement-import-preview-amount.expense {
+  color: var(--ink);
+}
+
+.statement-import-preview-actions {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.statement-import-edit-btn,
+.statement-import-row-remove {
+  min-width: 108px;
+  justify-content: center;
+}
+
+.statement-import-preview-editor {
+  padding-top: 4px;
 }
 
 .statement-import-row-grid {
@@ -1926,6 +1985,14 @@ select:focus {
   .statement-import-processing {
     grid-template-columns: 1fr;
     display: grid;
+  }
+
+  .statement-import-preview-main {
+    grid-template-columns: 1fr;
+  }
+
+  .statement-import-preview-actions {
+    flex-wrap: wrap;
   }
 
   .statement-import-row-grid {
