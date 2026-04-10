@@ -1027,22 +1027,16 @@
         </div>
 
         <section class="statement-import-step" id="statementImportSelectStep">
-          <p class="statement-import-copy">
-            Sube tu cartola, la leemos y te mostramos los movimientos para revisar.
+          <p class="statement-import-copy statement-import-copy--compact">
+            Sube tu cartola
           </p>
-          <div class="statement-import-types">
-            <button type="button" class="ghost-btn statement-file-type-btn" data-statement-type="pdf">
-              PDF
-            </button>
-            <button type="button" class="ghost-btn statement-file-type-btn" data-statement-type="excel">
-              Excel
-            </button>
-            <button type="button" class="ghost-btn statement-file-type-btn" data-statement-type="csv">
-              CSV
+          <div class="statement-import-picker">
+            <button type="button" class="ghost-btn statement-import-picker-btn" id="openStatementFilePickerBtn">
+              Seleccionar archivo
             </button>
           </div>
-          <p class="statement-import-hint">
-            Después podrás revisar y corregir antes de agregar.
+          <p class="statement-import-hint statement-import-hint--compact">
+            Formatos: PDF, Excel, CSV
           </p>
           <input
             type="file"

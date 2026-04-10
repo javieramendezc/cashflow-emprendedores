@@ -1740,6 +1740,12 @@ select:focus {
   gap: 18px;
 }
 
+.statement-import-copy--compact {
+  font-size: 1.02rem;
+  font-weight: 700;
+  color: var(--ink);
+}
+
 .statement-import-copy,
 .statement-import-hint,
 .statement-import-review-header p,
@@ -1747,6 +1753,19 @@ select:focus {
   margin: 0;
   color: var(--muted);
   line-height: 1.55;
+}
+
+.statement-import-picker {
+  display: flex;
+  justify-content: flex-start;
+}
+
+.statement-import-picker-btn {
+  min-width: 220px;
+}
+
+.statement-import-hint--compact {
+  font-size: 0.9rem;
 }
 
 .statement-import-types {

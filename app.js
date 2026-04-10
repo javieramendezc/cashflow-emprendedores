@@ -246,6 +246,7 @@ const closeStatementImportBtn = document.querySelector("#closeStatementImportBtn
 const cancelStatementImportBtn = document.querySelector("#cancelStatementImportBtn");
 const confirmStatementImportBtn = document.querySelector("#confirmStatementImportBtn");
 const statementImportInput = document.querySelector("#statementImportInput");
+const openStatementFilePickerBtn = document.querySelector("#openStatementFilePickerBtn");
 const statementImportSelectStep = document.querySelector("#statementImportSelectStep");
 const statementImportProcessingStep = document.querySelector("#statementImportProcessingStep");
 const statementImportReviewStep = document.querySelector("#statementImportReviewStep");
@@ -559,6 +560,10 @@ statementFileTypeButtons.forEach((button) => {
   button.addEventListener("click", () => {
     openStatementFilePicker(button.dataset.statementType || "");
   });
+});
+
+openStatementFilePickerBtn?.addEventListener("click", () => {
+  openStatementFilePicker();
 });
 
 statementImportReplaceFileBtn?.addEventListener("click", () => {
