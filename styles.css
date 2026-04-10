@@ -2326,10 +2326,18 @@ select:focus {
   width: 100%;
 }
 
+.history-toolbar--transactions {
+  grid-template-columns: minmax(0, 1fr) 220px;
+}
+
 .history-toolbar-month {
   justify-self: start;
   width: 100%;
   max-width: 220px;
+}
+
+.history-toolbar--transactions .history-toolbar-month {
+  max-width: 420px;
 }
 
 .history-toolbar-actions {
@@ -2819,13 +2827,20 @@ tbody tr:hover {
   }
 
   .history-toolbar {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr) 220px;
   }
 
   .history-toolbar-month,
   .history-toolbar-actions {
-    justify-self: stretch;
     max-width: none;
+  }
+
+  .history-toolbar-month {
+    justify-self: start;
+  }
+
+  .history-toolbar-actions {
+    justify-self: end;
   }
 
   .forecast-line {
@@ -3002,6 +3017,19 @@ tbody tr:hover {
   td {
     padding: 12px 10px;
     font-size: 0.82rem;
+  }
+}
+
+@media (max-width: 760px) {
+  .history-toolbar,
+  .history-toolbar--transactions {
+    grid-template-columns: 1fr;
+  }
+
+  .history-toolbar-month,
+  .history-toolbar-actions {
+    justify-self: stretch;
+    max-width: none;
   }
 }
 
