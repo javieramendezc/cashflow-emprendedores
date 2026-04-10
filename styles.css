@@ -1781,8 +1781,10 @@ select:focus {
 .statement-import-processing {
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 16px;
   min-height: 180px;
+  text-align: left;
 }
 
 .statement-import-processing strong,
@@ -1791,6 +1793,20 @@ select:focus {
   color: var(--ink);
   font-size: 1.1rem;
   letter-spacing: -0.03em;
+}
+
+.statement-import-processing-copy {
+  display: grid;
+  gap: 6px;
+}
+
+.statement-import-state-label {
+  margin: 0;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted);
 }
 
 .statement-import-spinner {
