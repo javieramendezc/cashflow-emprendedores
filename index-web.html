@@ -1,0 +1,1329 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Flujo Claro | Tu Caja Sin Estrés.</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="icon" type="image/png" href="" id="dynamicFavicon" />
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <section class="auth-screen" id="authScreen">
+      <div class="auth-card">
+          <p class="eyebrow" data-ux-copy>Acceso privado</p>
+        <h1>Entra a Flujo Claro</h1>
+          <p class="auth-copy" data-ux-copy>
+          Crea tu cuenta o inicia sesión para guardar tu plata en la nube y ver
+          solo tu información.
+        </p>
+
+        <form id="authForm" class="transaction-form">
+          <label>
+            Correo
+            <input type="email" name="email" autocomplete="email" required />
+          </label>
+
+          <label>
+            Contraseña
+            <input
+              type="password"
+              name="password"
+              autocomplete="current-password"
+              minlength="6"
+              required
+            />
+          </label>
+
+          <p class="auth-message" id="authMessage"></p>
+
+          <div class="form-actions">
+            <button type="submit" class="primary-btn" id="authSubmitBtn">
+              Iniciar sesión
+            </button>
+            <button type="button" class="ghost-btn" id="toggleAuthModeBtn">
+              Crear cuenta
+            </button>
+          </div>
+        </form>
+      </div>
+    </section>
+
+    <div class="app-shell app-layout" id="appShell" data-component="AppLayout" hidden>
+      <header class="app-header-minimal" data-component="AppHeader">
+        <div class="app-header-brand">
+          <span class="app-header-mark">
+            <img id="mobileBrandLogoPreview" alt="Logo de la empresa" hidden />
+            <span id="mobileBrandLogoFallback">FC</span>
+          </span>
+          <div>
+            <p class="section-label" data-ux-copy id="appHeaderScreenTitle">Dinero</p>
+            <strong id="appHeaderCashValue">$0</strong>
+          </div>
+        </div>
+        <div class="app-header-actions">
+          <button type="button" class="header-action-btn" id="mobileMenuBtn" aria-expanded="false">
+            <span aria-hidden="true">⚙️</span>
+            <span>Menú</span>
+          </button>
+          <button type="button" class="header-action-btn header-alert-btn" id="mobileAlertsBtn" aria-expanded="false">
+            <span aria-hidden="true">🔔</span>
+            <span>Alertas</span>
+            <small class="header-alert-count" id="mobileAlertsCount" hidden>0</small>
+          </button>
+        </div>
+      </header>
+
+      <section class="app-connection-banner" id="connectionBanner" hidden>
+        <div class="app-connection-copy">
+          <strong id="connectionBannerTitle">Sin conexión</strong>
+          <p id="connectionBannerText">Puedes seguir usando la app. Guardaremos los cambios automáticamente.</p>
+        </div>
+        <button type="button" class="ghost-btn connection-banner-btn" id="connectionBannerBtn" hidden>
+          Sincronizar
+        </button>
+      </section>
+
+      <section class="mobile-header-panel" id="mobileMenuPanel" hidden>
+        <div class="mobile-header-panel-head">
+          <strong>Menú</strong>
+          <button type="button" class="mobile-header-panel-close" id="closeMobileMenuBtn">
+            Cerrar
+          </button>
+        </div>
+        <nav class="mobile-header-nav">
+          <button type="button" class="mobile-header-nav-link is-active" data-page-target="home">
+            Inicio
+          </button>
+          <button type="button" class="mobile-header-nav-link" data-page-target="projection" hidden>
+            Proyección
+          </button>
+          <button type="button" class="mobile-header-nav-link" data-page-target="detail" hidden>
+            Detalle
+          </button>
+        </nav>
+        <div class="mobile-header-panel-actions">
+          <button type="button" class="ghost-btn mobile-header-panel-btn" id="mobileMenuLogoutBtn">
+            Salir
+          </button>
+        </div>
+      </section>
+
+      <section class="mobile-header-panel" id="mobileAlertsPanel" hidden>
+        <div class="mobile-header-panel-head">
+          <div>
+            <strong>Alertas</strong>
+            <p id="mobileAlertsHint">Te mostramos lo importante de hoy.</p>
+          </div>
+          <button type="button" class="mobile-header-panel-close" id="closeMobileAlertsBtn">
+            Cerrar
+          </button>
+        </div>
+        <div class="mobile-alerts-list" id="mobileAlertsList"></div>
+      </section>
+
+      <aside class="sidebar" data-component="DesktopSidebar">
+        <div class="brand-block">
+          <button type="button" class="brand-mark" id="logoSettingsToggle">
+            <img id="brandLogoPreview" alt="Logo de la empresa" hidden />
+            <span id="brandLogoFallback">FC</span>
+          </button>
+          <div>
+            <p class="eyebrow" data-ux-copy>Flujo claro</p>
+            <h1>Tu Caja Sin Estrés.</h1>
+          </div>
+        </div>
+
+        <div class="sidebar-section" id="logoSettingsPanel" data-ux-progressive hidden>
+          <p class="section-label" data-ux-copy>Logo</p>
+          <label class="logo-upload-btn">
+            Subir logo
+            <input type="file" id="companyLogoInput" accept="image/png,image/jpeg,image/webp" />
+          </label>
+          <button type="button" class="ghost-btn session-btn" id="removeLogoBtn">
+            Quitar logo
+          </button>
+        </div>
+
+        <div class="sidebar-section">
+          <p class="section-label" data-ux-copy>Menú</p>
+          <nav class="quick-links main-nav">
+            <button type="button" class="nav-link is-active" data-page-target="home">
+              Inicio
+            </button>
+            <button type="button" class="nav-link" data-page-target="projection" hidden>
+              Proyección
+            </button>
+            <button type="button" class="nav-link" data-page-target="detail" hidden>
+              Detalle
+            </button>
+          </nav>
+        </div>
+
+        <div class="sidebar-section">
+          <p class="section-label" data-ux-copy>Plata hoy</p>
+          <div class="cash-floor-card">
+            <strong class="sidebar-live-cash" id="sidebarBalance">$0</strong>
+            <small id="sidebarHealth">Sin datos aún</small>
+            <label>
+              Mínimo seguro
+              <input
+                type="number"
+                id="cashFloorInput"
+                min="0"
+                step="any"
+                placeholder="Ej. 200000"
+              />
+            </label>
+            <small class="cash-floor-alert" id="cashFloorAlert">
+              Define tu mínimo seguro. Y te aviso.
+            </small>
+          </div>
+        </div>
+
+        <div class="sidebar-section sidebar-note">
+          <p class="section-label" data-ux-copy>Sesión</p>
+          <p id="userEmailLabel">-</p>
+          <button type="button" class="ghost-btn session-btn" id="logoutBtn">
+            Cerrar sesión
+          </button>
+        </div>
+      </aside>
+
+      <main class="dashboard">
+        <section
+          class="app-page is-active"
+          id="homePage"
+          data-app-page="home"
+          data-component="HomeScreen"
+        >
+          <section class="home-error-state" id="homeErrorState" data-ux-block data-ux-focus="primary" hidden>
+            <strong>Ups, no salió bien</strong>
+            <p id="homeErrorHint" hidden>No pudimos cargar tus datos. Reintenta.</p>
+            <button type="button" class="ghost-btn retry-state-btn" id="retryHomeBtn">
+              Reintentar
+            </button>
+          </section>
+
+          <section class="home-hero-panel" id="homeHeroPanel" data-ux-block data-ux-block-group="home">
+            <article class="home-balance-card" id="homeBalanceCard" data-ux-focus="primary">
+              <span class="home-card-kicker success">Posición disponible</span>
+              <small class="home-balance-intro">Hoy tienes</small>
+              <strong id="homeTodayCash">$0</strong>
+              <small id="homeTodayHint">Hoy tienes disponible</small>
+              <p class="home-progress-note" id="homeProgressNote" hidden></p>
+            </article>
+
+            <article
+              class="home-month-summary"
+              id="homeMonthEndCard"
+              data-ux-focus="secondary"
+            >
+              <span class="home-card-kicker warning">Próximos pagos</span>
+              <strong id="homeMonthEndCash">$0</strong>
+              <p class="home-month-line" id="homeMonthEndHint">Sin pagos pendientes</p>
+              <span class="home-month-status">
+                <span class="home-month-dot neutral" id="homeMonthEndDot" aria-hidden="true"></span>
+                <small id="homeMonthEndMeta">Todo al día</small>
+              </span>
+            </article>
+
+            <article
+              class="home-alert-card"
+              id="homeAdviceCard"
+              data-ux-focus="secondary"
+              data-component="InsightsPanel"
+            >
+              <div class="home-alert-copy">
+                <span class="home-alert-kicker" id="homeAdviceLabel">INFO</span>
+                <strong class="home-alert-title" id="homeAdviceTitle">
+                  Empieza con tu plata de hoy
+                </strong>
+                <p id="adviceText">Agrega tu primer ingreso o gasto para ver recomendaciones claras.</p>
+              </div>
+              <button type="button" class="home-alert-cta" id="homeAdviceActionBtn">
+                Agregar movimiento
+              </button>
+            </article>
+          </section>
+
+          <section class="home-quick-grid" id="homeQuickGrid" data-ux-block>
+            <button type="button" class="quick-action-card income" id="quickIncomeBtn">
+              <span class="quick-action-icon">+</span>
+              <span class="quick-action-text" id="quickIncomeLabel">Ingreso</span>
+            </button>
+            <button type="button" class="quick-action-card expense" id="quickExpenseBtn">
+              <span class="quick-action-icon">−</span>
+              <span class="quick-action-text" id="quickExpenseLabel">Gasto</span>
+            </button>
+            <button type="button" class="quick-action-card report" id="quickReportBtn">
+              <span class="quick-action-icon">&#128202;</span>
+              <span class="quick-action-text" id="quickReportLabel">Reportes</span>
+            </button>
+          </section>
+
+          <section class="home-today-panel" id="homeTodayPanel" data-ux-block>
+            <div class="home-today-header">
+              <p class="section-label" data-ux-copy>Hoy</p>
+            </div>
+            <div class="today-movement-list" id="todayMovementList"></div>
+          </section>
+
+          <section class="panel feature-unlock-panel" id="featureUnlockPanel" hidden>
+            <div class="panel-header">
+              <div>
+                <p class="section-label" data-ux-copy>Se activa con uso real</p>
+                <h3>Lo siguiente llega solo</h3>
+              </div>
+            </div>
+            <div class="feature-unlock-list" id="featureUnlockList"></div>
+          </section>
+        </section>
+
+        <section
+          class="app-page"
+          id="projectionPage"
+          data-app-page="projection"
+          data-component="ProjectionScreen"
+          hidden
+        >
+          <section class="projection-hero-panel" data-ux-block data-ux-block-group="projection">
+            <article class="projection-status-card" id="projectionStatusCard" data-ux-focus="primary">
+              <p class="section-label" data-ux-copy>A fin de mes tendrás</p>
+              <strong id="projectionMonthEndValue">$0</strong>
+              <p id="projectionAlertText">Aún no hay movimientos para proyectar.</p>
+            </article>
+
+            <article
+              class="projection-assistant-card"
+              data-ux-focus="secondary"
+              data-component="InsightsPanel"
+            >
+              <p class="section-label" data-ux-copy>Asistente financiero</p>
+              <h2>¿Te alcanza?</h2>
+              <ul id="tipsList" class="tips-list"></ul>
+            </article>
+          </section>
+
+          <section class="panel" data-ux-block>
+            <div class="panel-header">
+              <div>
+                <p class="section-label" data-ux-copy>Hoy → fin de mes</p>
+                <h3>Curva de dinero</h3>
+              </div>
+            </div>
+            <div class="money-curve-chart" id="moneyCurveChart"></div>
+          </section>
+
+          <section class="forecast-grid" data-ux-block>
+            <section class="panel forecast-panel">
+              <div class="panel-header">
+                <div>
+                  <p class="section-label" data-ux-copy>Lectura rápida</p>
+                  <h3>Así viene tu plata</h3>
+                </div>
+              </div>
+              <div id="forecastList" class="forecast-list"></div>
+            </section>
+
+            <section class="panel simulator-panel">
+              <div class="panel-header">
+                <div>
+                  <p class="section-label" data-ux-copy>Simulador</p>
+                  <h3>¿Qué pasa si...?</h3>
+                </div>
+              </div>
+
+              <div class="form-row">
+                <label>
+                  Tipo
+                  <select id="scenarioType">
+                    <option value="income">vendo</option>
+                    <option value="expense">gasto</option>
+                  </select>
+                </label>
+                <label>
+                  Monto
+                  <input type="number" id="scenarioAmount" min="0" step="any" placeholder="200000" />
+                </label>
+              </div>
+
+              <label class="projection-floor-label">
+                Mínimo seguro
+                <input
+                  type="number"
+                  id="projectionCashFloorInput"
+                  min="0"
+                  step="any"
+                  placeholder="Ej. 200000"
+                />
+              </label>
+
+              <button type="button" class="primary-btn" id="runScenarioBtn">Probar escenario</button>
+              <p class="scenario-result" id="scenarioResultText" data-ux-feedback="instant">
+                Simula una venta o un gasto y mira altiro el impacto.
+              </p>
+            </section>
+          </section>
+        </section>
+
+        <section class="app-page" id="detailPage" data-app-page="detail" hidden>
+          <section class="panel" data-ux-block data-ux-focus="primary">
+            <div class="panel-header panel-header-split">
+              <div>
+                <p class="section-label" data-ux-copy>Modo avanzado</p>
+                <h3>Detalle</h3>
+              </div>
+              <div class="detail-tabs">
+                <button type="button" class="detail-tab-btn is-active" data-detail-tab="summary">
+                  Resumen
+                </button>
+                <button type="button" class="detail-tab-btn" data-detail-tab="categories">
+                  Categorías
+                </button>
+                <button type="button" class="detail-tab-btn" data-detail-tab="history">
+                  Historial
+                </button>
+              </div>
+            </div>
+          </section>
+
+          <section class="detail-tab-panel is-active" data-detail-panel="summary">
+            <section class="hero-panel" data-ux-block data-ux-focus="secondary">
+              <div class="hero-copy">
+                <p class="eyebrow" data-ux-copy>Resumen de plata</p>
+                <h2>Una vista más completa sin saturar el inicio.</h2>
+                <p id="detailSummaryCopy">
+                  Mira ingresos, gastos y compromisos del mes con más contexto.
+                </p>
+              </div>
+
+              <div class="hero-metrics">
+                <article class="metric">
+                  <span>Ingresos del mes</span>
+                  <strong id="incomeTotal">$0</strong>
+                </article>
+                <article class="metric">
+                  <span>Gastos del mes</span>
+                  <strong id="expenseTotal">$0</strong>
+                </article>
+                <article class="metric">
+                  <span>Por cobrar</span>
+                  <strong id="receivableTotal">$0</strong>
+                </article>
+                <article class="metric">
+                  <span>Por pagar</span>
+                  <strong id="payableTotal">$0</strong>
+                </article>
+                <article class="metric accent">
+                  <span>Cómo vas este mes</span>
+                  <strong id="netTotal">$0</strong>
+                </article>
+              </div>
+            </section>
+
+            <section
+              class="panel insights-panel"
+              data-ux-block
+              data-ux-focus="secondary"
+              data-component="InsightsPanel"
+            >
+              <div class="panel-header">
+                <div>
+                  <p class="section-label" data-ux-copy>Lectura rápida</p>
+                  <h3>Señales importantes</h3>
+                </div>
+                <span class="pill" id="healthPill">Sin datos</span>
+              </div>
+
+              <div class="kpi-stack">
+                <div>
+                  <span>Gastos fijos detectados</span>
+                  <strong id="recurringCount">0 movimientos</strong>
+                </div>
+                <div>
+                  <span>Ticket promedio de ingreso</span>
+                  <strong id="avgIncome">$0</strong>
+                </div>
+                <div>
+                  <span>Categoría que más pesa</span>
+                  <strong id="topCategory">Sin movimientos</strong>
+                </div>
+                <div>
+                  <span>Compromiso próximos 30 días</span>
+                  <strong id="nextCommitment">$0</strong>
+                </div>
+              </div>
+            </section>
+
+            <section class="panel transaction-panel" id="monthly-summary">
+              <div class="panel-header">
+                <div>
+                  <p class="section-label">Vista mensual</p>
+                  <h3>Resumen por mes</h3>
+                </div>
+              </div>
+
+              <div class="monthly-chart-wrap">
+                <div class="mini-chart-header">
+                  <span>Gráfico mensual</span>
+                  <small>Ingresos, gastos y neto</small>
+                </div>
+                <div class="monthly-flow-chart" id="monthlyFlowChart"></div>
+              </div>
+
+              <div class="table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Mes</th>
+                      <th>Ingresos</th>
+                      <th>Gastos</th>
+                      <th>Por cobrar</th>
+                      <th>Por pagar</th>
+                      <th>Resultado</th>
+                    </tr>
+                  </thead>
+                  <tbody id="monthlySummaryTableBody"></tbody>
+                </table>
+              </div>
+            </section>
+          </section>
+
+          <section class="detail-tab-panel" data-detail-panel="categories" data-ux-progressive hidden>
+            <section class="panel">
+              <div class="panel-header">
+                <div>
+                  <p class="section-label">IVA y egresos</p>
+                  <h3>Categorías</h3>
+                </div>
+              </div>
+
+              <div class="hero-metrics detail-tax-grid">
+                <article class="metric">
+                  <span>IVA a pagar estimado</span>
+                  <strong id="monthlyVatTotal">$0</strong>
+                </article>
+                <article class="metric">
+                  <span>IVA a descontar estimado</span>
+                  <strong id="monthlyVatCreditTotal">$0</strong>
+                </article>
+              </div>
+
+              <div class="mini-chart">
+                <div class="mini-chart-header">
+                  <span>Distribución de gastos</span>
+                  <small>Por categoría</small>
+                </div>
+                <div id="expenseBreakdown" class="breakdown-list"></div>
+              </div>
+            </section>
+
+            <section class="ledger-grid">
+              <section class="panel" id="receivables">
+                  <div class="panel-header">
+                    <div>
+                      <p class="section-label">Cobranza</p>
+                      <h3>Cuentas por cobrar</h3>
+                    </div>
+                    <div class="panel-header-inline-actions">
+                      <button type="button" class="ghost-btn" id="openReceivableImportBtn">
+                        Importar Excel
+                      </button>
+                      <span class="pill warn" id="receivablePill">0 pendientes</span>
+                    </div>
+                  </div>
+
+                  <form id="receivableForm" class="transaction-form compact-form">
+                    <input type="hidden" name="receivableId" />
+
+                    <div class="form-row form-row-3">
+                      <label>
+                        Cliente
+                        <input type="text" name="client" placeholder="Ej. Tienda Rocio" required />
+                      </label>
+                      <label>
+                        Documento
+                        <input type="text" name="document" placeholder="OC-102 / Factura 33" required />
+                      </label>
+                      <label>
+                        Monto
+                        <input type="number" name="amount" min="0" step="any" required />
+                      </label>
+                    </div>
+                    <div class="form-row form-row-3">
+                      <label>
+                        Emisión
+                        <input type="date" name="issueDate" required />
+                      </label>
+                      <label>
+                        Vencimiento
+                        <input type="date" name="dueDate" required />
+                      </label>
+                      <label>
+                        Estado
+                        <select name="status" required>
+                          <option value="pending">Pendiente</option>
+                          <option value="partial">Abono parcial</option>
+                          <option value="paid">Pagada</option>
+                        </select>
+                      </label>
+                    </div>
+                    <div class="form-row partial-amount-field" id="receivablePartialField" hidden>
+                      <label>
+                        Abono
+                        <input
+                          type="number"
+                          name="pendingAmount"
+                          min="0"
+                          step="any"
+                          placeholder="Monto abonado"
+                        />
+                      </label>
+                    </div>
+
+                    <label>
+                      Nota
+                      <input
+                        type="text"
+                        name="note"
+                        placeholder="Escribe una nota breve"
+                        maxlength="120"
+                      />
+                    </label>
+
+                    <div class="form-actions">
+                      <button type="submit" class="primary-btn" id="saveReceivableBtn">
+                        Registrar cuenta por cobrar
+                      </button>
+                      <button type="button" class="ghost-btn" id="cancelReceivableEditBtn" hidden>
+                        Cancelar edición
+                      </button>
+                    </div>
+                  </form>
+
+                  <div class="table-wrap">
+                    <table>
+                      <thead>
+                        <tr>
+                          <th>Cliente</th>
+                          <th>Documento</th>
+                          <th>Vence</th>
+                          <th>Estado</th>
+                          <th>Monto total</th>
+                          <th>Abono</th>
+                          <th>Nota</th>
+                          <th>Acción</th>
+                        </tr>
+                      </thead>
+                      <tbody id="receivableTableBody"></tbody>
+                    </table>
+                  </div>
+              </section>
+
+              <section class="panel" id="payables">
+                  <div class="panel-header">
+                    <div>
+                      <p class="section-label">Obligaciones</p>
+                      <h3>Registro de facturas por pagar</h3>
+                    </div>
+                    <div class="panel-header-inline-actions">
+                      <button type="button" class="ghost-btn" id="openPayableImportBtn">
+                        Importar Excel
+                      </button>
+                      <span class="pill risk" id="payablePill">0 pendientes</span>
+                    </div>
+                  </div>
+
+                  <form id="payableForm" class="transaction-form compact-form">
+                    <input type="hidden" name="payableId" />
+
+                    <div class="form-row form-row-3">
+                      <label>
+                        Proveedor
+                        <input type="text" name="vendor" placeholder="Ej. Proveedor textil" required />
+                      </label>
+                      <label>
+                        Factura
+                        <input type="text" name="document" placeholder="F-8832" required />
+                      </label>
+                      <label>
+                        Monto
+                        <input type="number" name="amount" min="0" step="any" required />
+                      </label>
+                    </div>
+                    <div class="form-row form-row-3">
+                      <label>
+                        Emisión
+                        <input type="date" name="issueDate" required />
+                      </label>
+                      <label>
+                        Vencimiento
+                        <input type="date" name="dueDate" required />
+                      </label>
+                      <label>
+                        Estado
+                        <select name="status" required>
+                          <option value="pending">Pendiente</option>
+                          <option value="partial">Abono parcial</option>
+                          <option value="scheduled">Programada</option>
+                          <option value="paid">Pagada</option>
+                        </select>
+                      </label>
+                    </div>
+                    <div class="form-row partial-amount-field" id="payablePartialField" hidden>
+                      <label>
+                        Abono
+                        <input
+                          type="number"
+                          name="pendingAmount"
+                          min="0"
+                          step="any"
+                          placeholder="Monto abonado"
+                        />
+                      </label>
+                    </div>
+
+                    <label>
+                      Nota
+                      <input
+                        type="text"
+                        name="note"
+                        placeholder="Escribe una nota breve"
+                        maxlength="120"
+                      />
+                    </label>
+
+                    <div class="invoice-attachment-box">
+                      <div class="invoice-attachment-header">
+                        <div>
+                          <p class="section-label">Factura adjunta</p>
+                          <strong>Foto de la factura</strong>
+                        </div>
+                        <button type="button" class="ghost-btn" id="readInvoiceBtn">
+                          Leer factura
+                        </button>
+                      </div>
+
+                      <div class="invoice-upload-row">
+                        <label class="invoice-upload-btn">
+                          Subir foto
+                          <input
+                            type="file"
+                            name="invoicePhoto"
+                            id="invoicePhotoInput"
+                            accept="image/*"
+                          />
+                        </label>
+                        <button type="button" class="ghost-btn" id="removeInvoicePhotoBtn" hidden>
+                          Quitar foto
+                        </button>
+                      </div>
+
+                      <p class="invoice-read-status" id="invoiceReadStatus">
+                        Sube una foto nítida y presiona “Leer factura”.
+                      </p>
+                      <img
+                        class="invoice-preview"
+                        id="invoicePreview"
+                        alt="Vista previa de la factura"
+                        hidden
+                      />
+                    </div>
+
+                    <div class="form-actions">
+                      <button type="submit" class="primary-btn" id="savePayableBtn">
+                        Registrar factura por pagar
+                      </button>
+                      <button type="button" class="ghost-btn" id="cancelPayableEditBtn" hidden>
+                        Cancelar edición
+                      </button>
+                    </div>
+                  </form>
+
+                  <div class="table-wrap">
+                    <table>
+                      <thead>
+                        <tr>
+                          <th>Proveedor</th>
+                          <th>Factura</th>
+                          <th>Vence</th>
+                          <th>Estado</th>
+                          <th>Monto total</th>
+                          <th>Abono</th>
+                          <th>Nota</th>
+                          <th>Adjunto</th>
+                          <th>Acción</th>
+                        </tr>
+                      </thead>
+                      <tbody id="payableTableBody"></tbody>
+                    </table>
+                  </div>
+              </section>
+            </section>
+          </section>
+
+          <section class="detail-tab-panel" data-detail-panel="history" data-ux-progressive hidden>
+            <section class="panel transaction-panel" id="transactions">
+              <div class="panel-header">
+                <div>
+                  <p class="section-label">Historial</p>
+                  <h3>Movimientos</h3>
+                </div>
+              </div>
+
+              <div class="transaction-history-controls">
+                <div class="transaction-history-month">
+                  <label>
+                    Mes
+                    <input type="month" id="monthFilter" />
+                  </label>
+                </div>
+
+                <div class="transaction-history-actions">
+                  <button id="openStatementImportBtn" class="ghost-btn" type="button">
+                    Subir cartola
+                  </button>
+                  <button id="historyShowAllBtn" class="ghost-btn" type="button">
+                    Ver todo
+                  </button>
+                  <button id="exportExcelBtn" class="ghost-btn" type="button">
+                    Descargar Excel
+                  </button>
+                  <button id="exportPdfBtn" class="ghost-btn" type="button">
+                    Descargar PDF
+                  </button>
+                  <button id="resetDataBtn" class="ghost-btn transaction-history-action-full" type="button">
+                    Reiniciar en cero
+                  </button>
+                </div>
+              </div>
+
+              <div class="table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Fecha</th>
+                      <th>Concepto</th>
+                      <th>Categoría</th>
+                      <th>Método</th>
+                      <th>Nota</th>
+                      <th>Tipo</th>
+                      <th>Monto</th>
+                      <th>Acción</th>
+                    </tr>
+                  </thead>
+                  <tbody id="transactionTableBody"></tbody>
+                </table>
+              </div>
+            </section>
+
+            <section class="panel transaction-panel" id="historyReceivables">
+              <div class="panel-header panel-header-split">
+                <div>
+                  <p class="section-label">Historial</p>
+                  <h3>Cuentas por cobrar</h3>
+                </div>
+                <div class="filters">
+                  <label>
+                    Mes
+                    <input type="month" id="receivableMonthFilter" />
+                  </label>
+                  <button id="historyReceivableShowAllBtn" class="ghost-btn" type="button">
+                    Ver todo
+                  </button>
+                </div>
+              </div>
+
+              <div class="table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Cliente</th>
+                      <th>Documento</th>
+                      <th>Vence</th>
+                      <th>Estado</th>
+                      <th>Monto total</th>
+                      <th>Abono</th>
+                      <th>Nota</th>
+                      <th>Acción</th>
+                    </tr>
+                  </thead>
+                  <tbody id="historyReceivableTableBody"></tbody>
+                </table>
+              </div>
+            </section>
+
+            <section class="panel transaction-panel" id="historyPayables">
+              <div class="panel-header panel-header-split">
+                <div>
+                  <p class="section-label">Historial</p>
+                  <h3>Facturas por pagar</h3>
+                </div>
+                <div class="filters">
+                  <label>
+                    Mes
+                    <input type="month" id="payableMonthFilter" />
+                  </label>
+                  <button id="historyPayableShowAllBtn" class="ghost-btn" type="button">
+                    Ver todo
+                  </button>
+                </div>
+              </div>
+
+              <div class="history-month-summary" id="payableHistoryMonths"></div>
+
+              <div class="table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Proveedor</th>
+                      <th>Factura</th>
+                      <th>Vence</th>
+                      <th>Estado</th>
+                      <th>Monto total</th>
+                      <th>Abono</th>
+                      <th>Nota</th>
+                      <th>Adjunto</th>
+                      <th>Acción</th>
+                    </tr>
+                  </thead>
+                  <tbody id="historyPayableTableBody"></tbody>
+                </table>
+              </div>
+            </section>
+          </section>
+        </section>
+      </main>
+
+      <button type="button" class="floating-add-btn" id="openTransactionModalBtn">+</button>
+
+      <nav class="bottom-navigation" data-component="BottomNavigation">
+        <button type="button" class="bottom-nav-btn is-active" data-page-target="home">
+          <span>⌂</span>
+          Inicio
+        </button>
+        <button type="button" class="bottom-nav-btn" data-page-target="projection" hidden>
+          <span>↗</span>
+          Proyección
+        </button>
+        <button type="button" class="bottom-nav-btn" data-page-target="detail" hidden>
+          <span>☰</span>
+          Detalle
+        </button>
+      </nav>
+    </div>
+
+    <div
+      class="transaction-modal"
+      id="transactionModal"
+      data-component="AddTransactionModal"
+      hidden
+    >
+      <div class="transaction-modal-card" role="dialog" aria-modal="true" aria-labelledby="movementModalTitle">
+        <div class="transaction-modal-header">
+          <div>
+            <p class="section-label">Agregar movimiento</p>
+            <h3 id="movementModalTitle">Registra en 5 segundos</h3>
+          </div>
+          <button type="button" class="close-modal-btn" id="closeTransactionModalBtn">×</button>
+        </div>
+
+        <form id="transactionForm" class="transaction-form quick-movement-form">
+          <input type="hidden" name="transactionId" />
+
+          <label class="quick-amount-label">
+            <span class="quick-step-label">1. Monto</span>
+            <input
+              type="number"
+              name="amount"
+              min="0"
+              step="any"
+              placeholder="0"
+              inputmode="decimal"
+              enterkeyhint="done"
+              autocomplete="off"
+              class="quick-amount-input"
+              required
+            />
+          </label>
+
+          <section class="quick-type-panel" aria-label="Tipo de movimiento">
+            <p class="quick-step-label">2. Tipo</p>
+            <div class="quick-type-switch">
+              <button
+                type="button"
+                class="quick-type-btn is-active"
+                data-quick-type="income"
+                aria-pressed="true"
+              >
+                + Ingreso
+              </button>
+              <button
+                type="button"
+                class="quick-type-btn"
+                data-quick-type="expense"
+                aria-pressed="false"
+              >
+                − Gasto
+              </button>
+            </div>
+            <select name="type" class="quick-type-select quick-type-native" required tabindex="-1" aria-hidden="true">
+              <option value="income">Ingreso</option>
+              <option value="expense">Gasto</option>
+            </select>
+          </section>
+
+          <details class="movement-extra-details" id="movementExtraDetails" data-ux-progressive>
+            <summary>
+              <span class="quick-step-label">3. Opcionales</span>
+              <strong>Categoría, cuenta y nota</strong>
+            </summary>
+
+            <label>
+              Concepto
+              <input
+                type="text"
+                name="description"
+                placeholder="Ej. Venta Instagram"
+              />
+            </label>
+
+            <div class="form-row">
+              <label>
+                Categoría
+                <select name="category"></select>
+              </label>
+
+              <label>
+                Cuenta
+                <select name="channel">
+                  <option value="Transferencia">Transferencia</option>
+                  <option value="Efectivo">Efectivo</option>
+                  <option value="Tarjeta">Tarjeta</option>
+                  <option value="Mercado Pago">Mercado Pago</option>
+                </select>
+              </label>
+            </div>
+
+            <div class="custom-category-row">
+              <label class="custom-category-label">
+                Nueva categoría
+                <input
+                  type="text"
+                  id="customCategoryInput"
+                  placeholder="Ej. Comisiones"
+                  maxlength="40"
+                />
+              </label>
+
+              <button type="button" class="ghost-btn" id="addCustomCategoryBtn">
+                Agregar
+              </button>
+            </div>
+
+            <p class="custom-category-hint" id="customCategoryHint">
+              La guardamos para ingresos.
+            </p>
+
+            <label>
+              Nota
+              <input
+                type="text"
+                name="note"
+                placeholder="Nota corta"
+                maxlength="120"
+              />
+            </label>
+
+            <div class="form-row">
+              <label>
+                Fecha
+                <input type="date" name="date" required />
+              </label>
+
+              <label class="checkbox-row quick-recurring-row">
+                <input type="checkbox" name="recurring" />
+                <span>Recurrente</span>
+              </label>
+            </div>
+          </details>
+
+          <p class="movement-impact-text" id="movementImpactText" data-ux-feedback="instant"></p>
+
+          <div class="form-actions transaction-modal-actions">
+            <button type="submit" class="primary-btn transaction-save-btn" id="saveTransactionBtn">
+              Guardar movimiento
+            </button>
+            <div class="transaction-secondary-actions">
+              <button type="button" class="ghost-btn" id="repeatLastMovementBtn">
+                Repetir último
+              </button>
+              <button type="button" class="ghost-btn" id="cancelTransactionEditBtn" hidden>
+                Cancelar edición
+              </button>
+            </div>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <div class="statement-import-modal" id="statementImportModal" hidden>
+      <div
+        class="statement-import-card"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="statementImportTitle"
+      >
+        <div class="transaction-modal-header">
+          <div>
+            <p class="section-label">Subir archivo</p>
+            <h3 id="statementImportTitle">Sube tu cartola</h3>
+          </div>
+          <button type="button" class="close-modal-btn" id="closeStatementImportBtn">×</button>
+        </div>
+
+        <section class="statement-import-step" id="statementImportSelectStep">
+          <div class="statement-import-picker">
+            <button type="button" class="ghost-btn statement-import-picker-btn" id="openStatementFilePickerBtn">
+              Seleccionar archivo
+            </button>
+          </div>
+          <p class="statement-import-hint statement-import-hint--compact">
+            Formatos: PDF, Excel, CSV
+          </p>
+          <input
+            type="file"
+            id="statementImportInput"
+            accept=".pdf,.csv,.xlsx,.xls,application/pdf,text/csv,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            hidden
+          />
+        </section>
+
+        <section class="statement-import-step" id="statementImportProcessingStep" hidden>
+          <div class="statement-import-processing">
+            <div class="statement-import-spinner" aria-hidden="true"></div>
+            <div class="statement-import-processing-copy">
+              <p class="statement-import-state-label">Estado: procesando</p>
+              <strong>Estamos leyendo tu cartola…</strong>
+              <p id="statementImportProcessingCopy">
+                Esto puede tardar unos segundos.
+              </p>
+            </div>
+          </div>
+        </section>
+
+        <section class="statement-import-step" id="statementImportReviewStep" hidden>
+          <div class="statement-import-review-header">
+            <div>
+              <strong id="statementImportResultTitle">Encontramos 0 movimientos</strong>
+              <p id="statementImportResultHint">Revísalos antes de agregarlos.</p>
+            </div>
+            <button type="button" class="ghost-btn" id="statementImportReplaceFileBtn">
+              Cambiar archivo
+            </button>
+          </div>
+
+          <div class="statement-import-review-list" id="statementImportReviewList"></div>
+        </section>
+
+        <p class="statement-import-error" id="statementImportError" hidden></p>
+
+        <div class="transaction-modal-actions statement-import-actions">
+          <button type="button" class="ghost-btn" id="cancelStatementImportBtn">
+            Cancelar
+          </button>
+          <button type="button" class="primary-btn" id="confirmStatementImportBtn" hidden>
+            Agregar movimientos
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div class="statement-import-modal" id="receivableImportModal" hidden>
+      <div
+        class="statement-import-card"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="receivableImportTitle"
+      >
+        <div class="transaction-modal-header">
+          <div>
+            <p class="section-label">Importar cobranza</p>
+            <h3 id="receivableImportTitle">Sube tu Excel de cuentas por cobrar</h3>
+          </div>
+          <button type="button" class="close-modal-btn" id="closeReceivableImportBtn">×</button>
+        </div>
+
+        <section class="statement-import-step" id="receivableImportSelectStep">
+          <p class="statement-import-copy">
+            Sube tu Excel, revisa las cuentas detectadas y agrégalas de una sola vez.
+          </p>
+          <div class="statement-import-types">
+            <button type="button" class="ghost-btn" id="openReceivableExcelBtn">
+              Elegir Excel
+            </button>
+          </div>
+          <p class="statement-import-hint">
+            Puedes corregir cliente, documento, monto, emisión, vencimiento y estado antes de guardar.
+          </p>
+          <input
+            type="file"
+            id="receivableImportInput"
+            accept=".csv,.xlsx,.xls,text/csv,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            hidden
+          />
+        </section>
+
+        <section class="statement-import-step" id="receivableImportProcessingStep" hidden>
+          <div class="statement-import-processing">
+            <div class="statement-import-spinner" aria-hidden="true"></div>
+            <div>
+              <strong>Estamos leyendo tu Excel…</strong>
+              <p id="receivableImportProcessingCopy">
+                Esto puede tardar unos segundos.
+              </p>
+            </div>
+          </div>
+        </section>
+
+        <section class="statement-import-step" id="receivableImportReviewStep" hidden>
+          <div class="statement-import-review-header">
+            <div>
+              <strong id="receivableImportResultTitle">Encontramos 0 cuentas por cobrar</strong>
+              <p id="receivableImportResultHint">Revísalas antes de agregarlas.</p>
+            </div>
+            <button type="button" class="ghost-btn" id="receivableImportReplaceFileBtn">
+              Cambiar archivo
+            </button>
+          </div>
+
+          <div class="statement-import-review-list" id="receivableImportReviewList"></div>
+        </section>
+
+        <p class="statement-import-error" id="receivableImportError" hidden></p>
+
+        <div class="transaction-modal-actions statement-import-actions">
+          <button type="button" class="ghost-btn" id="cancelReceivableImportBtn">
+            Cancelar
+          </button>
+          <button type="button" class="primary-btn" id="confirmReceivableImportBtn" hidden>
+            Agregar cuentas por cobrar
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div class="statement-import-modal" id="payableImportModal" hidden>
+      <div
+        class="statement-import-card"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="payableImportTitle"
+      >
+        <div class="transaction-modal-header">
+          <div>
+            <p class="section-label">Importar obligaciones</p>
+            <h3 id="payableImportTitle">Sube tu Excel de facturas por pagar</h3>
+          </div>
+          <button type="button" class="close-modal-btn" id="closePayableImportBtn">×</button>
+        </div>
+
+        <section class="statement-import-step" id="payableImportSelectStep">
+          <p class="statement-import-copy">
+            Sube tu Excel, revisa las facturas detectadas y agrégalas de una sola vez.
+          </p>
+          <div class="statement-import-types">
+            <button type="button" class="ghost-btn" id="openPayableExcelBtn">
+              Elegir Excel
+            </button>
+          </div>
+          <p class="statement-import-hint">
+            Puedes corregir proveedor, factura, monto, emisión, vencimiento y estado antes de guardar.
+          </p>
+          <input
+            type="file"
+            id="payableImportInput"
+            accept=".csv,.xlsx,.xls,text/csv,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            hidden
+          />
+        </section>
+
+        <section class="statement-import-step" id="payableImportProcessingStep" hidden>
+          <div class="statement-import-processing">
+            <div class="statement-import-spinner" aria-hidden="true"></div>
+            <div>
+              <strong>Estamos leyendo tu Excel…</strong>
+              <p id="payableImportProcessingCopy">
+                Esto puede tardar unos segundos.
+              </p>
+            </div>
+          </div>
+        </section>
+
+        <section class="statement-import-step" id="payableImportReviewStep" hidden>
+          <div class="statement-import-review-header">
+            <div>
+              <strong id="payableImportResultTitle">Encontramos 0 facturas por pagar</strong>
+              <p id="payableImportResultHint">Revísalas antes de agregarlas.</p>
+            </div>
+            <button type="button" class="ghost-btn" id="payableImportReplaceFileBtn">
+              Cambiar archivo
+            </button>
+          </div>
+
+          <div class="statement-import-review-list" id="payableImportReviewList"></div>
+        </section>
+
+        <p class="statement-import-error" id="payableImportError" hidden></p>
+
+        <div class="transaction-modal-actions statement-import-actions">
+          <button type="button" class="ghost-btn" id="cancelPayableImportBtn">
+            Cancelar
+          </button>
+          <button type="button" class="primary-btn" id="confirmPayableImportBtn" hidden>
+            Agregar facturas por pagar
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div
+      class="ux-toast"
+      id="uxToast"
+      data-ux-feedback="instant"
+      role="status"
+      aria-live="polite"
+      aria-atomic="true"
+      hidden
+    ></div>
+
+    <div class="reset-modal" id="resetConfirmModal" hidden>
+      <div class="reset-modal-card" role="dialog" aria-modal="true" aria-labelledby="resetModalTitle">
+        <p class="section-label">Advertencia</p>
+        <h3 id="resetModalTitle">¿Reiniciar en cero?</h3>
+        <p class="reset-modal-copy">
+          Si borras los datos de esta cuenta, no se podrán rescatar después.
+        </p>
+        <div class="reset-modal-actions">
+          <button type="button" class="ghost-btn" id="cancelResetModalBtn">Cancelar</button>
+          <button type="button" class="danger-confirm-btn" id="confirmResetModalBtn">
+            Aceptar borrado
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js"></script>
+    <script src="./copy.js"></script>
+    <script src="./app.js"></script>
+  </body>
+</html>
