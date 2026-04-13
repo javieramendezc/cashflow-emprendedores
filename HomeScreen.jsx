@@ -3,18 +3,11 @@
 import { useEffect, useMemo, useState } from "react"
 import AddMovementModal from "./AddMovementModal"
 import { emitCashflowStateChange } from "./cashflowGlobalState"
+import { formatCurrency, formatCurrencySigned } from "./formatCurrency"
 
 const MOVEMENTS_KEY = "movements"
 const SAFE_MINIMUM_KEY = "safeMinimum"
 const FUTURE_MOVEMENTS_KEY = "futureMovements"
-
-function formatCurrency(value) {
-  return new Intl.NumberFormat("es-CL", {
-    style: "currency",
-    currency: "CLP",
-    maximumFractionDigits: 0,
-  }).format(Number(value) || 0)
-}
 
 function normalizeMovement(rawMovement) {
   const amount = Number(rawMovement?.amount)
@@ -30,7 +23,7 @@ function normalizeMovement(rawMovement) {
     type,
     label,
     amount,
-    date: rawMovement?.date || "Hoy",
+    date: rawMovement?.date || new Date().toISOString().slice(0, 10),
     createdAt: rawMovement?.createdAt || new Date().toISOString(),
   }
 }
@@ -173,8 +166,11 @@ export default function HomeScreen() {
   }, [money, remainingWeeks, safeToSpend, screenState])
 
   const todayMovements = useMemo(() => {
-    const explicitToday = movements.filter((movement) => movement.date === "Hoy")
-    const visibleMovements = explicitToday.length ? explicitToday : movements
+    const todayKey = new Date().toISOString().slice(0, 10)
+    const todayItems = movements.filter(
+      (movement) => movement.date === todayKey || movement.date === "Hoy"
+    )
+    const visibleMovements = todayItems.length ? todayItems : movements
     return visibleMovements.slice(0, 6)
   }, [movements])
 
@@ -272,7 +268,7 @@ export default function HomeScreen() {
       const movementToSave = normalizeMovement({
         id: Date.now(),
         ...newMovement,
-        date: "Hoy",
+        date: new Date().toISOString().slice(0, 10),
       })
 
       if (!movementToSave) {
@@ -395,8 +391,7 @@ export default function HomeScreen() {
                         : "shrink-0 text-[#111827]"
                     }
                   >
-                    {movement.type === "income" ? "+" : "-"}
-                    {formatCurrency(movement.amount)}
+                    {formatCurrencySigned(movement.amount, movement.type)}
                   </span>
                 </div>
               ))}

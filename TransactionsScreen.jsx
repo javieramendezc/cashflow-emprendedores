@@ -1,12 +1,12 @@
 "use client"
 
+import { formatCurrencySigned } from "./formatCurrency"
+
 const sampleTransactions = [
   { id: 1, name: "Uber", amount: -8000, time: "Hace 2 horas", date: "hoy" },
   { id: 2, name: "Venta", amount: 120000, time: "Ayer", date: "ayer" },
   { id: 3, name: "Cafe", amount: -2500, time: "Ayer", date: "ayer" },
 ];
-
-const formatCurrency = (amount) => `$${Math.abs(amount).toLocaleString("es-CL")}`;
 
 function getAverageTicket(transactions) {
   const validTransactions = transactions.filter((transaction) => Number(transaction.amount));
@@ -65,7 +65,7 @@ export default function TransactionsScreen({ transactions = sampleTransactions }
             {"\u26a0\ufe0f"} Este gasto impacta tu semana
           </p>
           <p className="text-sm text-gray-500">
-            {biggestExpense.name} {formatCurrency(biggestExpense.amount)}
+            {biggestExpense.name} {formatCurrencySigned(biggestExpense.amount, "expense")}
           </p>
         </div>
       ) : null}
@@ -101,8 +101,10 @@ function Section({ title, items, averageTicket }) {
                 transaction.amount > 0 ? "text-green-600" : "text-gray-900"
               }`}
             >
-              {transaction.amount > 0 ? "+" : "-"}
-              {formatCurrency(transaction.amount)}
+              {formatCurrencySigned(
+                transaction.amount,
+                transaction.amount > 0 ? "income" : "expense"
+              )}
             </p>
           </div>
         ))}

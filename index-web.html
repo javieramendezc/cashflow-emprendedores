@@ -12,316 +12,18 @@
     />
     <link rel="icon" type="image/png" href="" id="dynamicFavicon" />
     <link rel="stylesheet" href="./styles.css" />
-    <style>
-      :root {
-        --color-bg: #ffffff;
-        --color-surface: #f9fafb;
-        --color-text: #1a1a1a;
-        --color-muted: #4b5563;
-        --color-border: #e5e7eb;
-        --color-critical: #ff6b35;
-        --color-warning: #f59e0b;
-        --color-success: #16a34a;
-        --color-danger: #dc2626;
-        --color-info: #3b82f6;
-      }
-
-      * { box-sizing: border-box; }
-      body { background: var(--color-bg); color: var(--color-text); font-family: 'Inter', sans-serif; }
-
-      .app-header-minimal {
-        background: var(--color-bg);
-        border-bottom: 1px solid var(--color-border);
-        padding: 12px 16px;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        position: sticky;
-        top: 0;
-        z-index: 100;
-      }
-
-      .app-header-brand { display: flex; align-items: center; gap: 12px; }
-      .app-header-brand strong { font-size: 16px; font-weight: 700; }
-      .app-header-mark { width: 40px; height: 40px; border-radius: 8px; background: var(--color-surface); display: flex; align-items: center; justify-content: center; font-weight: 700; }
-
-      .primary-btn {
-        background: var(--color-critical);
-        color: white;
-        border: none;
-        padding: 6px 14px;
-        border-radius: 6px;
-        font-size: 12px;
-        font-weight: 600;
-        cursor: pointer;
-        transition: all 0.2s;
-      }
-
-      .primary-btn:hover { background: #e55a28; }
-
-      .sidebar {
-        background: var(--color-bg);
-        border-right: 1px solid var(--color-border);
-      }
-
-      .brand-block { padding: 20px; border-bottom: 1px solid var(--color-border); }
-      .brand-block h1 { font-size: 18px; margin: 8px 0 0 0; }
-
-      .nav-link {
-        background: none;
-        border: none;
-        color: var(--color-muted);
-        padding: 10px 16px;
-        border-radius: 6px;
-        cursor: pointer;
-        font-size: 13px;
-        font-weight: 500;
-        transition: all 0.2s;
-        width: 100%;
-        text-align: left;
-        margin: 4px 8px;
-      }
-
-      .nav-link:hover { background: var(--color-surface); color: var(--color-text); }
-      .nav-link.is-active { background: var(--color-critical); color: white; font-weight: 600; }
-
-      .dashboard { background: var(--color-bg); }
-      .app-page { padding: 20px; }
-
-      .home-hero-panel { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 20px; }
-
-      .home-balance-card {
-        background: #f0fdf4;
-        border: 1px solid #86efac;
-        border-radius: 8px;
-        padding: 16px;
-        text-align: center;
-      }
-
-      .home-balance-card strong {
-        font-size: 32px;
-        color: var(--color-success);
-        display: block;
-        margin-bottom: 8px;
-      }
-
-      .home-balance-card small { font-size: 11px; color: var(--color-muted); }
-
-      .home-month-summary {
-        background: #fef3c7;
-        border: 1px solid #fcd34d;
-        border-radius: 8px;
-        padding: 16px;
-        text-align: center;
-      }
-
-      .home-month-summary strong { color: var(--color-warning); font-size: 24px; display: block; margin-bottom: 8px; }
-
-      .home-alert-card {
-        background: linear-gradient(135deg, #fff5f3, #ffe8e0);
-        border-left: 4px solid var(--color-critical);
-        border-radius: 8px;
-        padding: 16px;
-        display: flex;
-        justify-content: space-between;
-        align-items: flex-start;
-        gap: 16px;
-      }
-
-      .home-alert-card strong { display: block; font-size: 14px; margin-bottom: 4px; }
-      .home-alert-card small { display: block; font-size: 10px; color: var(--color-critical); font-weight: 700; text-transform: uppercase; margin-bottom: 8px; }
-      .home-alert-card p { margin: 0; font-size: 12px; color: var(--color-muted); }
-
-      .home-alert-card button {
-        flex-shrink: 0;
-        background: var(--color-critical);
-        color: white;
-        border: none;
-        padding: 8px 16px;
-        border-radius: 6px;
-        cursor: pointer;
-        font-size: 11px;
-        font-weight: 700;
-        transition: all 0.2s;
-      }
-
-      .home-alert-card button:hover { background: #e55a28; }
-
-      .home-quick-grid {
-        display: grid;
-        grid-template-columns: repeat(3, 1fr);
-        gap: 12px;
-        margin-bottom: 20px;
-      }
-
-      .quick-action-card {
-        background: var(--color-bg);
-        border: 1px solid var(--color-border);
-        border-radius: 8px;
-        padding: 12px;
-        cursor: pointer;
-        transition: all 0.2s;
-        text-align: center;
-        font-size: 11px;
-        font-weight: 600;
-      }
-
-      .quick-action-card:hover { background: var(--color-surface); border-color: var(--color-muted); }
-      .quick-action-card.income:hover { border-color: var(--color-success); background: #f0fdf4; }
-      .quick-action-card.expense:hover { border-color: var(--color-danger); background: #fef2f2; }
-      .quick-action-card.report:hover { border-color: var(--color-info); background: #eff6ff; }
-
-      .quick-action-icon { display: block; font-size: 20px; margin-bottom: 4px; }
-
-      .ghost-btn {
-        background: var(--color-surface);
-        border: 1px solid var(--color-border);
-        color: var(--color-text);
-        padding: 8px 16px;
-        border-radius: 6px;
-        cursor: pointer;
-        font-size: 11px;
-        font-weight: 600;
-        transition: all 0.2s;
-      }
-
-      .ghost-btn:hover { background: #e5e7eb; }
-
-      .panel {
-        background: var(--color-bg);
-        border: 1px solid var(--color-border);
-        border-radius: 8px;
-        padding: 16px;
-        margin-bottom: 12px;
-      }
-
-      .panel-header { margin-bottom: 16px; }
-      .panel-header h3 { margin: 0; font-size: 16px; }
-      .section-label { font-size: 11px; color: var(--color-muted); text-transform: uppercase; margin: 0; letter-spacing: 0.5px; }
-
-      .home-today-panel { margin-bottom: 20px; }
-      .home-today-header { margin-bottom: 16px; }
-
-      .today-movement-list { display: flex; flex-direction: column; gap: 8px; }
-      .movement-item {
-        background: var(--color-surface);
-        border-radius: 8px;
-        padding: 12px;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-      }
-
-      .movement-item.income { border-left: 3px solid var(--color-success); }
-      .movement-item.expense { border-left: 3px solid var(--color-danger); }
-
-      .feature-unlock-panel { background: linear-gradient(135deg, #f0fdf4, #f0f9ff); border: 1px solid var(--color-border); border-radius: 8px; }
-      .feature-unlock-list { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
-      .feature-unlock-item { background: rgba(255,255,255,0.7); border-radius: 8px; padding: 12px; text-align: center; font-size: 12px; }
-
-      .projection-hero-panel { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px; }
-      .projection-status-card { background: #f0fdf4; border: 1px solid #86efac; border-radius: 8px; padding: 16px; }
-      .projection-status-card strong { font-size: 32px; color: var(--color-success); display: block; }
-
-      .projection-assistant-card { background: #eff6ff; border: 1px solid var(--color-info); border-radius: 8px; padding: 16px; }
-      .projection-assistant-card h2 { margin: 0; font-size: 18px; }
-
-      .money-curve-chart { height: 200px; margin-bottom: 16px; }
-
-      .forecast-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-bottom: 20px; }
-      .forecast-panel { background: var(--color-bg); border: 1px solid var(--color-border); border-radius: 8px; padding: 16px; }
-      .simulator-panel { background: var(--color-bg); border: 1px solid var(--color-border); border-radius: 8px; padding: 16px; }
-
-      .detail-tabs { display: flex; gap: 8px; }
-      .detail-tab-btn {
-        background: none;
-        border: 1px solid var(--color-border);
-        padding: 6px 12px;
-        border-radius: 4px;
-        font-size: 12px;
-        cursor: pointer;
-        transition: all 0.2s;
-      }
-
-      .detail-tab-btn.is-active { background: var(--color-critical); color: white; border-color: var(--color-critical); }
-      .detail-tab-btn:hover { background: var(--color-surface); }
-
-      input[type="email"], input[type="password"], input[type="number"], input[type="text"], select, textarea {
-        background: var(--color-surface);
-        border: 1px solid var(--color-border);
-        border-radius: 6px;
-        padding: 8px 12px;
-        font-size: 13px;
-        transition: all 0.2s;
-      }
-
-      input:focus, select:focus, textarea:focus {
-        outline: none;
-        border-color: var(--color-critical);
-        background: var(--color-bg);
-      }
-
-      label {
-        display: flex;
-        flex-direction: column;
-        gap: 4px;
-        font-size: 13px;
-        font-weight: 500;
-        margin-bottom: 12px;
-      }
-
-      .statement-import-modal { background: rgba(0, 0, 0, 0.45); }
-      .statement-import-card { background: var(--color-bg); border-radius: 8px; border: 1px solid var(--color-border); }
-      .transaction-modal-header { border-bottom: 1px solid var(--color-border); padding: 16px; }
-      .close-modal-btn { background: none; border: none; font-size: 24px; cursor: pointer; }
-
-      .auth-card { background: var(--color-bg); border-radius: 8px; border: 1px solid var(--color-border); padding: 24px; }
-      .eyebrow { font-size: 11px; color: var(--color-muted); text-transform: uppercase; margin: 0; }
-
-      .ux-toast {
-        background: var(--color-text);
-        color: white;
-        padding: 12px 16px;
-        border-radius: 6px;
-        font-size: 12px;
-        position: fixed;
-        bottom: 20px;
-        right: 20px;
-      }
-
-      .app-connection-banner {
-        background: linear-gradient(135deg, var(--color-warning-bg), #fef08a);
-        border-bottom: 1px solid var(--color-warning);
-        padding: 12px 16px;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-      }
-
-      .sidebar-section { padding: 16px; border-bottom: 1px solid var(--color-border); }
-      .cash-floor-card { background: var(--color-surface); border: 1px solid var(--color-border); border-radius: 8px; padding: 12px; }
-      .sidebar-live-cash { display: block; font-size: 20px; font-weight: 700; color: var(--color-critical); margin-bottom: 4px; }
-
-      @media (max-width: 1024px) {
-        .home-hero-panel { grid-template-columns: repeat(2, 1fr); }
-      }
-
-      @media (max-width: 768px) {
-        .home-hero-panel { grid-template-columns: 1fr; }
-        .home-alert-card { flex-direction: column; }
-        .home-alert-card button { width: 100%; }
-        .home-quick-grid { grid-template-columns: repeat(2, 1fr); }
-        .forecast-grid { grid-template-columns: 1fr; }
-        .projection-hero-panel { grid-template-columns: 1fr; }
-      }
-    </style>
   </head>
   <body>
     <section class="auth-screen" id="authScreen">
       <div class="auth-card">
-          <p class="eyebrow" data-ux-copy>Acceso privado</p>
+        <div class="auth-logo">
+          <div class="auth-mark">FC</div>
+          <span class="auth-logo-name">Flujo Claro</span>
+        </div>
+        <p class="auth-headline">Tu caja,<br /><em>sin estrés.</em></p>
+        <p class="eyebrow" data-ux-copy>Acceso privado</p>
         <h1>Entra a Flujo Claro</h1>
-          <p class="auth-copy" data-ux-copy>
+        <p class="auth-copy" data-ux-copy>
           Crea tu cuenta o inicia sesión para guardar tu plata en la nube y ver
           solo tu información.
         </p>
@@ -361,17 +63,25 @@
       <header class="app-header-minimal" data-component="AppHeader">
         <div class="app-header-brand">
           <span class="app-header-mark">
-            <img id="mobileBrandLogoPreview" alt="Logo" hidden />
+            <img id="mobileBrandLogoPreview" alt="Logo de la empresa" hidden />
             <span id="mobileBrandLogoFallback">FC</span>
           </span>
           <div>
-            <p class="section-label" data-ux-copy id="appHeaderScreenTitle">Posición</p>
+            <p class="section-label" data-ux-copy id="appHeaderScreenTitle">Dinero</p>
             <strong id="appHeaderCashValue">$0</strong>
           </div>
         </div>
-        <button type="button" class="primary-btn" id="mobileLogoutBtn">
-          Salir
-        </button>
+        <div class="app-header-actions">
+          <button type="button" class="header-action-btn" id="mobileMenuBtn" aria-expanded="false">
+            <span aria-hidden="true">⚙️</span>
+            <span>Menú</span>
+          </button>
+          <button type="button" class="header-action-btn header-alert-btn" id="mobileAlertsBtn" aria-expanded="false">
+            <span aria-hidden="true">🔔</span>
+            <span>Alertas</span>
+            <small class="header-alert-count" id="mobileAlertsCount" hidden>0</small>
+          </button>
+        </div>
       </header>
 
       <section class="app-connection-banner" id="connectionBanner" hidden>
@@ -384,10 +94,48 @@
         </button>
       </section>
 
+      <section class="mobile-header-panel" id="mobileMenuPanel" hidden>
+        <div class="mobile-header-panel-head">
+          <strong>Menú</strong>
+          <button type="button" class="mobile-header-panel-close" id="closeMobileMenuBtn">
+            Cerrar
+          </button>
+        </div>
+        <nav class="mobile-header-nav">
+          <button type="button" class="mobile-header-nav-link is-active" data-page-target="home">
+            Inicio
+          </button>
+          <button type="button" class="mobile-header-nav-link" data-page-target="projection" hidden>
+            Proyección
+          </button>
+          <button type="button" class="mobile-header-nav-link" data-page-target="detail" hidden>
+            Detalle
+          </button>
+        </nav>
+        <div class="mobile-header-panel-actions">
+          <button type="button" class="ghost-btn mobile-header-panel-btn" id="mobileMenuLogoutBtn">
+            Salir
+          </button>
+        </div>
+      </section>
+
+      <section class="mobile-header-panel" id="mobileAlertsPanel" hidden>
+        <div class="mobile-header-panel-head">
+          <div>
+            <strong>Alertas</strong>
+            <p id="mobileAlertsHint">Te mostramos lo importante de hoy.</p>
+          </div>
+          <button type="button" class="mobile-header-panel-close" id="closeMobileAlertsBtn">
+            Cerrar
+          </button>
+        </div>
+        <div class="mobile-alerts-list" id="mobileAlertsList"></div>
+      </section>
+
       <aside class="sidebar" data-component="DesktopSidebar">
         <div class="brand-block">
           <button type="button" class="brand-mark" id="logoSettingsToggle">
-            <img id="brandLogoPreview" alt="Logo" hidden />
+            <img id="brandLogoPreview" alt="Logo de la empresa" hidden />
             <span id="brandLogoFallback">FC</span>
           </button>
           <div>
@@ -519,7 +267,7 @@
               <span class="quick-action-text" id="quickExpenseLabel">Gasto</span>
             </button>
             <button type="button" class="quick-action-card report" id="quickReportBtn">
-              <span class="quick-action-icon">📊</span>
+              <span class="quick-action-icon">&#128202;</span>
               <span class="quick-action-text" id="quickReportLabel">Reportes</span>
             </button>
           </section>
@@ -649,8 +397,946 @@
               </div>
             </div>
           </section>
+
+          <section class="detail-tab-panel is-active" data-detail-panel="summary">
+            <section class="hero-panel" data-ux-block data-ux-focus="secondary">
+              <div class="hero-copy">
+                <p class="eyebrow" data-ux-copy>Resumen de plata</p>
+                <p id="detailSummaryCopy">
+                  Mira ingresos, gastos y compromisos del mes con más contexto.
+                </p>
+              </div>
+
+              <div class="hero-metrics">
+                <article class="metric">
+                  <span>Ingresos del mes</span>
+                  <strong id="incomeTotal">$0</strong>
+                </article>
+                <article class="metric">
+                  <span>Gastos del mes</span>
+                  <strong id="expenseTotal">$0</strong>
+                </article>
+                <article class="metric">
+                  <span>Por cobrar</span>
+                  <strong id="receivableTotal">$0</strong>
+                </article>
+                <article class="metric">
+                  <span>Por pagar</span>
+                  <strong id="payableTotal">$0</strong>
+                </article>
+                <article class="metric accent">
+                  <span>Cómo vas este mes</span>
+                  <strong id="netTotal">$0</strong>
+                </article>
+              </div>
+            </section>
+
+            <section
+              class="panel insights-panel"
+              data-ux-block
+              data-ux-focus="secondary"
+              data-component="InsightsPanel"
+            >
+              <div class="panel-header">
+                <div>
+                  <p class="section-label" data-ux-copy>Lectura rápida</p>
+                  <h3>Señales importantes</h3>
+                </div>
+                <span class="pill" id="healthPill">Sin datos</span>
+              </div>
+
+              <div class="kpi-stack">
+                <div>
+                  <span>Gastos fijos detectados</span>
+                  <strong id="recurringCount">0 movimientos</strong>
+                </div>
+                <div>
+                  <span>Ticket promedio de ingreso</span>
+                  <strong id="avgIncome">$0</strong>
+                </div>
+                <div>
+                  <span>Categoría que más pesa</span>
+                  <strong id="topCategory">Sin movimientos</strong>
+                </div>
+                <div>
+                  <span>Compromiso próximos 30 días</span>
+                  <strong id="nextCommitment">$0</strong>
+                </div>
+              </div>
+            </section>
+
+            <section class="panel transaction-panel" id="monthly-summary">
+              <div class="panel-header">
+                <div>
+                  <p class="section-label">Vista mensual</p>
+                  <h3>Resumen por mes</h3>
+                </div>
+              </div>
+
+              <div class="monthly-chart-wrap">
+                <div class="mini-chart-header">
+                  <span>Gráfico mensual</span>
+                  <small>Ingresos, gastos y neto</small>
+                </div>
+                <div class="monthly-flow-chart" id="monthlyFlowChart"></div>
+              </div>
+
+              <div class="table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Mes</th>
+                      <th>Ingresos</th>
+                      <th>Gastos</th>
+                      <th>Por cobrar</th>
+                      <th>Por pagar</th>
+                      <th>Resultado</th>
+                    </tr>
+                  </thead>
+                  <tbody id="monthlySummaryTableBody"></tbody>
+                </table>
+              </div>
+            </section>
+          </section>
+
+          <section class="detail-tab-panel" data-detail-panel="categories" data-ux-progressive hidden>
+            <section class="panel">
+              <div class="panel-header">
+                <div>
+                  <p class="section-label">IVA y egresos</p>
+                  <h3>Categorías</h3>
+                </div>
+              </div>
+
+              <div class="hero-metrics detail-tax-grid">
+                <article class="metric">
+                  <span>IVA a pagar estimado</span>
+                  <strong id="monthlyVatTotal">$0</strong>
+                </article>
+                <article class="metric">
+                  <span>IVA a descontar estimado</span>
+                  <strong id="monthlyVatCreditTotal">$0</strong>
+                </article>
+              </div>
+
+              <div class="mini-chart">
+                <div class="mini-chart-header">
+                  <span>Distribución de gastos</span>
+                  <small>Por categoría</small>
+                </div>
+                <div id="expenseBreakdown" class="breakdown-list"></div>
+              </div>
+            </section>
+
+            <section class="ledger-grid">
+              <section class="panel" id="receivables">
+                  <div class="panel-header">
+                    <div>
+                      <p class="section-label">Cobranza</p>
+                      <h3>Cuentas por cobrar</h3>
+                    </div>
+                    <div class="panel-header-inline-actions ledger-panel-controls">
+                      <button type="button" class="ghost-btn" id="openReceivableImportBtn">
+                        Importar Excel
+                      </button>
+                      <span class="pill warn" id="receivablePill">0 pendientes</span>
+                      <label class="ledger-sort-label" for="receivableSortSelect">
+                        <span>Ordenar</span>
+                        <select id="receivableSortSelect" class="ledger-sort-select">
+                          <option value="date">Por fecha</option>
+                          <option value="pending">Pendientes primero</option>
+                          <option value="paid">Pagadas primero</option>
+                        </select>
+                      </label>
+                      <button
+                        type="button"
+                        class="ghost-btn panel-collapse-btn"
+                        id="toggleReceivablePanelBtn"
+                        aria-expanded="true"
+                        aria-controls="receivablePanelBody"
+                      >
+                        Cerrar
+                      </button>
+                    </div>
+                  </div>
+
+                  <div class="ledger-panel-body" id="receivablePanelBody">
+                    <form id="receivableForm" class="transaction-form compact-form">
+                      <input type="hidden" name="receivableId" />
+
+                      <div class="form-row form-row-3 payable-form-primary-row">
+                        <label>
+                          Cliente
+                          <input type="text" name="client" placeholder="Ej. Tienda Rocio" required />
+                        </label>
+                        <label>
+                          Documento
+                          <input type="text" name="document" placeholder="OC-102 / Factura 33" required />
+                        </label>
+                        <label>
+                          Monto
+                          <input type="number" name="amount" min="0" step="any" required />
+                        </label>
+                      </div>
+                      <div class="form-row form-row-3">
+                        <label>
+                          Emisión
+                          <input type="date" name="issueDate" required />
+                        </label>
+                        <label>
+                          Vencimiento
+                          <input type="date" name="dueDate" required />
+                        </label>
+                        <label>
+                          Estado
+                          <select name="status" required>
+                            <option value="pending">Pendiente</option>
+                            <option value="partial">Abono parcial</option>
+                            <option value="paid">Pagada</option>
+                          </select>
+                        </label>
+                      </div>
+                      <div class="form-row partial-amount-field" id="receivablePartialField" hidden>
+                        <label>
+                          Abono
+                          <input
+                            type="number"
+                            name="pendingAmount"
+                            min="0"
+                            step="any"
+                            placeholder="Monto abonado"
+                          />
+                        </label>
+                      </div>
+
+                      <label>
+                        Nota
+                        <input
+                          type="text"
+                          name="note"
+                          placeholder="Escribe una nota breve"
+                          maxlength="120"
+                        />
+                      </label>
+
+                      <div class="form-actions">
+                        <button type="submit" class="primary-btn" id="saveReceivableBtn">
+                          Registrar cuenta por cobrar
+                        </button>
+                        <button type="button" class="ghost-btn" id="cancelReceivableEditBtn" hidden>
+                          Cancelar edición
+                        </button>
+                      </div>
+                    </form>
+
+                    <div class="table-wrap">
+                      <table>
+                        <thead>
+                          <tr>
+                            <th>Cliente</th>
+                            <th>Documento</th>
+                            <th>Vence</th>
+                            <th>Estado</th>
+                            <th>Monto total</th>
+                            <th>Abono</th>
+                            <th>Nota</th>
+                            <th>Acción</th>
+                          </tr>
+                        </thead>
+                        <tbody id="receivableTableBody"></tbody>
+                      </table>
+                    </div>
+                  </div>
+              </section>
+
+              <section class="panel" id="payables">
+                  <div class="panel-header">
+                    <div>
+                      <p class="section-label">Obligaciones</p>
+                      <h3>Registro de facturas por pagar</h3>
+                    </div>
+                    <div class="panel-header-inline-actions ledger-panel-controls">
+                      <button type="button" class="ghost-btn" id="openPayableImportBtn">
+                        Importar Excel
+                      </button>
+                      <span class="pill risk" id="payablePill">0 pendientes</span>
+                      <label class="ledger-sort-label" for="payableSortSelect">
+                        <span>Ordenar</span>
+                        <select id="payableSortSelect" class="ledger-sort-select">
+                          <option value="date">Por fecha</option>
+                          <option value="pending">Pendientes primero</option>
+                          <option value="paid">Pagadas primero</option>
+                        </select>
+                      </label>
+                      <button
+                        type="button"
+                        class="ghost-btn panel-collapse-btn"
+                        id="togglePayablePanelBtn"
+                        aria-expanded="true"
+                        aria-controls="payablePanelBody"
+                      >
+                        Cerrar
+                      </button>
+                    </div>
+                  </div>
+
+                  <div class="ledger-panel-body" id="payablePanelBody">
+                    <form id="payableForm" class="transaction-form compact-form">
+                      <input type="hidden" name="payableId" />
+
+                      <div class="form-row form-row-3">
+                        <label>
+                          Proveedor
+                          <input type="text" name="vendor" placeholder="Ej. Proveedor textil" required />
+                        </label>
+                        <label>
+                          Factura
+                          <input type="text" name="document" placeholder="F-8832" required />
+                        </label>
+                        <label>
+                          Monto
+                          <input type="number" name="amount" min="0" step="any" required />
+                        </label>
+                      </div>
+                      <div class="form-row form-row-3">
+                        <label>
+                          Emisión
+                          <input type="date" name="issueDate" required />
+                        </label>
+                        <label>
+                          Vencimiento
+                          <input type="date" name="dueDate" required />
+                        </label>
+                        <label>
+                          Estado
+                          <select name="status" required>
+                            <option value="pending">Pendiente</option>
+                            <option value="partial">Abono parcial</option>
+                            <option value="scheduled">Programada</option>
+                            <option value="paid">Pagada</option>
+                          </select>
+                        </label>
+                      </div>
+                      <div class="form-row partial-amount-field" id="payablePartialField" hidden>
+                        <label>
+                          Abono
+                          <input
+                            type="number"
+                            name="pendingAmount"
+                            min="0"
+                            step="any"
+                            placeholder="Monto abonado"
+                          />
+                        </label>
+                      </div>
+
+                      <label>
+                        Nota
+                        <input
+                          type="text"
+                          name="note"
+                          placeholder="Escribe una nota breve"
+                          maxlength="120"
+                        />
+                      </label>
+
+                      <div class="invoice-attachment-box">
+                        <div class="invoice-attachment-header">
+                          <div>
+                            <p class="section-label">Factura adjunta</p>
+                            <strong>Foto de la factura</strong>
+                          </div>
+                          <button type="button" class="ghost-btn" id="readInvoiceBtn">
+                            Leer factura
+                          </button>
+                        </div>
+
+                        <div class="invoice-upload-row">
+                          <label class="invoice-upload-btn">
+                            Subir foto
+                            <input
+                              type="file"
+                              name="invoicePhoto"
+                              id="invoicePhotoInput"
+                              accept="image/*"
+                            />
+                          </label>
+                          <button type="button" class="ghost-btn" id="removeInvoicePhotoBtn" hidden>
+                            Quitar foto
+                          </button>
+                        </div>
+
+                        <p class="invoice-read-status" id="invoiceReadStatus">
+                          Sube una foto nítida y presiona “Leer factura”.
+                        </p>
+                        <img
+                          class="invoice-preview"
+                          id="invoicePreview"
+                          alt="Vista previa de la factura"
+                          hidden
+                        />
+                      </div>
+
+                      <div class="form-actions">
+                        <button type="submit" class="primary-btn" id="savePayableBtn">
+                          Registrar factura por pagar
+                        </button>
+                        <button type="button" class="ghost-btn" id="cancelPayableEditBtn" hidden>
+                          Cancelar edición
+                        </button>
+                      </div>
+                    </form>
+
+                    <div class="table-wrap">
+                      <table>
+                        <thead>
+                          <tr>
+                            <th>Proveedor</th>
+                            <th>Factura</th>
+                            <th>Vence</th>
+                            <th>Estado</th>
+                            <th>Monto total</th>
+                            <th>Abono</th>
+                            <th>Nota</th>
+                            <th>Adjunto</th>
+                            <th>Acción</th>
+                          </tr>
+                        </thead>
+                        <tbody id="payableTableBody"></tbody>
+                      </table>
+                    </div>
+                  </div>
+              </section>
+            </section>
+          </section>
+
+          <section class="detail-tab-panel" data-detail-panel="history" data-ux-progressive hidden>
+            <section class="panel transaction-panel" id="transactions">
+              <div class="panel-header">
+                <div>
+                  <p class="section-label">Historial</p>
+                  <h3>Movimientos</h3>
+                </div>
+              </div>
+
+              <div class="history-accordion-list">
+                <section class="history-accordion-item">
+                  <button
+                    type="button"
+                    class="history-accordion-toggle"
+                    id="historyTransactionsControlsToggle"
+                    aria-expanded="false"
+                    aria-controls="historyTransactionsControlsBody"
+                  >
+                    <span class="history-accordion-copy">
+                      <span class="history-accordion-kicker">Bloque</span>
+                      <strong>Buscar y filtrar</strong>
+                      <small>Busca movimientos y ajusta el mes visible.</small>
+                    </span>
+                    <span class="history-accordion-indicator" aria-hidden="true"></span>
+                  </button>
+                  <div
+                    class="history-accordion-body"
+                    id="historyTransactionsControlsBody"
+                    role="region"
+                    aria-labelledby="historyTransactionsControlsToggle"
+                    aria-hidden="true"
+                  >
+                    <div class="history-accordion-body-inner">
+                      <div class="transaction-history-controls">
+                        <div class="history-ledger-search">
+                          <label>
+                            Buscar
+                            <input
+                              type="search"
+                              id="transactionSearchInput"
+                              placeholder="Fecha, concepto, categoría o nota"
+                            />
+                          </label>
+                        </div>
+                        <div class="transaction-history-month">
+                          <label>
+                            Mes
+                            <input type="month" id="monthFilter" />
+                          </label>
+                        </div>
+
+                        <div class="transaction-history-actions">
+                          <button id="openStatementImportBtn" class="ghost-btn" type="button">
+                            Subir cartola
+                          </button>
+                          <button id="historyShowAllBtn" class="ghost-btn" type="button">
+                            Ver todo
+                          </button>
+                          <button id="exportExcelBtn" class="ghost-btn" type="button">
+                            Descargar Excel
+                          </button>
+                          <button id="exportPdfBtn" class="ghost-btn" type="button">
+                            Descargar PDF
+                          </button>
+                          <button id="resetDataBtn" class="ghost-btn transaction-history-action-full" type="button">
+                            Reiniciar en cero
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </section>
+
+                <section class="history-accordion-item">
+                  <button
+                    type="button"
+                    class="history-accordion-toggle"
+                    id="historyTransactionsTableToggle"
+                    aria-expanded="false"
+                    aria-controls="historyTransactionsTableRegion"
+                  >
+                    <span class="history-accordion-copy">
+                      <span class="history-accordion-kicker">Bloque</span>
+                      <strong>Listado de movimientos</strong>
+                      <small>Abre la tabla completa con detalle y acciones.</small>
+                    </span>
+                    <span class="history-accordion-indicator" aria-hidden="true"></span>
+                  </button>
+                  <div
+                    class="history-accordion-body"
+                    id="historyTransactionsTableRegion"
+                    role="region"
+                    aria-labelledby="historyTransactionsTableToggle"
+                    aria-hidden="true"
+                  >
+                    <div class="history-accordion-body-inner">
+                      <div class="table-wrap">
+                        <table>
+                          <thead>
+                            <tr>
+                              <th>Fecha</th>
+                              <th>Concepto</th>
+                              <th>Categoría</th>
+                              <th>Método</th>
+                              <th>Nota</th>
+                              <th>Tipo</th>
+                              <th>Monto</th>
+                              <th>Acción</th>
+                            </tr>
+                          </thead>
+                          <tbody id="transactionTableBody"></tbody>
+                        </table>
+                      </div>
+                    </div>
+                  </div>
+                </section>
+              </div>
+            </section>
+
+            <section class="panel transaction-panel" id="historyReceivables">
+              <div class="panel-header panel-header-split">
+                <div>
+                  <p class="section-label">Historial</p>
+                  <h3>Cuentas por cobrar</h3>
+                </div>
+              </div>
+
+              <div class="history-accordion-list">
+                <section class="history-accordion-item">
+                  <button
+                    type="button"
+                    class="history-accordion-toggle"
+                    id="historyReceivablesFiltersToggle"
+                    aria-expanded="false"
+                    aria-controls="historyReceivablesFiltersBody"
+                  >
+                    <span class="history-accordion-copy">
+                      <span class="history-accordion-kicker">Bloque</span>
+                      <strong>Buscar y filtrar</strong>
+                      <small>Busca cuentas por cobrar y ajusta el mes visible.</small>
+                    </span>
+                    <span class="history-accordion-indicator" aria-hidden="true"></span>
+                  </button>
+                  <div
+                    class="history-accordion-body"
+                    id="historyReceivablesFiltersBody"
+                    role="region"
+                    aria-labelledby="historyReceivablesFiltersToggle"
+                    aria-hidden="true"
+                  >
+                    <div class="history-accordion-body-inner">
+                      <div class="history-ledger-controls">
+                        <div class="history-ledger-search">
+                          <label>
+                            Buscar
+                            <input
+                              type="search"
+                              id="receivableSearchInput"
+                              placeholder="Cliente, documento o nota"
+                            />
+                          </label>
+                        </div>
+                        <div class="filters history-ledger-filters">
+                          <label>
+                            Mes
+                            <input type="month" id="receivableMonthFilter" />
+                          </label>
+                          <button id="historyReceivableShowAllBtn" class="ghost-btn" type="button">
+                            Ver todo
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </section>
+
+                <section class="history-accordion-item">
+                  <button
+                    type="button"
+                    class="history-accordion-toggle"
+                    id="historyReceivablesTableToggle"
+                    aria-expanded="false"
+                    aria-controls="historyReceivablesTableRegion"
+                  >
+                    <span class="history-accordion-copy">
+                      <span class="history-accordion-kicker">Bloque</span>
+                      <strong>Listado de cuentas por cobrar</strong>
+                      <small>Abre la tabla completa con estados y acciones.</small>
+                    </span>
+                    <span class="history-accordion-indicator" aria-hidden="true"></span>
+                  </button>
+                  <div
+                    class="history-accordion-body"
+                    id="historyReceivablesTableRegion"
+                    role="region"
+                    aria-labelledby="historyReceivablesTableToggle"
+                    aria-hidden="true"
+                  >
+                    <div class="history-accordion-body-inner">
+                      <div class="table-wrap">
+                        <table>
+                          <thead>
+                            <tr>
+                              <th>Cliente</th>
+                              <th>Documento</th>
+                              <th>Vence</th>
+                              <th>Estado</th>
+                              <th>Monto total</th>
+                              <th>Abono</th>
+                              <th>Nota</th>
+                              <th>Acción</th>
+                            </tr>
+                          </thead>
+                          <tbody id="historyReceivableTableBody"></tbody>
+                        </table>
+                      </div>
+                    </div>
+                  </div>
+                </section>
+              </div>
+            </section>
+
+            <section class="panel transaction-panel" id="historyPayables">
+              <div class="panel-header panel-header-split">
+                <div>
+                  <p class="section-label">Historial</p>
+                  <h3>Facturas por pagar</h3>
+                </div>
+              </div>
+
+              <div class="history-accordion-list">
+                <section class="history-accordion-item">
+                  <button
+                    type="button"
+                    class="history-accordion-toggle"
+                    id="historyPayablesFiltersToggle"
+                    aria-expanded="false"
+                    aria-controls="historyPayablesFiltersBody"
+                  >
+                    <span class="history-accordion-copy">
+                      <span class="history-accordion-kicker">Bloque</span>
+                      <strong>Buscar y filtrar</strong>
+                      <small>Busca facturas y ajusta el mes visible.</small>
+                    </span>
+                    <span class="history-accordion-indicator" aria-hidden="true"></span>
+                  </button>
+                  <div
+                    class="history-accordion-body"
+                    id="historyPayablesFiltersBody"
+                    role="region"
+                    aria-labelledby="historyPayablesFiltersToggle"
+                    aria-hidden="true"
+                  >
+                    <div class="history-accordion-body-inner">
+                      <div class="history-ledger-controls">
+                        <div class="history-ledger-search">
+                          <label>
+                            Buscar factura
+                            <input
+                              type="search"
+                              id="payableSearchInput"
+                              placeholder="Proveedor, factura o nota"
+                            />
+                          </label>
+                        </div>
+                        <div class="filters history-ledger-filters">
+                          <label>
+                            Mes
+                            <input type="month" id="payableMonthFilter" />
+                          </label>
+                          <button id="historyPayableShowAllBtn" class="ghost-btn" type="button">
+                            Ver todo
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </section>
+
+                <section class="history-accordion-item">
+                  <button
+                    type="button"
+                    class="history-accordion-toggle"
+                    id="historyPayablesSummaryToggle"
+                    aria-expanded="false"
+                    aria-controls="historyPayablesSummaryBody"
+                  >
+                    <span class="history-accordion-copy">
+                      <span class="history-accordion-kicker">Bloque</span>
+                      <strong>Resumen por mes</strong>
+                      <small>Revisa volumen, pendientes y total por cada mes.</small>
+                    </span>
+                    <span class="history-accordion-indicator" aria-hidden="true"></span>
+                  </button>
+                  <div
+                    class="history-accordion-body"
+                    id="historyPayablesSummaryBody"
+                    role="region"
+                    aria-labelledby="historyPayablesSummaryToggle"
+                    aria-hidden="true"
+                  >
+                    <div class="history-accordion-body-inner">
+                      <div class="history-month-summary" id="payableHistoryMonths"></div>
+                    </div>
+                  </div>
+                </section>
+
+                <section class="history-accordion-item">
+                  <button
+                    type="button"
+                    class="history-accordion-toggle"
+                    id="historyPayablesTableToggle"
+                    aria-expanded="false"
+                    aria-controls="historyPayablesTableRegion"
+                  >
+                    <span class="history-accordion-copy">
+                      <span class="history-accordion-kicker">Bloque</span>
+                      <strong>Listado de facturas</strong>
+                      <small>Abre la tabla completa con acciones y adjuntos.</small>
+                    </span>
+                    <span class="history-accordion-indicator" aria-hidden="true"></span>
+                  </button>
+                  <div
+                    class="history-accordion-body"
+                    id="historyPayablesTableRegion"
+                    role="region"
+                    aria-labelledby="historyPayablesTableToggle"
+                    aria-hidden="true"
+                  >
+                    <div class="history-accordion-body-inner">
+                      <div class="table-wrap">
+                        <table>
+                          <thead>
+                            <tr>
+                              <th>Proveedor</th>
+                              <th>Factura</th>
+                              <th>Vence</th>
+                              <th>Estado</th>
+                              <th>Monto total</th>
+                              <th>Abono</th>
+                              <th>Nota</th>
+                              <th>Adjunto</th>
+                              <th>Acción</th>
+                            </tr>
+                          </thead>
+                          <tbody id="historyPayableTableBody"></tbody>
+                        </table>
+                      </div>
+                    </div>
+                  </div>
+                </section>
+              </div>
+            </section>
+          </section>
         </section>
       </main>
+
+      <button type="button" class="floating-add-btn" id="openTransactionModalBtn">+</button>
+
+      <nav class="bottom-navigation" data-component="BottomNavigation">
+        <button type="button" class="bottom-nav-btn is-active" data-page-target="home">
+          <span>⌂</span>
+          Inicio
+        </button>
+        <button type="button" class="bottom-nav-btn" data-page-target="projection" hidden>
+          <span>↗</span>
+          Proyección
+        </button>
+        <button type="button" class="bottom-nav-btn" data-page-target="detail" hidden>
+          <span>☰</span>
+          Detalle
+        </button>
+      </nav>
+    </div>
+
+    <div
+      class="transaction-modal"
+      id="transactionModal"
+      data-component="AddTransactionModal"
+      hidden
+    >
+      <div class="transaction-modal-card" role="dialog" aria-modal="true" aria-labelledby="movementModalTitle">
+        <div class="transaction-modal-header">
+          <div>
+            <p class="section-label">Agregar movimiento</p>
+            <h3 id="movementModalTitle">Registra en 5 segundos</h3>
+          </div>
+          <button type="button" class="close-modal-btn" id="closeTransactionModalBtn">×</button>
+        </div>
+
+        <form id="transactionForm" class="transaction-form quick-movement-form">
+          <input type="hidden" name="transactionId" />
+
+          <label class="quick-amount-label">
+            <span class="quick-step-label">1. Monto</span>
+            <input
+              type="number"
+              name="amount"
+              min="0"
+              step="any"
+              placeholder="0"
+              inputmode="decimal"
+              enterkeyhint="done"
+              autocomplete="off"
+              class="quick-amount-input"
+              required
+            />
+          </label>
+
+          <section class="quick-type-panel" aria-label="Tipo de movimiento">
+            <p class="quick-step-label">2. Tipo</p>
+            <div class="quick-type-switch">
+              <button
+                type="button"
+                class="quick-type-btn is-active"
+                data-quick-type="income"
+                aria-pressed="true"
+              >
+                + Ingreso
+              </button>
+              <button
+                type="button"
+                class="quick-type-btn"
+                data-quick-type="expense"
+                aria-pressed="false"
+              >
+                − Gasto
+              </button>
+            </div>
+            <select name="type" class="quick-type-select quick-type-native" required tabindex="-1" aria-hidden="true">
+              <option value="income">Ingreso</option>
+              <option value="expense">Gasto</option>
+            </select>
+          </section>
+
+          <details class="movement-extra-details" id="movementExtraDetails" data-ux-progressive>
+            <summary>
+              <span class="quick-step-label">3. Opcionales</span>
+              <strong>Categoría, cuenta y nota</strong>
+            </summary>
+
+            <label>
+              Concepto
+              <input
+                type="text"
+                name="description"
+                placeholder="Ej. Venta Instagram"
+              />
+            </label>
+
+            <div class="form-row">
+              <label>
+                Categoría
+                <select name="category"></select>
+              </label>
+
+              <label>
+                Cuenta
+                <select name="channel">
+                  <option value="Transferencia">Transferencia</option>
+                  <option value="Efectivo">Efectivo</option>
+                  <option value="Tarjeta">Tarjeta</option>
+                  <option value="Mercado Pago">Mercado Pago</option>
+                </select>
+              </label>
+            </div>
+
+            <div class="custom-category-row">
+              <label class="custom-category-label">
+                Nueva categoría
+                <input
+                  type="text"
+                  id="customCategoryInput"
+                  placeholder="Ej. Comisiones"
+                  maxlength="40"
+                />
+              </label>
+
+              <button type="button" class="ghost-btn" id="addCustomCategoryBtn">
+                Agregar
+              </button>
+            </div>
+
+            <p class="custom-category-hint" id="customCategoryHint">
+              La guardamos para ingresos.
+            </p>
+
+            <label>
+              Nota
+              <input
+                type="text"
+                name="note"
+                placeholder="Nota corta"
+                maxlength="120"
+              />
+            </label>
+
+            <div class="form-row">
+              <label>
+                Fecha
+                <input type="date" name="date" required />
+              </label>
+
+              <label class="checkbox-row quick-recurring-row">
+                <input type="checkbox" name="recurring" />
+                <span>Recurrente</span>
+              </label>
+            </div>
+          </details>
+
+          <p class="movement-impact-text" id="movementImpactText" data-ux-feedback="instant"></p>
+
+          <div class="form-actions transaction-modal-actions">
+            <button type="submit" class="primary-btn transaction-save-btn" id="saveTransactionBtn">
+              Guardar movimiento
+            </button>
+            <div class="transaction-secondary-actions">
+              <button type="button" class="ghost-btn" id="repeatLastMovementBtn">
+                Repetir último
+              </button>
+              <button type="button" class="ghost-btn" id="cancelTransactionEditBtn" hidden>
+                Cancelar edición
+              </button>
+            </div>
+          </div>
+        </form>
+      </div>
     </div>
 
     <div class="statement-import-modal" id="statementImportModal" hidden>
@@ -662,41 +1348,42 @@
       >
         <div class="transaction-modal-header">
           <div>
-            <p class="section-label">Importar movimientos</p>
-            <h3 id="statementImportTitle">Sube tu Excel de transacciones</h3>
+            <p class="section-label">Subir archivo</p>
+            <h3 id="statementImportTitle">Sube tu cartola</h3>
           </div>
           <button type="button" class="close-modal-btn" id="closeStatementImportBtn">×</button>
         </div>
+
         <section class="statement-import-step" id="statementImportSelectStep">
-          <p class="statement-import-copy">
-            Sube tu extracto bancario, revisa los movimientos detectados y agrégalos de una sola vez.
-          </p>
-          <div class="statement-import-types">
-            <button type="button" class="ghost-btn" id="openStatementExcelBtn">
-              Elegir Excel
+          <div class="statement-import-picker">
+            <button type="button" class="ghost-btn statement-import-picker-btn" id="openStatementFilePickerBtn">
+              Seleccionar archivo
             </button>
           </div>
-          <p class="statement-import-hint">
-            Puedes corregir fecha, descripción, monto y categoría antes de guardar.
+          <p class="statement-import-hint statement-import-hint--compact">
+            Formatos: PDF, Excel, CSV
           </p>
           <input
             type="file"
             id="statementImportInput"
-            accept=".csv,.xlsx,.xls,text/csv,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            accept=".pdf,.csv,.xlsx,.xls,application/pdf,text/csv,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
             hidden
           />
         </section>
+
         <section class="statement-import-step" id="statementImportProcessingStep" hidden>
           <div class="statement-import-processing">
             <div class="statement-import-spinner" aria-hidden="true"></div>
-            <div>
-              <strong>Estamos leyendo tu Excel…</strong>
+            <div class="statement-import-processing-copy">
+              <p class="statement-import-state-label">Estado: procesando</p>
+              <strong>Estamos leyendo tu cartola…</strong>
               <p id="statementImportProcessingCopy">
                 Esto puede tardar unos segundos.
               </p>
             </div>
           </div>
         </section>
+
         <section class="statement-import-step" id="statementImportReviewStep" hidden>
           <div class="statement-import-review-header">
             <div>
@@ -707,15 +1394,166 @@
               Cambiar archivo
             </button>
           </div>
+
           <div class="statement-import-review-list" id="statementImportReviewList"></div>
         </section>
+
         <p class="statement-import-error" id="statementImportError" hidden></p>
+
         <div class="transaction-modal-actions statement-import-actions">
           <button type="button" class="ghost-btn" id="cancelStatementImportBtn">
             Cancelar
           </button>
           <button type="button" class="primary-btn" id="confirmStatementImportBtn" hidden>
             Agregar movimientos
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div class="statement-import-modal" id="receivableImportModal" hidden>
+      <div
+        class="statement-import-card"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="receivableImportTitle"
+      >
+        <div class="transaction-modal-header">
+          <div>
+            <p class="section-label">Importar cobranza</p>
+            <h3 id="receivableImportTitle">Sube tu Excel de cuentas por cobrar</h3>
+          </div>
+          <button type="button" class="close-modal-btn" id="closeReceivableImportBtn">×</button>
+        </div>
+
+        <section class="statement-import-step" id="receivableImportSelectStep">
+          <p class="statement-import-copy">
+            Sube tu Excel, revisa las cuentas detectadas y agrégalas de una sola vez.
+          </p>
+          <div class="statement-import-types">
+            <button type="button" class="ghost-btn" id="openReceivableExcelBtn">
+              Elegir Excel
+            </button>
+          </div>
+          <p class="statement-import-hint">
+            Puedes corregir cliente, documento, monto, emisión, vencimiento y estado antes de guardar.
+          </p>
+          <input
+            type="file"
+            id="receivableImportInput"
+            accept=".csv,.xlsx,.xls,text/csv,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            hidden
+          />
+        </section>
+
+        <section class="statement-import-step" id="receivableImportProcessingStep" hidden>
+          <div class="statement-import-processing">
+            <div class="statement-import-spinner" aria-hidden="true"></div>
+            <div>
+              <strong>Estamos leyendo tu Excel…</strong>
+              <p id="receivableImportProcessingCopy">
+                Esto puede tardar unos segundos.
+              </p>
+            </div>
+          </div>
+        </section>
+
+        <section class="statement-import-step" id="receivableImportReviewStep" hidden>
+          <div class="statement-import-review-header">
+            <div>
+              <strong id="receivableImportResultTitle">Encontramos 0 cuentas por cobrar</strong>
+              <p id="receivableImportResultHint">Revísalas antes de agregarlas.</p>
+            </div>
+            <button type="button" class="ghost-btn" id="receivableImportReplaceFileBtn">
+              Cambiar archivo
+            </button>
+          </div>
+
+          <div class="statement-import-review-list" id="receivableImportReviewList"></div>
+        </section>
+
+        <p class="statement-import-error" id="receivableImportError" hidden></p>
+
+        <div class="transaction-modal-actions statement-import-actions">
+          <button type="button" class="ghost-btn" id="cancelReceivableImportBtn">
+            Cancelar
+          </button>
+          <button type="button" class="primary-btn" id="confirmReceivableImportBtn" hidden>
+            Agregar cuentas por cobrar
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div class="statement-import-modal" id="payableImportModal" hidden>
+      <div
+        class="statement-import-card"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="payableImportTitle"
+      >
+        <div class="transaction-modal-header">
+          <div>
+            <p class="section-label">Importar obligaciones</p>
+            <h3 id="payableImportTitle">Sube tu Excel de facturas por pagar</h3>
+          </div>
+          <button type="button" class="close-modal-btn" id="closePayableImportBtn">×</button>
+        </div>
+
+        <section class="statement-import-step" id="payableImportSelectStep">
+          <p class="statement-import-copy">
+            Sube tu Excel, revisa las facturas detectadas y agrégalas de una sola vez.
+          </p>
+          <div class="statement-import-types">
+            <button type="button" class="ghost-btn" id="openPayableExcelBtn">
+              Elegir Excel
+            </button>
+          </div>
+          <p class="statement-import-hint">
+            Puedes corregir proveedor, factura, monto, emisión, vencimiento y estado antes de guardar.
+          </p>
+          <input
+            type="file"
+            id="payableImportInput"
+            accept=".csv,.xlsx,.xls,text/csv,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            hidden
+          />
+        </section>
+
+        <section class="statement-import-step" id="payableImportProcessingStep" hidden>
+          <div class="statement-import-processing">
+            <div class="statement-import-spinner" aria-hidden="true"></div>
+            <div>
+              <strong>Estamos leyendo tu Excel…</strong>
+              <p id="payableImportProcessingCopy">
+                Esto puede tardar unos segundos.
+              </p>
+            </div>
+          </div>
+        </section>
+
+        <section class="statement-import-step" id="payableImportReviewStep" hidden>
+          <div class="statement-import-review-header">
+            <div>
+              <strong id="payableImportResultTitle">Encontramos 0 facturas por pagar</strong>
+              <p id="payableImportResultHint">Revísalas antes de agregarlas.</p>
+            </div>
+            <button type="button" class="ghost-btn" id="payableImportReplaceFileBtn">
+              Cambiar archivo
+            </button>
+          </div>
+
+          <div class="statement-import-review-list" id="payableImportReviewList"></div>
+        </section>
+
+        <p class="statement-import-error" id="payableImportError" hidden></p>
+
+        <div class="transaction-modal-actions statement-import-actions">
+          <button type="button" class="ghost-btn" id="cancelPayableImportBtn">
+            Cancelar
+          </button>
+          <button type="button" class="primary-btn" id="confirmPayableImportBtn" hidden>
+            Agregar facturas por pagar
           </button>
         </div>
       </div>
@@ -740,7 +1578,7 @@
         </p>
         <div class="reset-modal-actions">
           <button type="button" class="ghost-btn" id="cancelResetModalBtn">Cancelar</button>
-          <button type="button" class="primary-btn" id="confirmResetModalBtn">
+          <button type="button" class="danger-confirm-btn" id="confirmResetModalBtn">
             Aceptar borrado
           </button>
         </div>

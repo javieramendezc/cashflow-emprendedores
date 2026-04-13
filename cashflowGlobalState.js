@@ -10,6 +10,7 @@ const NOTIFICATIONS_LAST_SEEN_KEY = "notificationsLastSeenAt"
 const GLOBAL_STATE_EVENT = "cashflow:state-changed"
 
 let cachedSnapshot = createEmptySnapshot()
+let snapshotIsDirty = true
 
 function createEmptySnapshot() {
   return {
@@ -295,6 +296,7 @@ function buildSnapshotFromStorage() {
 
 function refreshSnapshot() {
   cachedSnapshot = buildSnapshotFromStorage()
+  snapshotIsDirty = false
   return cachedSnapshot
 }
 
@@ -304,6 +306,7 @@ function subscribe(listener) {
   }
 
   const handleChange = () => {
+    snapshotIsDirty = true
     refreshSnapshot()
     listener()
   }
@@ -318,7 +321,7 @@ function subscribe(listener) {
 }
 
 function getSnapshot() {
-  if (typeof window !== "undefined" && !cachedSnapshot.notifications.length) {
+  if (typeof window !== "undefined" && snapshotIsDirty) {
     return refreshSnapshot()
   }
 
@@ -332,6 +335,7 @@ function getServerSnapshot() {
 export function emitCashflowStateChange() {
   if (typeof window === "undefined") return
 
+  snapshotIsDirty = true
   refreshSnapshot()
   window.dispatchEvent(new Event(GLOBAL_STATE_EVENT))
 }

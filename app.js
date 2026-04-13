@@ -61,14 +61,17 @@ function createHistoryFiltersState() {
     transactions: {
       month: currentMonth(),
       showAll: false,
+      search: "",
     },
     receivables: {
       month: currentMonth(),
       showAll: false,
+      search: "",
     },
     payables: {
       month: currentMonth(),
       showAll: false,
+      search: "",
     },
   };
 }
@@ -105,12 +108,36 @@ function createPayableImportState() {
   };
 }
 
+function createLedgerPanelsState() {
+  return {
+    receivables: {
+      collapsed: false,
+      sort: "date",
+    },
+    payables: {
+      collapsed: false,
+      sort: "date",
+    },
+  };
+}
+
+function createHistoryAccordionState(sections) {
+  return sections.reduce((accordionState, section) => {
+    accordionState[section] = false;
+    return accordionState;
+  }, {});
+}
+
 const state = {
   data: cloneSeedState(),
   historyFilters: createHistoryFiltersState(),
   statementImport: createStatementImportState(),
   receivableImport: createReceivableImportState(),
   payableImport: createPayableImportState(),
+  ledgerPanels: createLedgerPanelsState(),
+  historyTransactionsAccordion: createHistoryAccordionState(["controls", "table"]),
+  historyReceivablesAccordion: createHistoryAccordionState(["filters", "table"]),
+  historyPayablesAccordion: createHistoryAccordionState(["filters", "summary", "table"]),
   session: null,
   appError: false,
   appErrorMessage: "",
@@ -145,7 +172,15 @@ const toggleAuthModeBtn = document.querySelector("#toggleAuthModeBtn");
 const appHeaderCashValue = document.querySelector("#appHeaderCashValue");
 const userEmailLabel = document.querySelector("#userEmailLabel");
 const logoutBtn = document.querySelector("#logoutBtn");
-const mobileLogoutBtn = document.querySelector("#mobileLogoutBtn");
+const mobileMenuBtn = document.querySelector("#mobileMenuBtn");
+const mobileAlertsBtn = document.querySelector("#mobileAlertsBtn");
+const mobileAlertsCount = document.querySelector("#mobileAlertsCount");
+const mobileMenuPanel = document.querySelector("#mobileMenuPanel");
+const mobileAlertsPanel = document.querySelector("#mobileAlertsPanel");
+const closeMobileMenuBtn = document.querySelector("#closeMobileMenuBtn");
+const closeMobileAlertsBtn = document.querySelector("#closeMobileAlertsBtn");
+const mobileMenuLogoutBtn = document.querySelector("#mobileMenuLogoutBtn");
+const mobileAlertsList = document.querySelector("#mobileAlertsList");
 const dynamicFavicon = document.querySelector("#dynamicFavicon");
 const logoSettingsToggle = document.querySelector("#logoSettingsToggle");
 const logoSettingsPanel = document.querySelector("#logoSettingsPanel");
@@ -202,10 +237,28 @@ const addCustomCategoryBtn = document.querySelector("#addCustomCategoryBtn");
 const customCategoryHint = document.querySelector("#customCategoryHint");
 const monthFilter = document.querySelector("#monthFilter");
 const historyShowAllBtn = document.querySelector("#historyShowAllBtn");
+const transactionSearchInput = document.querySelector("#transactionSearchInput");
+const historyTransactionsControlsToggle = document.querySelector("#historyTransactionsControlsToggle");
+const historyTransactionsTableToggle = document.querySelector("#historyTransactionsTableToggle");
+const historyTransactionsControlsBody = document.querySelector("#historyTransactionsControlsBody");
+const historyTransactionsTableRegion = document.querySelector("#historyTransactionsTableRegion");
+const receivableSearchInput = document.querySelector("#receivableSearchInput");
 const receivableMonthFilter = document.querySelector("#receivableMonthFilter");
 const historyReceivableShowAllBtn = document.querySelector("#historyReceivableShowAllBtn");
+const historyReceivablesFiltersToggle = document.querySelector("#historyReceivablesFiltersToggle");
+const historyReceivablesTableToggle = document.querySelector("#historyReceivablesTableToggle");
+const historyReceivablesFiltersBody = document.querySelector("#historyReceivablesFiltersBody");
+const historyReceivablesTableRegion = document.querySelector("#historyReceivablesTableRegion");
+const payableSearchInput = document.querySelector("#payableSearchInput");
 const payableMonthFilter = document.querySelector("#payableMonthFilter");
 const historyPayableShowAllBtn = document.querySelector("#historyPayableShowAllBtn");
+const historyPayablesFiltersToggle = document.querySelector("#historyPayablesFiltersToggle");
+const historyPayablesSummaryToggle = document.querySelector("#historyPayablesSummaryToggle");
+const historyPayablesTableToggle = document.querySelector("#historyPayablesTableToggle");
+const historyPayablesFiltersBody = document.querySelector("#historyPayablesFiltersBody");
+const historyPayablesSummaryBody = document.querySelector("#historyPayablesSummaryBody");
+const historyPayablesTableRegion = document.querySelector("#historyPayablesTableRegion");
+const payableHistoryMonths = document.querySelector("#payableHistoryMonths");
 const appPages = [...document.querySelectorAll("[data-app-page]")];
 const navLinks = [...document.querySelectorAll("[data-page-target]")];
 const detailTabButtons = [...document.querySelectorAll("[data-detail-tab]")];
@@ -226,14 +279,20 @@ const homeMonthEndCash = document.querySelector("#homeMonthEndCash");
 const homeMonthEndCard = document.querySelector("#homeMonthEndCard");
 const homeMonthEndHint = document.querySelector("#homeMonthEndHint");
 const homeMonthEndDot = document.querySelector("#homeMonthEndDot");
+const homeMonthEndMeta = document.querySelector("#homeMonthEndMeta");
 const homeAdviceCard = document.querySelector("#homeAdviceCard");
+const homeAdviceLabel = document.querySelector("#homeAdviceLabel");
+const homeAdviceTitle = document.querySelector("#homeAdviceTitle");
+const homeAdviceActionBtn = document.querySelector("#homeAdviceActionBtn");
 const homeTodayPanel = document.querySelector("#homeTodayPanel");
 const todayMovementList = document.querySelector("#todayMovementList");
 const homeQuickGrid = document.querySelector("#homeQuickGrid");
 const quickIncomeBtn = document.querySelector("#quickIncomeBtn");
 const quickExpenseBtn = document.querySelector("#quickExpenseBtn");
+const quickReportBtn = document.querySelector("#quickReportBtn");
 const quickIncomeLabel = document.querySelector("#quickIncomeLabel");
 const quickExpenseLabel = document.querySelector("#quickExpenseLabel");
+const quickReportLabel = document.querySelector("#quickReportLabel");
 const quickTypeButtons = [...document.querySelectorAll("[data-quick-type]")];
 const openTransactionModalBtn = document.querySelector("#openTransactionModalBtn");
 const transactionModal = document.querySelector("#transactionModal");
@@ -300,6 +359,12 @@ const scenarioResultText = document.querySelector("#scenarioResultText");
 const transactionTableBody = document.querySelector("#transactionTableBody");
 const receivableTableBody = document.querySelector("#receivableTableBody");
 const payableTableBody = document.querySelector("#payableTableBody");
+const receivableSortSelect = document.querySelector("#receivableSortSelect");
+const payableSortSelect = document.querySelector("#payableSortSelect");
+const toggleReceivablePanelBtn = document.querySelector("#toggleReceivablePanelBtn");
+const togglePayablePanelBtn = document.querySelector("#togglePayablePanelBtn");
+const receivablePanelBody = document.querySelector("#receivablePanelBody");
+const payablePanelBody = document.querySelector("#payablePanelBody");
 const historyReceivableTableBody = document.querySelector("#historyReceivableTableBody");
 const historyPayableTableBody = document.querySelector("#historyPayableTableBody");
 const monthlyFlowChart = document.querySelector("#monthlyFlowChart");
@@ -422,8 +487,31 @@ logoutBtn.addEventListener("click", async () => {
   await supabaseClient.auth.signOut();
 });
 
-mobileLogoutBtn.addEventListener("click", async () => {
+mobileMenuLogoutBtn?.addEventListener("click", async () => {
+  closeMobileHeaderPanels();
   await supabaseClient.auth.signOut();
+});
+
+mobileMenuBtn?.addEventListener("click", () => {
+  toggleMobileHeaderPanel("menu");
+});
+
+mobileAlertsBtn?.addEventListener("click", () => {
+  toggleMobileHeaderPanel("alerts");
+});
+
+closeMobileMenuBtn?.addEventListener("click", () => {
+  closeMobileHeaderPanels();
+});
+
+closeMobileAlertsBtn?.addEventListener("click", () => {
+  closeMobileHeaderPanels();
+});
+
+window.addEventListener("keydown", (event) => {
+  if (event.key === "Escape") {
+    closeMobileHeaderPanels();
+  }
 });
 
 quickIncomeBtn.addEventListener("click", () => {
@@ -437,6 +525,14 @@ quickIncomeBtn.addEventListener("click", () => {
 
 quickExpenseBtn.addEventListener("click", () => {
   openTransactionModal("expense");
+});
+
+quickReportBtn?.addEventListener("click", () => {
+  openReportsView();
+});
+
+homeAdviceActionBtn?.addEventListener("click", () => {
+  handleHomeAdviceAction();
 });
 
 openTransactionModalBtn.addEventListener("click", () => {
@@ -453,6 +549,26 @@ openReceivableImportBtn?.addEventListener("click", () => {
 
 openPayableImportBtn?.addEventListener("click", () => {
   openPayableImportModal();
+});
+
+toggleReceivablePanelBtn?.addEventListener("click", () => {
+  state.ledgerPanels.receivables.collapsed = !state.ledgerPanels.receivables.collapsed;
+  renderLedgerPanels();
+});
+
+togglePayablePanelBtn?.addEventListener("click", () => {
+  state.ledgerPanels.payables.collapsed = !state.ledgerPanels.payables.collapsed;
+  renderLedgerPanels();
+});
+
+receivableSortSelect?.addEventListener("change", (event) => {
+  state.ledgerPanels.receivables.sort = normalizeLedgerSortMode(event.target.value);
+  render();
+});
+
+payableSortSelect?.addEventListener("change", (event) => {
+  state.ledgerPanels.payables.sort = normalizeLedgerSortMode(event.target.value);
+  render();
 });
 
 connectionBannerBtn.addEventListener("click", async () => {
@@ -651,12 +767,26 @@ statementImportReviewList?.addEventListener("input", (event) => {
   }
 
   if (event.target.name === "amount") {
-    item.amount = Math.abs(Number(event.target.value) || 0);
+    const nextSignedAmount = Number(event.target.value) || 0;
+    item.type = classifyImportedMovementType(nextSignedAmount, item.type);
+    item.amount = Math.abs(nextSignedAmount);
+
+    const typeField = row.querySelector('[name="type"]');
+    if (typeField) {
+      typeField.value = item.type;
+    }
+
     updateStatementImportPreviewRow(row, item);
   }
 
   if (event.target.name === "type") {
     item.type = event.target.value === "income" ? "income" : "expense";
+
+    const amountField = row.querySelector('[name="amount"]');
+    if (amountField) {
+      amountField.value = String(getSignedImportedMovementAmount(item));
+    }
+
     updateStatementImportPreviewRow(row, item);
   }
 
@@ -1135,38 +1265,108 @@ payableForm.addEventListener("submit", async (event) => {
 monthFilter.addEventListener("change", (event) => {
   state.historyFilters.transactions.month = event.target.value || currentMonth();
   state.historyFilters.transactions.showAll = false;
+  state.historyTransactionsAccordion.table = true;
   syncHistoryFilterInput();
+  render();
+});
+
+transactionSearchInput?.addEventListener("input", (event) => {
+  state.historyFilters.transactions.search = String(event.target.value || "").trim();
+  state.historyTransactionsAccordion.table = true;
   render();
 });
 
 historyShowAllBtn?.addEventListener("click", () => {
   state.historyFilters.transactions.showAll = !state.historyFilters.transactions.showAll;
+  state.historyTransactionsAccordion.table = true;
   syncHistoryFilterInput();
   render();
+});
+
+historyTransactionsControlsToggle?.addEventListener("click", () => {
+  toggleHistoryAccordionSection("historyTransactionsAccordion", "controls");
+});
+
+historyTransactionsTableToggle?.addEventListener("click", () => {
+  toggleHistoryAccordionSection("historyTransactionsAccordion", "table");
 });
 
 receivableMonthFilter?.addEventListener("change", (event) => {
   state.historyFilters.receivables.month = event.target.value || currentMonth();
   state.historyFilters.receivables.showAll = false;
+  state.historyReceivablesAccordion.table = true;
   syncHistoryFilterInput();
+  render();
+});
+
+receivableSearchInput?.addEventListener("input", (event) => {
+  state.historyFilters.receivables.search = String(event.target.value || "").trim();
+  state.historyReceivablesAccordion.table = true;
   render();
 });
 
 historyReceivableShowAllBtn?.addEventListener("click", () => {
   state.historyFilters.receivables.showAll = !state.historyFilters.receivables.showAll;
+  state.historyReceivablesAccordion.table = true;
   syncHistoryFilterInput();
+  render();
+});
+
+historyReceivablesFiltersToggle?.addEventListener("click", () => {
+  toggleHistoryAccordionSection("historyReceivablesAccordion", "filters");
+});
+
+historyReceivablesTableToggle?.addEventListener("click", () => {
+  toggleHistoryAccordionSection("historyReceivablesAccordion", "table");
+});
+
+historyPayablesFiltersToggle?.addEventListener("click", () => {
+  toggleHistoryAccordionSection("historyPayablesAccordion", "filters");
+});
+
+historyPayablesSummaryToggle?.addEventListener("click", () => {
+  toggleHistoryAccordionSection("historyPayablesAccordion", "summary");
+});
+
+historyPayablesTableToggle?.addEventListener("click", () => {
+  toggleHistoryAccordionSection("historyPayablesAccordion", "table");
+});
+
+payableSearchInput?.addEventListener("input", (event) => {
+  state.historyFilters.payables.search = String(event.target.value || "").trim();
+  state.historyPayablesAccordion.table = true;
   render();
 });
 
 payableMonthFilter?.addEventListener("change", (event) => {
   state.historyFilters.payables.month = event.target.value || currentMonth();
   state.historyFilters.payables.showAll = false;
+  state.historyPayablesAccordion.table = true;
   syncHistoryFilterInput();
   render();
 });
 
 historyPayableShowAllBtn?.addEventListener("click", () => {
   state.historyFilters.payables.showAll = !state.historyFilters.payables.showAll;
+  state.historyPayablesAccordion.table = true;
+  syncHistoryFilterInput();
+  render();
+});
+
+payableHistoryMonths?.addEventListener("click", (event) => {
+  const monthButton = event.target.closest("[data-payable-history-month]");
+  if (!monthButton) {
+    return;
+  }
+
+  const monthKey = monthButton.dataset.payableHistoryMonth;
+  if (!monthKey) {
+    return;
+  }
+
+  state.historyFilters.payables.month = monthKey;
+  state.historyFilters.payables.showAll = false;
+  state.historyPayablesAccordion.table = true;
   syncHistoryFilterInput();
   render();
 });
@@ -1338,6 +1538,10 @@ confirmResetModalBtn.addEventListener("click", async () => {
   state.statementImport = createStatementImportState();
   state.receivableImport = createReceivableImportState();
   state.payableImport = createPayableImportState();
+  state.ledgerPanels = createLedgerPanelsState();
+  state.historyTransactionsAccordion = createHistoryAccordionState(["controls", "table"]);
+  state.historyReceivablesAccordion = createHistoryAccordionState(["filters", "table"]);
+  state.historyPayablesAccordion = createHistoryAccordionState(["filters", "summary", "table"]);
   syncHistoryFilterInput();
   renderStatementImportState();
   renderReceivableImportState();
@@ -1425,6 +1629,10 @@ async function syncSessionView() {
     state.statementImport = createStatementImportState();
     state.receivableImport = createReceivableImportState();
     state.payableImport = createPayableImportState();
+    state.ledgerPanels = createLedgerPanelsState();
+    state.historyTransactionsAccordion = createHistoryAccordionState(["controls", "table"]);
+    state.historyReceivablesAccordion = createHistoryAccordionState(["filters", "table"]);
+    state.historyPayablesAccordion = createHistoryAccordionState(["filters", "summary", "table"]);
     syncHistoryFilterInput();
     renderStatementImportState();
     renderReceivableImportState();
@@ -1456,6 +1664,10 @@ async function syncSessionView() {
   state.statementImport = createStatementImportState();
   state.receivableImport = createReceivableImportState();
   state.payableImport = createPayableImportState();
+  state.ledgerPanels = createLedgerPanelsState();
+  state.historyTransactionsAccordion = createHistoryAccordionState(["controls", "table"]);
+  state.historyReceivablesAccordion = createHistoryAccordionState(["filters", "table"]);
+  state.historyPayablesAccordion = createHistoryAccordionState(["filters", "summary", "table"]);
   syncHistoryFilterInput();
   renderStatementImportState();
   renderReceivableImportState();
@@ -1521,8 +1733,9 @@ function buildStatementImportMeta(item) {
 }
 
 function buildStatementImportSignedAmount(item) {
-  const sign = item.type === "income" ? "+" : "-";
-  return `${sign}${formatCurrency(item.amount)}`;
+  const signedAmount = getSignedImportedMovementAmount(item);
+  const sign = signedAmount >= 0 ? "+" : "-";
+  return `${sign}${formatCurrency(Math.abs(signedAmount))}`;
 }
 
 function updateStatementImportPreviewRow(row, item) {
@@ -1672,9 +1885,8 @@ function renderStatementImportState() {
                       type="number"
                       inputmode="decimal"
                       step="any"
-                      min="0"
                       name="amount"
-                      value="${escapeHtml(String(item.amount))}"
+                      value="${escapeHtml(String(getSignedImportedMovementAmount(item)))}"
                     />
                   </label>
                   <label>
@@ -1753,9 +1965,12 @@ function renderReceivableImportState() {
 
   if (receivableImportResultHint) {
     const overflowHint = items.length > 10 ? " Desliza para revisar todas." : "";
+    const fallbackHint = items.some((item) => item.importMode === "fallback")
+      ? " No pudimos leer todo. Puedes ajustarlo antes de guardar."
+      : "";
     receivableImportResultHint.textContent = fileName
-      ? `${fileName} · revísalas antes de agregarlas.${overflowHint}`
-      : `Revísalas antes de agregarlas.${overflowHint}`;
+      ? `${fileName} · revísalas antes de agregarlas.${fallbackHint}${overflowHint}`
+      : `Revísalas antes de agregarlas.${fallbackHint}${overflowHint}`;
   }
 
   if (confirmReceivableImportBtn) {
@@ -1977,9 +2192,12 @@ function renderPayableImportState() {
 
   if (payableImportResultHint) {
     const overflowHint = items.length > 10 ? " Desliza para revisar todas." : "";
+    const fallbackHint = items.some((item) => item.importMode === "fallback")
+      ? " No pudimos leer todo. Puedes ajustarlo antes de guardar."
+      : "";
     payableImportResultHint.textContent = fileName
-      ? `${fileName} · revísalas antes de agregarlas.${overflowHint}`
-      : `Revísalas antes de agregarlas.${overflowHint}`;
+      ? `${fileName} · revísalas antes de agregarlas.${fallbackHint}${overflowHint}`
+      : `Revísalas antes de agregarlas.${fallbackHint}${overflowHint}`;
   }
 
   if (confirmPayableImportBtn) {
@@ -2244,8 +2462,9 @@ async function confirmStatementImport() {
 function normalizeImportedMovement(item) {
   const date = parseStatementDateValue(item.date) || today();
   const description = String(item.description || item.name || "Movimiento importado").trim();
-  const amount = Math.abs(Number(item.amount) || 0);
-  const type = item.type === "income" ? "income" : "expense";
+  const signedAmount = getSignedImportedMovementAmount(item);
+  const amount = Math.abs(signedAmount);
+  const type = classifyImportedMovementType(signedAmount, item.type);
 
   if (!description || !amount) {
     return null;
@@ -2311,10 +2530,100 @@ function normalizeImportedPayable(item) {
   };
 }
 
+function closeMobileHeaderPanels() {
+  if (mobileMenuPanel) {
+    mobileMenuPanel.hidden = true;
+  }
+
+  if (mobileAlertsPanel) {
+    mobileAlertsPanel.hidden = true;
+  }
+
+  if (mobileMenuBtn) {
+    mobileMenuBtn.setAttribute("aria-expanded", "false");
+  }
+
+  if (mobileAlertsBtn) {
+    mobileAlertsBtn.setAttribute("aria-expanded", "false");
+  }
+}
+
+function toggleMobileHeaderPanel(panelName) {
+  const targetPanel = panelName === "alerts" ? mobileAlertsPanel : mobileMenuPanel;
+  const isOpen = targetPanel ? !targetPanel.hidden : false;
+
+  closeMobileHeaderPanels();
+
+  if (isOpen || !targetPanel) {
+    return;
+  }
+
+  targetPanel.hidden = false;
+
+  if (panelName === "alerts" && mobileAlertsBtn) {
+    mobileAlertsBtn.setAttribute("aria-expanded", "true");
+    return;
+  }
+
+  if (mobileMenuBtn) {
+    mobileMenuBtn.setAttribute("aria-expanded", "true");
+  }
+}
+
+function splitSmartNotificationMessage(message) {
+  const lines = String(message || "")
+    .split(/\n+/)
+    .map((line) => line.trim())
+    .filter(Boolean);
+
+  return {
+    title: lines[0] || "Sin alertas por ahora",
+    detail: lines[1] || "",
+  };
+}
+
+function renderMobileHeaderPanels() {
+  if (mobileAlertsCount) {
+    const count = state.smartNotifications.length;
+    mobileAlertsCount.hidden = count === 0;
+    mobileAlertsCount.textContent = count > 9 ? "9+" : String(count);
+  }
+
+  if (mobileAlertsBtn) {
+    mobileAlertsBtn.classList.toggle("is-pulsing", state.smartNotifications.length > 0);
+  }
+
+  if (!mobileAlertsList) {
+    return;
+  }
+
+  if (!state.smartNotifications.length) {
+    mobileAlertsList.innerHTML =
+      '<article class="mobile-alert-item"><strong>Todo en orden</strong><p>No hay alertas nuevas por ahora.</p></article>';
+    return;
+  }
+
+  mobileAlertsList.innerHTML = state.smartNotifications
+    .slice(0, 4)
+    .map((item) => {
+      const { title, detail } = splitSmartNotificationMessage(item.message);
+
+      return `
+        <article class="mobile-alert-item ${escapeHtml(item.type)}">
+          <strong>${escapeHtml(title)}</strong>
+          ${detail ? `<p>${escapeHtml(detail)}</p>` : ""}
+        </article>
+      `;
+    })
+    .join("");
+}
+
 function switchPage(pageName) {
   if (!isPageAccessible(pageName)) {
     pageName = "home";
   }
+
+  closeMobileHeaderPanels();
 
   state.activePage = pageName;
 
@@ -2460,11 +2769,11 @@ function syncHomeViewVisibility(homeViewState) {
   }
 
   if (homeMonthEndCard) {
-    homeMonthEndCard.hidden = isErrorState || homeViewState !== "normal";
+    homeMonthEndCard.hidden = isErrorState;
   }
 
   if (homeAdviceCard) {
-    homeAdviceCard.hidden = isErrorState || homeViewState !== "normal";
+    homeAdviceCard.hidden = isErrorState;
   }
 
   if (openTransactionModalBtn) {
@@ -2521,6 +2830,256 @@ function buildHomePositiveCopy(projectedBalance, cashFloor) {
   }
 
   return copyText("home.positive.spend", { amount: formatCurrency(weeklySpend) });
+}
+
+function getUpcomingPayablesSnapshot(payables) {
+  const openPayables = [...payables]
+    .filter((item) => item.status !== "paid")
+    .sort(sortByDueDateAsc);
+  const nextPayable = openPayables.find((item) => daysUntil(item.dueDate) >= 0) || openPayables[0] || null;
+
+  return {
+    nextPayable,
+    pendingCount: openPayables.length,
+    overdueCount: openPayables.filter((item) => daysUntil(item.dueDate) < 0).length,
+    totalOpenAmount: openPayables.reduce((total, item) => total + getOutstandingAmount(item), 0),
+    nextDays: nextPayable ? daysUntil(nextPayable.dueDate) : null,
+  };
+}
+
+function buildPendingPaymentsLabel(count) {
+  if (!count) {
+    return "Todo al día";
+  }
+
+  return `${count} pago${count === 1 ? "" : "s"} pendiente${count === 1 ? "" : "s"}`;
+}
+
+function buildUpcomingPayablesHint(nextPayable, nextDays) {
+  if (!nextPayable) {
+    return "Sin pagos pendientes";
+  }
+
+  if (nextDays === null) {
+    return "Revisa tu próximo pago";
+  }
+
+  if (nextDays < 0) {
+    const absDays = Math.abs(nextDays);
+    return `Venció hace ${absDays} día${absDays === 1 ? "" : "s"}`;
+  }
+
+  if (nextDays === 0) {
+    return "Vence hoy";
+  }
+
+  if (nextDays === 1) {
+    return "Vence mañana";
+  }
+
+  return `En ${nextDays} días`;
+}
+
+function getUpcomingPayablesTone(payablesSnapshot) {
+  if (payablesSnapshot.overdueCount > 0) {
+    return "risk";
+  }
+
+  if (payablesSnapshot.nextDays !== null && payablesSnapshot.nextDays <= 3) {
+    return "risk";
+  }
+
+  if (payablesSnapshot.nextDays !== null && payablesSnapshot.nextDays <= 10) {
+    return "warn";
+  }
+
+  if (payablesSnapshot.pendingCount > 0) {
+    return "neutral";
+  }
+
+  return "ok";
+}
+
+function describeUpcomingPayables(payablesSnapshot, commitmentAmount) {
+  if (!payablesSnapshot.pendingCount) {
+    return "No tienes pagos pendientes por ahora.";
+  }
+
+  const amount = commitmentAmount > 0 ? commitmentAmount : payablesSnapshot.totalOpenAmount;
+  return `${buildPendingPaymentsLabel(payablesSnapshot.pendingCount)} por ${formatCurrency(amount)}.`;
+}
+
+function buildHomeAlertConfig({
+  hasAnyData,
+  hasMovements,
+  isOnboardingState,
+  isRiskState,
+  isPositiveState,
+  assistantMessage,
+  criticalCashDate,
+  projectedBalance,
+  cashFloor,
+  payablesSnapshot,
+  nextCommitment,
+}) {
+  if (!hasAnyData || isOnboardingState) {
+    return {
+      tone: "is-info",
+      label: "Primer paso",
+      title: hasMovements ? "Te falta poco para ver tu panorama real" : "Empieza con tu plata de hoy",
+      description: hasMovements
+        ? copyText(
+            UX_RULES.progressiveVisibility.projectionTransactions - state.data.transactions.length === 1
+              ? "home.onboarding.addOneMore"
+              : "home.onboarding.addManyMore",
+            {
+              count:
+                UX_RULES.progressiveVisibility.projectionTransactions -
+                state.data.transactions.length,
+            }
+          )
+        : "Agrega un ingreso o un gasto y te mostramos qué hacer con tu caja.",
+      actionLabel: "Agregar movimiento",
+      action: "openMovement",
+    };
+  }
+
+  if (payablesSnapshot.overdueCount > 0) {
+    return {
+      tone: "is-critical",
+      label: "Acción urgente",
+      title:
+        payablesSnapshot.overdueCount === 1
+          ? "Tienes un pago vencido"
+          : `Tienes ${payablesSnapshot.overdueCount} pagos vencidos`,
+      description: describeUpcomingPayables(payablesSnapshot, nextCommitment),
+      actionLabel: "Ver pagos",
+      action: "viewPayables",
+    };
+  }
+
+  if (isRiskState) {
+    return {
+      tone: "is-critical",
+      label: "Acción urgente",
+      title: criticalCashDate ? "Tu caja puede quedar bajo el mínimo" : "Tu margen quedó muy corto",
+      description: buildHomeRiskCopy(criticalCashDate, projectedBalance),
+      actionLabel: "Abrir proyección",
+      action: "openProjection",
+    };
+  }
+
+  if (payablesSnapshot.nextPayable && payablesSnapshot.nextDays !== null && payablesSnapshot.nextDays <= 7) {
+    return {
+      tone: "is-warning",
+      label: "Atención",
+      title: payablesSnapshot.nextDays <= 1 ? "Tienes pagos muy cerca" : "Prepara tus próximos pagos",
+      description: `${buildUpcomingPayablesHint(
+        payablesSnapshot.nextPayable,
+        payablesSnapshot.nextDays
+      )}. ${describeUpcomingPayables(payablesSnapshot, nextCommitment)}`,
+      actionLabel: "Ver pagos",
+      action: "viewPayables",
+    };
+  }
+
+  if (isPositiveState) {
+    return {
+      tone: "is-info",
+      label: "Info",
+      title: "Tienes margen para moverte hoy",
+      description: buildHomePositiveCopy(projectedBalance, cashFloor),
+      actionLabel: "Ver reportes",
+      action: "openReports",
+    };
+  }
+
+  return {
+    tone: "is-info",
+    label: "Info",
+    title: "Hay una recomendación para hoy",
+    description: assistantMessage || copyText("home.advice.starter"),
+    actionLabel: "Ver detalle",
+    action: "openReports",
+  };
+}
+
+function openReportsView() {
+  closeMobileHeaderPanels();
+
+  if (state.visibility.detail) {
+    switchPage("detail");
+    switchDetailTab("summary");
+    document.querySelector("#monthly-summary")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    return;
+  }
+
+  if (state.visibility.projection) {
+    switchPage("projection");
+    document.querySelector("#projectionStatusCard")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    return;
+  }
+
+  openTransactionModal();
+}
+
+function openPayablesView() {
+  closeMobileHeaderPanels();
+
+  if (state.visibility.detail && state.visibility.detailTabs.categories) {
+    switchPage("detail");
+    switchDetailTab("categories");
+    document.querySelector("#payables")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    return;
+  }
+
+  if (state.visibility.detail) {
+    switchPage("detail");
+    switchDetailTab("summary");
+    document.querySelector("#nextCommitment")?.scrollIntoView({ behavior: "smooth", block: "center" });
+    return;
+  }
+
+  if (state.visibility.projection) {
+    switchPage("projection");
+    document.querySelector("#projectionStatusCard")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    return;
+  }
+
+  openTransactionModal("expense");
+}
+
+function openProjectionView() {
+  closeMobileHeaderPanels();
+
+  if (state.visibility.projection) {
+    switchPage("projection");
+    document.querySelector("#projectionStatusCard")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    return;
+  }
+
+  openTransactionModal();
+}
+
+function handleHomeAdviceAction() {
+  const action = homeAdviceActionBtn?.dataset.homeAction || "openMovement";
+
+  if (action === "viewPayables") {
+    openPayablesView();
+    return;
+  }
+
+  if (action === "openProjection") {
+    openProjectionView();
+    return;
+  }
+
+  if (action === "openReports") {
+    openReportsView();
+    return;
+  }
+
+  openTransactionModal();
 }
 
 function renderMoneyCurveChart(currentBalance, cashFloor) {
@@ -2903,6 +3462,11 @@ function render() {
   const allTransactions = [...state.data.transactions].sort(sortByDateDesc);
   const allReceivables = [...state.data.receivables].sort(sortByDueDateAsc);
   const allPayables = [...state.data.payables].sort(sortByDueDateAsc);
+  const sortedReceivables = sortLedgerItems(
+    allReceivables,
+    state.ledgerPanels.receivables.sort
+  );
+  const sortedPayables = sortLedgerItems(allPayables, state.ledgerPanels.payables.sort);
   const allHistoryPayables = [...state.data.payables].sort(sortByPayableHistoryDateDesc);
   const transactions = allTransactions.filter((item) => item.date.startsWith(currentMonthKey));
   const receivables = allReceivables.filter((item) => item.dueDate.startsWith(currentMonthKey));
@@ -2912,16 +3476,25 @@ function render() {
     : allTransactions.filter((item) =>
         item.date.startsWith(state.historyFilters.transactions.month)
       );
+  const searchedHistoryTransactions = historyTransactions.filter((item) =>
+    matchesTransactionSearch(item, state.historyFilters.transactions.search)
+  );
   const historyReceivables = state.historyFilters.receivables.showAll
     ? allReceivables
     : allReceivables.filter((item) =>
         item.dueDate.startsWith(state.historyFilters.receivables.month)
       );
+  const searchedHistoryReceivables = historyReceivables.filter((item) =>
+    matchesReceivableSearch(item, state.historyFilters.receivables.search)
+  );
   const historyPayables = state.historyFilters.payables.showAll
     ? allHistoryPayables
     : allHistoryPayables.filter((item) =>
         getPayableHistoryMonthKey(item) === state.historyFilters.payables.month
       );
+  const searchedHistoryPayables = historyPayables.filter((item) =>
+    matchesPayableSearch(item, state.historyFilters.payables.search)
+  );
   const liveTransactions = transactions;
   const liveReceivables = receivables;
   const livePayables = payables;
@@ -2961,7 +3534,6 @@ function render() {
     : 0;
   const liveTopCategory = findTopExpenseCategory(liveExpenses);
   const hasMovements = state.data.transactions.length > 0;
-  const isLearningState = isHomeLearningState();
   const homeViewState = getHomeViewState();
   const isOnboardingState = homeViewState === "onboarding";
   const isNormalState = homeViewState === "normal";
@@ -2975,6 +3547,7 @@ function render() {
   const nextCommitment = sum(
     state.data.payables.filter((item) => item.status !== "paid" && daysUntil(item.dueDate) <= 30)
   );
+  const upcomingPayables = getUpcomingPayablesSnapshot(state.data.payables);
   const forecastWeeks = createForecastWeeks(
     currentBalance,
     liveRecurring,
@@ -3008,6 +3581,19 @@ function render() {
     cashFloor,
     lowCashWeek
   );
+  const homeAlertConfig = buildHomeAlertConfig({
+    hasAnyData,
+    hasMovements,
+    isOnboardingState,
+    isRiskState,
+    isPositiveState,
+    assistantMessage,
+    criticalCashDate,
+    projectedBalance,
+    cashFloor,
+    payablesSnapshot: upcomingPayables,
+    nextCommitment,
+  });
   syncSmartNotifications({
     currentBalance,
     projectedBalance,
@@ -3053,7 +3639,7 @@ function render() {
             : copyText("home.today.start")
         : copyText("home.today.empty")
   );
-  setAnimatedCurrency("#homeMonthEndCash", projectedBalance);
+  setAnimatedCurrency("#homeMonthEndCash", nextCommitment);
   setAnimatedCurrency("#projectionMonthEndValue", projectedBalance);
   text(
     "#projectionAlertText",
@@ -3063,26 +3649,7 @@ function render() {
   text("#avgIncome", formatCurrency(averageIncome));
   text("#topCategory", liveTopCategory);
   text("#nextCommitment", formatCurrency(nextCommitment));
-  text(
-    "#adviceText",
-    isOnboardingState
-      ? copyText(
-          UX_RULES.progressiveVisibility.projectionTransactions - state.data.transactions.length === 1
-            ? "home.onboarding.addOneMore"
-            : "home.onboarding.addManyMore",
-          {
-            count:
-              UX_RULES.progressiveVisibility.projectionTransactions -
-              state.data.transactions.length,
-          }
-        )
-      : isRiskState
-        ? buildHomeRiskCopy(criticalCashDate, projectedBalance)
-        : isPositiveState
-          ? buildHomePositiveCopy(projectedBalance, cashFloor)
-      : assistantMessage ||
-          copyText("home.advice.starter")
-  );
+  text("#adviceText", homeAlertConfig.description);
   if (homeProgressNote) {
     homeProgressNote.hidden = !isOnboardingState;
     homeProgressNote.textContent = isOnboardingState
@@ -3101,9 +3668,25 @@ function render() {
   const healthPill = document.querySelector("#healthPill");
   healthPill.textContent = health.label;
   healthPill.className = `pill ${health.tone}`;
-  homeMonthEndCard.className = `home-month-summary ${health.tone}`;
-  homeMonthEndHint.textContent = getHomeHealthCopy(health);
-  homeMonthEndDot.className = `home-month-dot ${health.tone}`;
+  homeMonthEndCard.className = `home-month-summary ${getUpcomingPayablesTone(upcomingPayables)}`;
+  homeMonthEndHint.textContent = buildUpcomingPayablesHint(
+    upcomingPayables.nextPayable,
+    upcomingPayables.nextDays
+  );
+  homeMonthEndDot.className = `home-month-dot ${getUpcomingPayablesTone(upcomingPayables)}`;
+  if (homeMonthEndMeta) {
+    homeMonthEndMeta.textContent = buildPendingPaymentsLabel(upcomingPayables.pendingCount);
+  }
+  if (homeAdviceLabel) {
+    homeAdviceLabel.textContent = homeAlertConfig.label;
+  }
+  if (homeAdviceTitle) {
+    homeAdviceTitle.textContent = homeAlertConfig.title;
+  }
+  if (homeAdviceActionBtn) {
+    homeAdviceActionBtn.textContent = homeAlertConfig.actionLabel;
+    homeAdviceActionBtn.dataset.homeAction = homeAlertConfig.action;
+  }
   projectionStatusCard.className = `projection-status-card ${health.tone}`;
   if (connectionBanner) {
     const showConnectionBanner = state.offline || state.syncPending || state.syncingPending;
@@ -3133,35 +3716,34 @@ function render() {
   homeBalanceCard.classList.toggle("is-learning", hasMovements && isOnboardingState);
   homeBalanceCard.classList.toggle("is-risk", isRiskState);
   homeBalanceCard.classList.toggle("is-ok", isPositiveState);
-  homeAdviceCard.classList.toggle("is-learning", isOnboardingState);
-  homeAdviceCard.classList.toggle("is-risk", isRiskState);
-  homeAdviceCard.classList.toggle("is-ok", isPositiveState);
-  homeQuickGrid.classList.toggle("is-single", isLearningState);
-  quickExpenseBtn.hidden = hasMovements && isOnboardingState;
+  homeAdviceCard.className = `home-alert-card ${homeAlertConfig.tone}`;
+  homeQuickGrid.classList.remove("is-single");
+  quickExpenseBtn.hidden = false;
+  quickReportBtn.hidden = false;
   if (quickIncomeLabel) {
-    quickIncomeLabel.textContent = !hasMovements
-      ? copyText("home.quick.addIncome")
-      : isLearningState
-        ? copyText("home.quick.add")
-        : copyText("home.quick.income");
+    quickIncomeLabel.textContent = "Ingreso";
   }
   if (quickExpenseLabel) {
-    quickExpenseLabel.textContent = hasMovements
-      ? copyText("home.quick.expense")
-      : copyText("home.quick.addExpense");
+    quickExpenseLabel.textContent = "Gasto";
+  }
+  if (quickReportLabel) {
+    quickReportLabel.textContent = "Reportes";
   }
   state.latestScenarioBalance = projectedBalance;
 
   applyCompanyLogo();
 
   renderTodayMovements(state.data.transactions);
-  renderTable(historyTransactions, { groupByMonth: state.historyFilters.transactions.showAll });
-  renderReceivables(allReceivables);
-  renderPayables(allPayables);
-  renderHistoryReceivables(historyReceivables, {
+  renderTable(searchedHistoryTransactions, {
+    groupByMonth: state.historyFilters.transactions.showAll,
+  });
+  renderReceivables(sortedReceivables);
+  renderPayables(sortedPayables);
+  renderHistoryReceivables(searchedHistoryReceivables, {
     groupByMonth: state.historyFilters.receivables.showAll,
   });
-  renderHistoryPayables(historyPayables, {
+  renderPayableHistoryMonths(allHistoryPayables);
+  renderHistoryPayables(searchedHistoryPayables, {
     groupByMonth: state.historyFilters.payables.showAll,
   });
   renderMoneyCurveChart(currentBalance, cashFloor);
@@ -3181,8 +3763,11 @@ function render() {
     lowCashWeek
   );
 
+  renderHistoryAccordions();
   switchPage(state.activePage);
   switchDetailTab(state.activeDetailTab);
+  renderLedgerPanels();
+  renderMobileHeaderPanels();
 }
 
 function renderCategoryOptions(type, selectedCategory = "") {
@@ -3357,6 +3942,58 @@ function renderHistoryPayables(payables, options = {}) {
   );
 }
 
+function renderPayableHistoryMonths(payables) {
+  if (!payableHistoryMonths) {
+    return;
+  }
+
+  if (!payables.length) {
+    payableHistoryMonths.className = "history-month-summary is-empty";
+    payableHistoryMonths.innerHTML =
+      '<p class="history-month-summary-copy">Aún no tienes facturas registradas para ver por mes.</p>';
+    return;
+  }
+
+  const monthlySummary = getPayableHistoryMonthlySummary(payables);
+
+  payableHistoryMonths.className = "history-month-summary";
+  payableHistoryMonths.innerHTML = `
+    <p class="history-month-summary-copy">Elige un mes y revisa cuántas facturas tienes, cuánto suman y cuánto sigue pendiente.</p>
+    <div class="history-month-summary-list">
+      ${monthlySummary
+        .map((item) => {
+          const isActive =
+            !state.historyFilters.payables.showAll &&
+            item.monthKey === state.historyFilters.payables.month;
+          const pendingLabel = `${item.pendingCount} pendiente${
+            item.pendingCount === 1 ? "" : "s"
+          }`;
+
+          return `
+            <button
+              type="button"
+              class="history-month-summary-btn ${isActive ? "is-active" : ""}"
+              data-payable-history-month="${escapeHtml(item.monthKey)}"
+            >
+              <span class="history-month-summary-title">${escapeHtml(
+                formatMonthLabel(item.monthKey)
+              )}</span>
+              <span class="history-month-summary-meta">
+                ${item.count} factura${item.count === 1 ? "" : "s"} · ${escapeHtml(
+                  formatCurrency(item.totalAmount)
+                )}
+              </span>
+              <span class="history-month-summary-submeta">
+                ${pendingLabel} · ${escapeHtml(formatCurrency(item.pendingAmount))} por pagar
+              </span>
+            </button>
+          `;
+        })
+        .join("")}
+    </div>
+  `;
+}
+
 function renderPayableRows(targetBody, payables, emptyCopy, options = {}) {
   if (!targetBody) {
     return;
@@ -3391,6 +4028,164 @@ function renderPayableRows(targetBody, payables, emptyCopy, options = {}) {
   });
 }
 
+function matchesTransactionSearch(item, rawSearch) {
+  const search = normalizeStatementHeader(rawSearch);
+  if (!search) {
+    return true;
+  }
+
+  const haystack = [
+    item.date,
+    item.description,
+    item.category,
+    item.channel,
+    item.note,
+    item.type === "income" ? "Ingreso" : "Gasto",
+    item.type,
+  ]
+    .map((value) => normalizeStatementHeader(value))
+    .join(" ");
+
+  return haystack.includes(search);
+}
+
+function matchesReceivableSearch(item, rawSearch) {
+  const search = normalizeStatementHeader(rawSearch);
+  if (!search) {
+    return true;
+  }
+
+  const haystack = [
+    item.client,
+    item.document,
+    item.note,
+    item.status,
+    labelStatus(item.status),
+    item.dueDate,
+    item.issueDate,
+  ]
+    .map((value) => normalizeStatementHeader(value))
+    .join(" ");
+
+  return haystack.includes(search);
+}
+
+function matchesPayableSearch(item, rawSearch) {
+  const search = normalizeStatementHeader(rawSearch);
+  if (!search) {
+    return true;
+  }
+
+  const haystack = [
+    item.vendor,
+    item.document,
+    item.note,
+    item.status,
+    labelStatus(item.status),
+    item.dueDate,
+    item.issueDate,
+  ]
+    .map((value) => normalizeStatementHeader(value))
+    .join(" ");
+
+  return haystack.includes(search);
+}
+
+function toggleHistoryAccordionSection(groupKey, sectionKey) {
+  const accordionState = state[groupKey];
+  if (!accordionState || !(sectionKey in accordionState)) {
+    return;
+  }
+
+  accordionState[sectionKey] = !accordionState[sectionKey];
+  renderHistoryAccordions();
+}
+
+function renderHistoryAccordions() {
+  syncAccordionSection(
+    historyTransactionsControlsToggle,
+    historyTransactionsControlsBody,
+    state.historyTransactionsAccordion.controls
+  );
+  syncAccordionSection(
+    historyTransactionsTableToggle,
+    historyTransactionsTableRegion,
+    state.historyTransactionsAccordion.table
+  );
+  syncAccordionSection(
+    historyReceivablesFiltersToggle,
+    historyReceivablesFiltersBody,
+    state.historyReceivablesAccordion.filters
+  );
+  syncAccordionSection(
+    historyReceivablesTableToggle,
+    historyReceivablesTableRegion,
+    state.historyReceivablesAccordion.table
+  );
+  syncAccordionSection(
+    historyPayablesFiltersToggle,
+    historyPayablesFiltersBody,
+    state.historyPayablesAccordion.filters
+  );
+  syncAccordionSection(
+    historyPayablesSummaryToggle,
+    historyPayablesSummaryBody,
+    state.historyPayablesAccordion.summary
+  );
+  syncAccordionSection(
+    historyPayablesTableToggle,
+    historyPayablesTableRegion,
+    state.historyPayablesAccordion.table
+  );
+}
+
+function syncAccordionSection(button, body, expanded) {
+  if (!button || !body) {
+    return;
+  }
+
+  button.setAttribute("aria-expanded", String(expanded));
+  body.classList.toggle("is-open", expanded);
+  body.setAttribute("aria-hidden", String(!expanded));
+
+  if ("inert" in body) {
+    body.inert = !expanded;
+  }
+}
+
+function renderLedgerPanels() {
+  syncLedgerPanelState("receivables", {
+    body: receivablePanelBody,
+    button: toggleReceivablePanelBtn,
+    select: receivableSortSelect,
+  });
+  syncLedgerPanelState("payables", {
+    body: payablePanelBody,
+    button: togglePayablePanelBtn,
+    select: payableSortSelect,
+  });
+}
+
+function syncLedgerPanelState(panelKey, elements) {
+  const panelState = state.ledgerPanels?.[panelKey];
+  if (!panelState) {
+    return;
+  }
+
+  if (elements.body) {
+    elements.body.hidden = panelState.collapsed;
+  }
+
+  if (elements.button) {
+    elements.button.textContent = panelState.collapsed ? "Desplegar" : "Cerrar";
+    elements.button.setAttribute("aria-expanded", String(!panelState.collapsed));
+  }
+
+  if (elements.select) {
+    elements.select.value = normalizeLedgerSortMode(panelState.sort);
+  }
+}
+
 function buildHistoryRows({ items, groupByMonth = false, getMonthKey, colSpan, renderRow }) {
   let previousMonth = "";
 
@@ -3408,6 +4203,36 @@ function buildHistoryRows({ items, groupByMonth = false, getMonthKey, colSpan, r
       return `${monthRow}${renderRow(item)}`;
     })
     .join("");
+}
+
+function getPayableHistoryMonthlySummary(payables) {
+  const monthlyMap = new Map();
+
+  payables.forEach((item) => {
+    const monthKey = getPayableHistoryMonthKey(item);
+    const currentSummary = monthlyMap.get(monthKey) || {
+      monthKey,
+      count: 0,
+      totalAmount: 0,
+      pendingAmount: 0,
+      pendingCount: 0,
+    };
+
+    currentSummary.count += 1;
+    currentSummary.totalAmount += Number(item.amount || 0);
+
+    const outstandingAmount = getOutstandingAmount(item);
+    if (outstandingAmount > 0) {
+      currentSummary.pendingAmount += outstandingAmount;
+      currentSummary.pendingCount += 1;
+    }
+
+    monthlyMap.set(monthKey, currentSummary);
+  });
+
+  return [...monthlyMap.values()].sort((left, right) =>
+    right.monthKey.localeCompare(left.monthKey)
+  );
 }
 
 function renderMonthlySummary() {
@@ -4585,8 +5410,46 @@ function sortByDueDateAsc(a, b) {
   return a.dueDate.localeCompare(b.dueDate);
 }
 
+function normalizeLedgerSortMode(value) {
+  return ["date", "pending", "paid"].includes(value) ? value : "date";
+}
+
+function sortLedgerItems(items, sortMode = "date") {
+  const normalizedSort = normalizeLedgerSortMode(sortMode);
+  const sortedItems = [...items];
+
+  if (normalizedSort === "date") {
+    return sortedItems.sort(sortByDueDateAsc);
+  }
+
+  return sortedItems.sort((left, right) => {
+    const priorityDiff =
+      getLedgerSortPriority(left, normalizedSort) - getLedgerSortPriority(right, normalizedSort);
+
+    if (priorityDiff !== 0) {
+      return priorityDiff;
+    }
+
+    return sortByDueDateAsc(left, right);
+  });
+}
+
+function getLedgerSortPriority(item, sortMode) {
+  const isPaid = item?.status === "paid";
+
+  if (sortMode === "paid") {
+    return isPaid ? 0 : 1;
+  }
+
+  if (sortMode === "pending") {
+    return isPaid ? 1 : 0;
+  }
+
+  return 0;
+}
+
 function getPayableHistoryMonthKey(item) {
-  return String(item.issueDate || item.dueDate || today()).slice(0, 7);
+  return String(item.dueDate || item.issueDate || today()).slice(0, 7);
 }
 
 function sortByPayableHistoryDateDesc(a, b) {
@@ -4640,6 +5503,18 @@ function syncHistoryFilterInput() {
       button.setAttribute("aria-pressed", String(filter.showAll));
     }
   });
+
+  if (transactionSearchInput) {
+    transactionSearchInput.value = state.historyFilters.transactions.search || "";
+  }
+
+  if (receivableSearchInput) {
+    receivableSearchInput.value = state.historyFilters.receivables.search || "";
+  }
+
+  if (payableSearchInput) {
+    payableSearchInput.value = state.historyFilters.payables.search || "";
+  }
 }
 
 function idsMatch(leftId, rightId) {
@@ -5344,6 +6219,8 @@ function getFriendlyErrorMessage(context, error) {
 }
 
 function fillReceivableForm(receivable) {
+  state.ledgerPanels.receivables.collapsed = false;
+  renderLedgerPanels();
   receivableFields.receivableId.value = receivable.id;
   receivableFields.client.value = receivable.client;
   receivableFields.document.value = receivable.document;
@@ -5370,6 +6247,8 @@ function resetReceivableForm() {
 }
 
 function fillPayableForm(payable) {
+  state.ledgerPanels.payables.collapsed = false;
+  renderLedgerPanels();
   payableFields.payableId.value = payable.id;
   payableFields.vendor.value = payable.vendor;
   payableFields.document.value = payable.document;
@@ -5665,8 +6544,8 @@ function extractInvoiceVendor(lines) {
 }
 
 function extractInvoiceDocument(lines, text) {
-  const joinedTopLines = normalizeOcrNumberText(lines.slice(0, 16).join(" "));
-  const normalizedText = normalizeOcrNumberText(text);
+  const joinedTopLines = normalizeStatementText(lines.slice(0, 16).join(" "));
+  const normalizedText = normalizeStatementText(text);
   const patterns = [
     /factura\s*electronica[\s\S]{0,40}?n[°ºo.]?\s*([a-z0-9-]{3,})/i,
     /factura\s*electronica[\s\S]{0,40}?\b(\d{3,})\b/i,
@@ -5736,7 +6615,7 @@ function extractInvoiceDate(lines, keywords) {
 }
 
 function parseInvoiceDate(text) {
-  const normalizedText = normalizeOcrNumberText(text);
+  const normalizedText = normalizeStatementText(text);
   const match = normalizedText.match(/(\d{1,2})[/-](\d{1,2})[/-](\d{2,4})/);
   if (!match) {
     return "";
@@ -5754,7 +6633,7 @@ function parseInvoiceDate(text) {
 }
 
 function parseInvoiceAmount(value) {
-  const digitsOnly = normalizeOcrNumberText(String(value)).replace(/[^\d]/g, "");
+  const digitsOnly = normalizeStatementText(value).replace(/[^\d]/g, "");
   return Number(digitsOnly) || 0;
 }
 
@@ -5805,6 +6684,7 @@ async function runInvoiceOcrPass(dataUrl, modeLabel) {
   const {
     data: { text = "", confidence = 0 } = {},
   } = await window.Tesseract.recognize(dataUrl, "spa+eng");
+  const ocrScoringText = normalizeOcrNumberText(text);
   const extracted = extractPayableInvoiceData(text);
 
   return {
@@ -5812,7 +6692,7 @@ async function runInvoiceOcrPass(dataUrl, modeLabel) {
     text,
     confidence,
     extracted,
-    score: scoreInvoiceOcrResult(extracted, confidence, text),
+    score: scoreInvoiceOcrResult(extracted, confidence, ocrScoringText),
   };
 }
 
@@ -6032,6 +6912,10 @@ function normalizeOcrNumberText(value) {
     .replace(/[Il|]/g, "1");
 }
 
+function normalizeStatementText(value) {
+  return String(value || "").trim();
+}
+
 function getUppercaseRatio(value) {
   const letters = String(value || "").match(/[A-Za-zÁÉÍÓÚÑáéíóúñ]/g) || [];
   if (!letters.length) {
@@ -6125,16 +7009,7 @@ function resolveStatementFileType(file, expectedType = "") {
 }
 
 async function parseSpreadsheetStatementFile(file) {
-  if (!window.XLSX?.read) {
-    throw new Error("No pudimos leer Excel o CSV ahora. Inténtalo de nuevo.");
-  }
-
-  const buffer = await readFileAsArrayBuffer(file);
-  const workbook = window.XLSX.read(buffer, {
-    type: "array",
-    raw: false,
-    cellDates: false,
-  });
+  const workbook = await readSpreadsheetWorkbook(file);
 
   const parsedItems = workbook.SheetNames.slice(0, 3).flatMap((sheetName) =>
     parseSpreadsheetSheet(workbook.Sheets[sheetName])
@@ -6144,26 +7019,13 @@ async function parseSpreadsheetStatementFile(file) {
 }
 
 function parseSpreadsheetSheet(sheet) {
-  const rows = window.XLSX.utils.sheet_to_json(sheet, {
-    header: 1,
-    defval: "",
-    raw: false,
-    blankrows: false,
-  });
-
-  if (!rows.length) {
+  const context = createSpreadsheetSheetContext(sheet, { minScore: 3 });
+  if (!context) {
     return [];
   }
 
-  const headerIndex = findStatementHeaderRow(rows);
-  const hasDetectedHeader = headerIndex >= 0;
-  const dataRows = hasDetectedHeader ? rows.slice(headerIndex + 1) : rows;
-  const headers = hasDetectedHeader
-    ? rows[headerIndex].map((cell, index) => normalizeStatementHeader(cell) || `column_${index}`)
-    : buildFallbackStatementHeaders(dataRows);
-  const statementFormat = hasDetectedHeader
-    ? detectSpreadsheetStatementFormat(headers)
-    : "generic";
+  const { headers, dataRows, hasDetectedHeader } = context;
+  const statementFormat = hasDetectedHeader ? detectSpreadsheetStatementFormat(headers) : "generic";
   const parser = getSpreadsheetStatementParser(statementFormat);
   const mappedRows = dataRows.map((row) => mapStatementRowToObject(headers, row));
   const parsedRows = mappedRows
@@ -6188,45 +7050,7 @@ function parseSpreadsheetSheet(sheet) {
 }
 
 function findStatementHeaderRow(rows) {
-  const headerSignals = [
-    "fecha",
-    "date",
-    "descripcion",
-    "descripción",
-    "detalle",
-    "glosa",
-    "concepto",
-    "monto",
-    "amount",
-    "cargo",
-    "abono",
-    "debito",
-    "credito",
-    "depositos y abonos",
-    "depositos o abonos",
-    "depositos abonos",
-    "cheques y otros cargos",
-    "cheques otros cargos",
-    "otros cargos",
-    "saldo",
-  ];
-
-  let bestIndex = -1;
-  let bestScore = 0;
-
-  rows.slice(0, 24).forEach((row, index) => {
-    const rowScore = row.reduce((score, cell) => {
-      const normalizedCell = normalizeStatementHeader(cell);
-      return score + (headerSignals.some((signal) => normalizedCell.includes(signal)) ? 1 : 0);
-    }, 0);
-
-    if (rowScore > bestScore) {
-      bestScore = rowScore;
-      bestIndex = index;
-    }
-  });
-
-  return bestScore >= 2 ? bestIndex : -1;
+  return findUniversalHeaderRow(rows, { minScore: 3 });
 }
 
 function mapStatementRowToObject(headers, row) {
@@ -6242,6 +7066,258 @@ function buildFallbackStatementHeaders(rows) {
   }, 0);
 
   return Array.from({ length: maxColumns }, (_, index) => `column_${index}`);
+}
+
+async function readSpreadsheetWorkbook(file) {
+  if (!window.XLSX?.read) {
+    throw new Error("No pudimos leer Excel ahora. Inténtalo de nuevo.");
+  }
+
+  const buffer = await readFileAsArrayBuffer(file);
+  return window.XLSX.read(buffer, {
+    type: "array",
+    raw: false,
+    cellDates: false,
+  });
+}
+
+function readSpreadsheetSheetRows(sheet) {
+  return window.XLSX.utils.sheet_to_json(sheet, {
+    header: 1,
+    defval: "",
+    raw: false,
+    blankrows: false,
+  });
+}
+
+function pickHeaderKeyByRegex(headers, expressions) {
+  const normalizedHeaders = headers.map((header) => ({
+    header,
+    normalizedHeader: normalizeStatementHeader(header),
+  }));
+
+  for (const expression of expressions) {
+    const exactMatch = normalizedHeaders.find(({ normalizedHeader }) =>
+      typeof expression === "string"
+        ? normalizedHeader === normalizeStatementHeader(expression)
+        : expression.test(normalizedHeader)
+    );
+    if (exactMatch) {
+      return exactMatch.header;
+    }
+
+    const partialMatch = normalizedHeaders.find(({ normalizedHeader }) =>
+      typeof expression === "string"
+        ? normalizedHeader.includes(normalizeStatementHeader(expression))
+        : expression.test(normalizedHeader)
+    );
+    if (partialMatch) {
+      return partialMatch.header;
+    }
+  }
+
+  return "";
+}
+
+function detectUniversalExcelFormat(headers) {
+  const normalizedHeaders = headers.map((header) => normalizeStatementHeader(header));
+
+  const isSiiFormat =
+    normalizedHeaders.some((header) => header === "razon social") &&
+    normalizedHeaders.some((header) => header === "folio") &&
+    normalizedHeaders.some((header) => header === "fecha docto") &&
+    normalizedHeaders.some((header) => header === "monto total");
+
+  if (isSiiFormat) {
+    return "sii";
+  }
+
+  const bankSignals = [
+    "descripcion",
+    "detalle",
+    "glosa",
+    "depositos y abonos",
+    "depositos o abonos",
+    "cheques y otros cargos",
+    "cargo",
+    "abono",
+    "debito",
+    "credito",
+  ];
+  if (normalizedHeaders.some((header) => bankSignals.some((signal) => header.includes(signal)))) {
+    return "banco";
+  }
+
+  const invoiceSignals = [
+    "cliente",
+    "proveedor",
+    "razon social",
+    "documento",
+    "factura",
+    "folio",
+    "vencimiento",
+    "saldo pendiente",
+  ];
+  if (normalizedHeaders.some((header) => invoiceSignals.some((signal) => header.includes(signal)))) {
+    return "facturas";
+  }
+
+  return "desconocido";
+}
+
+function detectUniversalExcelColumns(headers) {
+  return {
+    date: pickHeaderKeyByRegex(headers, [/fecha/i, /\bfec\b/i, /\bdate\b/i]),
+    issueDate: pickHeaderKeyByRegex(headers, [
+      /fecha\s*(emision|emisión|documento|factura|docto)/i,
+      /\bemision\b/i,
+      /\bemisión\b/i,
+      /fecha/i,
+    ]),
+    dueDate: pickHeaderKeyByRegex(headers, [
+      /(fecha\s*)?(vencimiento|vence)/i,
+      /(fecha\s*)?(pago|cobro|compromiso)/i,
+      /fecha\s*recepcion/i,
+      /fecha\s*recepción/i,
+    ]),
+    name: pickHeaderKeyByRegex(headers, [
+      /cliente/i,
+      /proveedor/i,
+      /razon\s*social/i,
+      /razón\s*social/i,
+      /descripcion/i,
+      /descripci[oó]n/i,
+      /detalle/i,
+      /glosa/i,
+      /deudor/i,
+      /acreedor/i,
+      /empresa/i,
+      /comercio/i,
+      /nombre/i,
+    ]),
+    document: pickHeaderKeyByRegex(headers, [
+      /documento/i,
+      /factura/i,
+      /folio/i,
+      /referencia/i,
+      /\bref\b/i,
+      /\bnro\b/i,
+      /\bnumero\b/i,
+      /\boc\b/i,
+    ]),
+    amount: pickHeaderKeyByRegex(headers, [
+      /saldo\s*pendiente/i,
+      /total\s*pendiente/i,
+      /monto\s*total/i,
+      /\btotal\b/i,
+      /\bsaldo\b/i,
+      /\bmonto\b/i,
+      /\bimporte\b/i,
+      /\bvalor\b/i,
+      /\bcargo\b/i,
+      /\babono\b/i,
+    ]),
+    debit: pickHeaderKeyByRegex(headers, [
+      /cheques?.*cargos?/i,
+      /otros\s*cargos?/i,
+      /\bcargos?\b/i,
+      /d[eé]bito/i,
+      /\begreso\b/i,
+      /\bsalida\b/i,
+      /\bwithdraw\b/i,
+    ]),
+    credit: pickHeaderKeyByRegex(headers, [
+      /dep[oó]sitos?.*abonos?/i,
+      /\babonos?\b/i,
+      /cr[eé]dito/i,
+      /\bingreso\b/i,
+      /deposit/i,
+    ]),
+    status: pickHeaderKeyByRegex(headers, [/estado/i, /status/i, /situaci[oó]n/i]),
+    partialAmount: pickHeaderKeyByRegex(headers, [
+      /abono/i,
+      /abonado/i,
+      /pagado/i,
+      /pago\s*parcial/i,
+      /parcial/i,
+    ]),
+    pendingAmount: pickHeaderKeyByRegex(headers, [/saldo\s*pendiente/i, /\bpendiente\b/i, /\bsaldo\b/i]),
+    note: pickHeaderKeyByRegex(headers, [/nota/i, /observaci[oó]n/i, /glosa/i]),
+  };
+}
+
+function getUniversalColumnDetectionScore(columns) {
+  let score = 0;
+
+  if (columns.name) {
+    score += 3;
+  }
+
+  if (columns.amount || columns.debit || columns.credit) {
+    score += 3;
+  }
+
+  if (columns.date || columns.issueDate) {
+    score += 2;
+  }
+
+  if (columns.dueDate) {
+    score += 1;
+  }
+
+  if (columns.document) {
+    score += 1;
+  }
+
+  if (columns.status) {
+    score += 1;
+  }
+
+  return score;
+}
+
+function findUniversalHeaderRow(rows, { minScore = 3 } = {}) {
+  let bestIndex = -1;
+  let bestScore = 0;
+
+  rows.slice(0, 24).forEach((row, index) => {
+    const headers = row.map(
+      (cell, columnIndex) => normalizeStatementHeader(cell) || `column_${columnIndex}`
+    );
+    const rowScore = getUniversalColumnDetectionScore(detectUniversalExcelColumns(headers));
+
+    if (rowScore > bestScore) {
+      bestScore = rowScore;
+      bestIndex = index;
+    }
+  });
+
+  return bestScore >= minScore ? bestIndex : -1;
+}
+
+function createSpreadsheetSheetContext(sheet, { minScore = 3 } = {}) {
+  const rows = readSpreadsheetSheetRows(sheet);
+
+  if (!rows.length) {
+    return null;
+  }
+
+  const headerIndex = findUniversalHeaderRow(rows, { minScore });
+  const hasDetectedHeader = headerIndex >= 0;
+  const dataRows = hasDetectedHeader ? rows.slice(headerIndex + 1) : rows;
+  const headers = hasDetectedHeader
+    ? rows[headerIndex].map((cell, index) => normalizeStatementHeader(cell) || `column_${index}`)
+    : buildFallbackStatementHeaders(dataRows);
+
+  return {
+    rows,
+    headerIndex,
+    hasDetectedHeader,
+    dataRows,
+    headers,
+    format: detectUniversalExcelFormat(headers),
+    columns: detectUniversalExcelColumns(headers),
+  };
 }
 
 function detectSpreadsheetStatementFormat(headers) {
@@ -6372,9 +7448,26 @@ function buildStatementImportPreviewItem(item, importFormat = "generic") {
     date,
     description,
     amount: Math.abs(signedAmount),
-    type: signedAmount >= 0 ? "income" : "expense",
+    type: classifyImportedMovementType(signedAmount, item.type),
     importFormat,
   };
+}
+
+function classifyImportedMovementType(amount, fallbackType = "expense") {
+  if (amount > 0) {
+    return "income";
+  }
+
+  if (amount < 0) {
+    return "expense";
+  }
+
+  return fallbackType === "income" ? "income" : "expense";
+}
+
+function getSignedImportedMovementAmount(item) {
+  const absoluteAmount = Math.abs(Number(item.amount) || 0);
+  return item.type === "income" ? absoluteAmount : -absoluteAmount;
 }
 
 function resolveStatementRowDate(row, keys, allowLooseRow = false) {
@@ -6612,6 +7705,33 @@ function pickStatementValue(row, keys, patterns) {
   return key ? row[key] : "";
 }
 
+function pickStatementValueByPriority(row, keys, patternGroups) {
+  const normalizedKeys = keys.map((key) => ({
+    key,
+    normalizedKey: normalizeStatementHeader(key),
+  }));
+
+  for (const patterns of patternGroups) {
+    const normalizedPatterns = patterns.map((pattern) => normalizeStatementHeader(pattern));
+
+    const exactMatch = normalizedKeys.find(({ normalizedKey }) =>
+      normalizedPatterns.includes(normalizedKey)
+    );
+    if (exactMatch) {
+      return row[exactMatch.key];
+    }
+
+    const partialMatch = normalizedKeys.find(({ normalizedKey }) =>
+      normalizedPatterns.some((pattern) => normalizedKey.includes(pattern))
+    );
+    if (partialMatch) {
+      return row[partialMatch.key];
+    }
+  }
+
+  return "";
+}
+
 function hasStatementColumn(keys, patterns) {
   const normalizedPatterns = patterns.map((pattern) => normalizeStatementHeader(pattern));
   return keys.some((candidateKey) => {
@@ -6621,255 +7741,419 @@ function hasStatementColumn(keys, patterns) {
 }
 
 async function parseReceivableImportFile(file) {
-  if (!window.XLSX?.read) {
-    throw new Error("No pudimos leer Excel ahora. Inténtalo de nuevo.");
-  }
-
-  const buffer = await readFileAsArrayBuffer(file);
-  const workbook = window.XLSX.read(buffer, {
-    type: "array",
-    raw: false,
-    cellDates: false,
-  });
+  const workbook = await readSpreadsheetWorkbook(file);
 
   const parsedItems = workbook.SheetNames.slice(0, 3).flatMap((sheetName) =>
     parseReceivableImportSheet(workbook.Sheets[sheetName])
   );
 
-  return parsedItems.sort((left, right) => right.dueDate.localeCompare(left.dueDate));
+  if (parsedItems.length) {
+    return parsedItems.sort((left, right) => right.dueDate.localeCompare(left.dueDate));
+  }
+
+  const fallbackItems = workbook.SheetNames.slice(0, 3).flatMap((sheetName) =>
+    buildLooseReceivableImportItems(workbook.Sheets[sheetName])
+  );
+
+  return fallbackItems.sort((left, right) => right.dueDate.localeCompare(left.dueDate));
 }
 
 async function parsePayableImportFile(file) {
-  if (!window.XLSX?.read) {
-    throw new Error("No pudimos leer Excel ahora. Inténtalo de nuevo.");
-  }
-
-  const buffer = await readFileAsArrayBuffer(file);
-  const workbook = window.XLSX.read(buffer, {
-    type: "array",
-    raw: false,
-    cellDates: false,
-  });
+  const workbook = await readSpreadsheetWorkbook(file);
 
   const parsedItems = workbook.SheetNames.slice(0, 3).flatMap((sheetName) =>
     parsePayableImportSheet(workbook.Sheets[sheetName])
   );
 
-  return parsedItems.sort((left, right) => right.dueDate.localeCompare(left.dueDate));
+  if (parsedItems.length) {
+    return parsedItems.sort((left, right) => right.dueDate.localeCompare(left.dueDate));
+  }
+
+  const fallbackItems = workbook.SheetNames.slice(0, 3).flatMap((sheetName) =>
+    buildLoosePayableImportItems(workbook.Sheets[sheetName])
+  );
+
+  return fallbackItems.sort((left, right) => right.dueDate.localeCompare(left.dueDate));
 }
 
 function parseReceivableImportSheet(sheet) {
-  const rows = window.XLSX.utils.sheet_to_json(sheet, {
-    header: 1,
-    defval: "",
-    raw: false,
-    blankrows: false,
-  });
-
-  if (!rows.length) {
+  const context = createSpreadsheetSheetContext(sheet, { minScore: 4 });
+  if (!context) {
     return [];
   }
 
-  const headerIndex = findReceivableHeaderRow(rows);
-  const hasDetectedHeader = headerIndex >= 0;
-  const dataRows = hasDetectedHeader ? rows.slice(headerIndex + 1) : rows;
-  const headers = hasDetectedHeader
-    ? rows[headerIndex].map((cell, index) => normalizeStatementHeader(cell) || `column_${index}`)
-    : buildFallbackStatementHeaders(dataRows);
+  const { headers, dataRows, hasDetectedHeader, columns: detectedColumns } = context;
+  const hasCoreDetectedColumns = Boolean(detectedColumns.name && detectedColumns.amount);
 
   return dataRows
-    .map((row) => mapStatementRowToObject(headers, row))
-    .map((row) => parseReceivableImportRow(row, { allowLooseRow: !hasDetectedHeader }))
+    .filter((row) => !isSpreadsheetImportRowEmpty(row))
+    .filter((row) => !isSpreadsheetImportSummaryArrayRow(row))
+    .map((rawRow) => {
+      const row = mapStatementRowToObject(headers, rawRow);
+
+      if (isSpreadsheetImportSummaryObjectRow(row, detectedColumns)) {
+        return null;
+      }
+
+      return (
+        (hasCoreDetectedColumns
+          ? parseDetectedReceivableImportRow(row, detectedColumns)
+          : null) ||
+        parseReceivableImportRow(row, {
+          allowLooseRow: !hasDetectedHeader || !hasCoreDetectedColumns,
+        })
+      );
+    })
     .filter(Boolean);
 }
 
 function parsePayableImportSheet(sheet) {
-  const rows = window.XLSX.utils.sheet_to_json(sheet, {
-    header: 1,
-    defval: "",
-    raw: false,
-    blankrows: false,
-  });
-
-  if (!rows.length) {
+  const context = createSpreadsheetSheetContext(sheet, { minScore: 4 });
+  if (!context) {
     return [];
   }
 
-  const headerIndex = findPayableHeaderRow(rows);
-  const hasDetectedHeader = headerIndex >= 0;
-  const dataRows = hasDetectedHeader ? rows.slice(headerIndex + 1) : rows;
-  const headers = hasDetectedHeader
-    ? rows[headerIndex].map((cell, index) => normalizeStatementHeader(cell) || `column_${index}`)
-    : buildFallbackStatementHeaders(dataRows);
+  const { headers, dataRows, hasDetectedHeader, format, columns: detectedColumns } = context;
+  const isSiiPurchaseRegister = format === "sii" || isSiiPurchaseRegisterSheet(headers);
+  const hasCoreDetectedColumns = Boolean(detectedColumns.name && detectedColumns.amount);
 
   return dataRows
+    .filter((row) => !isSpreadsheetImportRowEmpty(row))
+    .filter((row) => !isSpreadsheetImportSummaryArrayRow(row))
     .map((row) => mapStatementRowToObject(headers, row))
-    .map((row) => parsePayableImportRow(row, { allowLooseRow: !hasDetectedHeader }))
+    .map((row) => {
+      if (isSpreadsheetImportSummaryObjectRow(row, detectedColumns)) {
+        return null;
+      }
+
+      if (isSiiPurchaseRegister) {
+        return (
+          parseSiiPurchaseRegisterPayableRow(row) ||
+          parseDetectedPayableImportRow(row, detectedColumns) ||
+          parsePayableImportRow(row, { allowLooseRow: true })
+        );
+      }
+
+      return (
+        (hasCoreDetectedColumns ? parseDetectedPayableImportRow(row, detectedColumns) : null) ||
+        parsePayableImportRow(row, { allowLooseRow: !hasDetectedHeader }) ||
+        parsePayableImportRow(row, { allowLooseRow: true })
+      );
+    })
     .filter(Boolean);
 }
 
 function findReceivableHeaderRow(rows) {
-  const headerSignals = [
-    "cliente",
-    "razon social",
-    "razón social",
-    "empresa",
-    "documento",
-    "factura",
-    "folio",
-    "monto",
-    "total",
-    "emision",
-    "emisión",
-    "vencimiento",
-    "estado",
-    "nota",
-    "observacion",
-    "abono",
-    "saldo pendiente",
-  ];
+  return findUniversalHeaderRow(rows, { minScore: 4 });
+}
 
-  let bestIndex = -1;
-  let bestScore = 0;
+function detectReceivableColumns(headers) {
+  return detectUniversalExcelColumns(headers);
+}
 
-  rows.slice(0, 24).forEach((row, index) => {
-    const rowScore = row.reduce((score, cell) => {
-      const normalizedCell = normalizeStatementHeader(cell);
-      return score + (headerSignals.some((signal) => normalizedCell.includes(signal)) ? 1 : 0);
-    }, 0);
-
-    if (rowScore > bestScore) {
-      bestScore = rowScore;
-      bestIndex = index;
-    }
-  });
-
-  return bestScore >= 2 ? bestIndex : -1;
+function getReceivableColumnDetectionScore(columns) {
+  return getUniversalColumnDetectionScore(columns);
 }
 
 function findPayableHeaderRow(rows) {
-  const headerSignals = [
-    "proveedor",
-    "razon social",
-    "razón social",
-    "empresa",
-    "factura",
-    "folio",
-    "documento",
-    "monto",
-    "total",
-    "emision",
-    "emisión",
-    "vencimiento",
-    "estado",
-    "nota",
-    "observacion",
-    "abono",
-    "saldo pendiente",
-  ];
+  return findUniversalHeaderRow(rows, { minScore: 4 });
+}
 
-  let bestIndex = -1;
-  let bestScore = 0;
+function isSiiPurchaseRegisterSheet(headers) {
+  const normalizedHeaders = headers.map((header) => normalizeStatementHeader(header));
 
-  rows.slice(0, 24).forEach((row, index) => {
-    const rowScore = row.reduce((score, cell) => {
-      const normalizedCell = normalizeStatementHeader(cell);
-      return score + (headerSignals.some((signal) => normalizedCell.includes(signal)) ? 1 : 0);
-    }, 0);
+  return (
+    normalizedHeaders.some((header) => header === "razon social") &&
+    normalizedHeaders.some((header) => header === "folio") &&
+    normalizedHeaders.some((header) => header === "fecha docto") &&
+    normalizedHeaders.some((header) => header === "monto total")
+  );
+}
 
-    if (rowScore > bestScore) {
-      bestScore = rowScore;
-      bestIndex = index;
+function pickHeaderKeyByPriority(headers, patternGroups) {
+  const normalizedHeaders = headers.map((header) => ({
+    header,
+    normalizedHeader: normalizeStatementHeader(header),
+  }));
+
+  for (const patterns of patternGroups) {
+    const normalizedPatterns = patterns.map((pattern) => normalizeStatementHeader(pattern));
+
+    const exactMatch = normalizedHeaders.find(({ normalizedHeader }) =>
+      normalizedPatterns.includes(normalizedHeader)
+    );
+    if (exactMatch) {
+      return exactMatch.header;
     }
-  });
 
-  return bestScore >= 2 ? bestIndex : -1;
+    const partialMatch = normalizedHeaders.find(({ normalizedHeader }) =>
+      normalizedPatterns.some((pattern) => normalizedHeader.includes(pattern))
+    );
+    if (partialMatch) {
+      return partialMatch.header;
+    }
+  }
+
+  return "";
+}
+
+function isSpreadsheetImportRowEmpty(row) {
+  if (!Array.isArray(row) || !row.length) {
+    return true;
+  }
+
+  return row.every((value) => {
+    const normalizedValue = normalizeStatementDescription(value);
+    return !normalizedValue;
+  });
+}
+
+function isSpreadsheetImportSummaryText(value) {
+  const normalizedValue = normalizeStatementHeader(value);
+  return [
+    "total",
+    "totales",
+    "subtotal",
+    "total general",
+    "resumen",
+    "saldo inicial",
+    "saldo final",
+    "acumulado",
+  ].some((label) => normalizedValue.includes(label));
+}
+
+function isSpreadsheetImportSummaryArrayRow(row) {
+  return row.some((value) => {
+    const normalizedValue = normalizeStatementDescription(value);
+    return normalizedValue && isSpreadsheetImportSummaryText(normalizedValue);
+  });
+}
+
+function isSpreadsheetImportSummaryObjectRow(row, columns = {}) {
+  const nameValue = normalizeStatementDescription(
+    columns.name ? row[columns.name] : pickStatementValue(row, Object.keys(row), ["cliente", "detalle"])
+  );
+
+  if (nameValue && isSpreadsheetImportSummaryText(nameValue)) {
+    return true;
+  }
+
+  return Object.values(row).some((value) => {
+    const normalizedValue = normalizeStatementDescription(value);
+    return normalizedValue && isSpreadsheetImportSummaryText(normalizedValue);
+  });
+}
+
+function isReceivableSummaryText(value) {
+  return isSpreadsheetImportSummaryText(value);
+}
+
+function isReceivableSummaryArrayRow(row) {
+  return isSpreadsheetImportSummaryArrayRow(row);
+}
+
+function isReceivableSummaryObjectRow(row, columns = {}) {
+  return isSpreadsheetImportSummaryObjectRow(row, columns);
+}
+
+function resolveUniversalExcelAmount(row, columns) {
+  const directAmount = parseStatementSignedAmount(columns.amount ? row[columns.amount] : "");
+  if (directAmount) {
+    return directAmount;
+  }
+
+  const creditAmount = parseStatementSignedAmount(columns.credit ? row[columns.credit] : "");
+  if (creditAmount) {
+    return Math.abs(creditAmount);
+  }
+
+  const debitAmount = parseStatementSignedAmount(columns.debit ? row[columns.debit] : "");
+  if (debitAmount) {
+    return -Math.abs(debitAmount);
+  }
+
+  return 0;
+}
+
+function parseUniversalExcelBaseRow(row, columns) {
+  const date =
+    parseStatementDateValue(
+      (columns.date && row[columns.date]) ||
+        (columns.issueDate && row[columns.issueDate]) ||
+        (columns.dueDate && row[columns.dueDate]) ||
+        ""
+    ) || "";
+  const name = normalizeStatementDescription(columns.name ? row[columns.name] : "");
+  const amount = resolveUniversalExcelAmount(row, columns);
+
+  if (!name || !amount) {
+    return null;
+  }
+
+  return {
+    date: date || today(),
+    name,
+    amount,
+  };
+}
+
+function parseDetectedReceivableImportRow(row, columns) {
+  const baseRow = parseUniversalExcelBaseRow(row, columns);
+  const client = baseRow?.name || "";
+  if (!client || isSpreadsheetImportSummaryText(client)) {
+    return null;
+  }
+
+  const document =
+    normalizeStatementDescription(columns.document ? row[columns.document] : "") ||
+    "Documento pendiente";
+  const amount = Math.abs(baseRow.amount);
+  const issueDate =
+    parseStatementDateValue(
+      (columns.issueDate && row[columns.issueDate]) || (columns.date && row[columns.date]) || ""
+    ) || "";
+  const dueDate =
+    parseStatementDateValue(columns.dueDate ? row[columns.dueDate] : "") ||
+    issueDate ||
+    today();
+  const status = normalizeReceivableImportStatus(columns.status ? row[columns.status] : "");
+  const partialAmount = Math.abs(
+    parseStatementSignedAmount(columns.partialAmount ? row[columns.partialAmount] : "")
+  );
+  const pendingAmount = Math.abs(
+    parseStatementSignedAmount(columns.pendingAmount ? row[columns.pendingAmount] : "")
+  );
+  const note = normalizeStatementDescription(columns.note ? row[columns.note] : "");
+
+  if (!amount) {
+    return null;
+  }
+
+  return {
+    client,
+    document,
+    amount,
+    issueDate: issueDate || today(),
+    dueDate,
+    status: deriveReceivableImportStatus(status, amount, partialAmount, pendingAmount),
+    partialAmount: partialAmount || deriveReceivablePartialAmount(amount, pendingAmount),
+    note: note || "",
+    type: "por_cobrar",
+  };
+}
+
+function parseDetectedPayableImportRow(row, columns) {
+  const baseRow = parseUniversalExcelBaseRow(row, columns);
+  const vendor = baseRow?.name || "";
+  if (!vendor || isSpreadsheetImportSummaryText(vendor)) {
+    return null;
+  }
+
+  const document =
+    normalizeStatementDescription(columns.document ? row[columns.document] : "") ||
+    "Documento pendiente";
+  const amount = Math.abs(baseRow.amount);
+  const issueDate =
+    parseStatementDateValue(
+      (columns.issueDate && row[columns.issueDate]) || (columns.date && row[columns.date]) || ""
+    ) || "";
+  const dueDate =
+    parseStatementDateValue(columns.dueDate ? row[columns.dueDate] : "") ||
+    issueDate ||
+    today();
+  const status = normalizePayableImportStatus(columns.status ? row[columns.status] : "");
+  const partialAmount = Math.abs(
+    parseStatementSignedAmount(columns.partialAmount ? row[columns.partialAmount] : "")
+  );
+  const pendingAmount = Math.abs(
+    parseStatementSignedAmount(columns.pendingAmount ? row[columns.pendingAmount] : "")
+  );
+  const note = normalizeStatementDescription(columns.note ? row[columns.note] : "");
+
+  if (!amount) {
+    return null;
+  }
+
+  return {
+    vendor,
+    document,
+    amount,
+    issueDate: issueDate || today(),
+    dueDate,
+    status: derivePayableImportStatus(status, amount, partialAmount, pendingAmount),
+    partialAmount: partialAmount || derivePayablePartialAmount(amount, pendingAmount),
+    note: note || "",
+  };
 }
 
 function parseReceivableImportRow(row, { allowLooseRow = false } = {}) {
   const keys = Object.keys(row);
   const client =
     normalizeStatementDescription(
-      pickStatementValue(row, keys, [
-        "cliente",
-        "razon social",
-        "razón social",
-        "empresa",
-        "deudor",
-        "nombre",
+      pickStatementValueByPriority(row, keys, [
+        ["razon social", "razón social"],
+        ["cliente", "nombre cliente"],
+        ["empresa", "deudor", "nombre"],
       ])
     ) || (allowLooseRow ? findLooseReceivableText(row, keys) : "");
 
   const document =
     normalizeStatementDescription(
-      pickStatementValue(row, keys, [
-        "documento",
-        "factura",
-        "folio",
-        "referencia",
-        "ref",
-        "oc",
-        "numero",
-        "nro",
+      pickStatementValueByPriority(row, keys, [
+        ["documento", "factura", "folio"],
+        ["referencia", "ref", "oc", "numero", "nro"],
       ])
     ) || "Documento pendiente";
 
   const amount = Math.abs(
     parseStatementSignedAmount(
-      pickStatementValue(row, keys, [
-        "monto",
-        "total",
-        "importe",
-        "valor",
-        "saldo",
-        "pendiente",
+      pickStatementValueByPriority(row, keys, [
+        ["monto total", "total", "importe total", "valor total"],
+        ["monto", "importe", "valor"],
+        ["saldo pendiente", "pendiente", "saldo"],
       ])
     )
   );
 
   const issueDate =
     parseStatementDateValue(
-      pickStatementValue(row, keys, [
-        "emision",
-        "emisión",
-        "fecha emision",
-        "fecha emisión",
-        "fecha documento",
-        "fecha factura",
-        "fecha",
+      pickStatementValueByPriority(row, keys, [
+        [
+          "fecha docto",
+          "fecha documento",
+          "fecha factura",
+          "emision",
+          "emisión",
+          "fecha emision",
+          "fecha emisión",
+        ],
+        ["fecha"],
       ])
     ) || (allowLooseRow ? findLooseReceivableDate(row) : "");
   const dueDate =
     parseStatementDateValue(
-      pickStatementValue(row, keys, [
-        "vencimiento",
-        "fecha vencimiento",
-        "vence",
-        "pago",
-        "fecha pago",
+      pickStatementValueByPriority(row, keys, [
+        ["vencimiento", "fecha vencimiento", "vence"],
+        ["pago", "fecha pago"],
       ])
     ) || issueDate || today();
   const status = normalizeReceivableImportStatus(
-    pickStatementValue(row, keys, ["estado", "status", "situacion", "situación"])
+    pickStatementValueByPriority(row, keys, [["estado", "status", "situacion", "situación"]])
   );
   const partialAmount = Math.abs(
     parseStatementSignedAmount(
-      pickStatementValue(row, keys, [
-        "abono",
-        "abonado",
-        "pagado",
-        "pago parcial",
-        "parcial",
+      pickStatementValueByPriority(row, keys, [
+        ["abono", "abonado", "pagado", "pago parcial", "parcial"],
       ])
     )
   );
   const pendingAmount = Math.abs(
     parseStatementSignedAmount(
-      pickStatementValue(row, keys, ["saldo pendiente", "pendiente", "saldo"])
+      pickStatementValueByPriority(row, keys, [["saldo pendiente", "pendiente", "saldo"]])
     )
   );
   const note = normalizeStatementDescription(
-    pickStatementValue(row, keys, ["nota", "observacion", "observación", "glosa"])
+    pickStatementValueByPriority(row, keys, [["nota", "observacion", "observación", "glosa"]])
   );
 
   if (!client || !amount) {
@@ -6885,6 +8169,7 @@ function parseReceivableImportRow(row, { allowLooseRow = false } = {}) {
     status: deriveReceivableImportStatus(status, amount, partialAmount, pendingAmount),
     partialAmount: partialAmount || deriveReceivablePartialAmount(amount, pendingAmount),
     note: note || "",
+    type: "por_cobrar",
   };
 }
 
@@ -6892,85 +8177,70 @@ function parsePayableImportRow(row, { allowLooseRow = false } = {}) {
   const keys = Object.keys(row);
   const vendor =
     normalizeStatementDescription(
-      pickStatementValue(row, keys, [
-        "proveedor",
-        "razon social",
-        "razón social",
-        "empresa",
-        "acreedor",
-        "nombre",
+      pickStatementValueByPriority(row, keys, [
+        ["razon social", "razón social"],
+        ["proveedor", "nombre proveedor"],
+        ["empresa", "acreedor", "nombre"],
       ])
     ) || (allowLooseRow ? findLoosePayableText(row, keys) : "");
 
   const document =
     normalizeStatementDescription(
-      pickStatementValue(row, keys, [
-        "factura",
-        "documento",
-        "folio",
-        "referencia",
-        "ref",
-        "numero",
-        "nro",
+      pickStatementValueByPriority(row, keys, [
+        ["factura", "documento", "folio"],
+        ["referencia", "ref", "numero", "nro"],
       ])
     ) || "Documento pendiente";
 
   const amount = Math.abs(
     parseStatementSignedAmount(
-      pickStatementValue(row, keys, [
-        "monto",
-        "total",
-        "importe",
-        "valor",
-        "saldo",
-        "pendiente",
+      pickStatementValueByPriority(row, keys, [
+        ["monto total", "total", "importe total", "valor total"],
+        ["monto", "importe", "valor"],
+        ["saldo pendiente", "pendiente", "saldo"],
       ])
     )
   );
 
   const issueDate =
     parseStatementDateValue(
-      pickStatementValue(row, keys, [
-        "emision",
-        "emisión",
-        "fecha emision",
-        "fecha emisión",
-        "fecha documento",
-        "fecha factura",
-        "fecha",
+      pickStatementValueByPriority(row, keys, [
+        [
+          "fecha docto",
+          "fecha documento",
+          "fecha factura",
+          "emision",
+          "emisión",
+          "fecha emision",
+          "fecha emisión",
+        ],
+        ["fecha"],
       ])
     ) || (allowLooseRow ? findLoosePayableDate(row) : "");
   const dueDate =
     parseStatementDateValue(
-      pickStatementValue(row, keys, [
-        "vencimiento",
-        "fecha vencimiento",
-        "vence",
-        "pago",
-        "fecha pago",
+      pickStatementValueByPriority(row, keys, [
+        ["vencimiento", "fecha vencimiento", "vence"],
+        ["pago", "fecha pago"],
       ])
     ) || issueDate || today();
   const status = normalizePayableImportStatus(
-    pickStatementValue(row, keys, ["estado", "status", "situacion", "situación"])
+    pickStatementValueByPriority(row, keys, [["estado", "status", "situacion", "situación"]])
   );
   const partialAmount = Math.abs(
     parseStatementSignedAmount(
-      pickStatementValue(row, keys, [
-        "abono",
-        "abonado",
-        "pagado",
-        "pago parcial",
-        "parcial",
+      pickStatementValueByPriority(row, keys, [
+        ["abono", "abonado", "pagado", "pago parcial", "parcial"],
       ])
     )
   );
   const pendingAmount = Math.abs(
     parseStatementSignedAmount(
-      pickStatementValue(row, keys, ["saldo pendiente", "pendiente", "saldo"])
+      pickStatementValueByPriority(row, keys, [["saldo pendiente", "pendiente", "saldo"]])
     )
   );
   const note = normalizeStatementDescription(
-    pickStatementValue(row, keys, ["nota", "observacion", "observación", "glosa"])
+    pickStatementValueByPriority(row, keys, [["nota", "observacion", "observación", "glosa"]])
   );
 
   if (!vendor || !amount) {
@@ -6987,6 +8257,247 @@ function parsePayableImportRow(row, { allowLooseRow = false } = {}) {
     partialAmount: partialAmount || derivePayablePartialAmount(amount, pendingAmount),
     note: note || "",
   };
+}
+
+function buildLooseReceivableImportItems(sheet) {
+  const rows = window.XLSX.utils.sheet_to_json(sheet, {
+    header: 1,
+    defval: "",
+    raw: false,
+    blankrows: false,
+  });
+
+  return rows
+    .map((row) => parseLooseReceivableImportRow(row))
+    .filter(Boolean);
+}
+
+function parseLooseReceivableImportRow(row) {
+  if (!Array.isArray(row) || !row.length || isSpreadsheetImportRowEmpty(row)) {
+    return null;
+  }
+
+  const textCandidates = row
+    .map((value) => normalizeStatementDescription(value))
+    .filter(
+      (value) =>
+        value &&
+        /[a-záéíóúñ]/i.test(value) &&
+        !isLooseReceivableHeaderText(value) &&
+        !isReceivableSummaryText(value) &&
+        !/^\d{1,2}\/\d{1,2}\/\d{2,4}/.test(value)
+    )
+    .sort((left, right) => right.length - left.length);
+
+  const client = textCandidates[0] || "";
+  const document =
+    row
+      .map((value) => String(value || "").trim())
+      .find(
+        (value) =>
+          value &&
+          value !== client &&
+          /\d/.test(value) &&
+          value.length <= 24 &&
+          !/^\d{1,2}\/\d{1,2}\/\d{2,4}/.test(value)
+      ) || "Documento pendiente";
+
+  const amountCandidates = row
+    .map((value) => parseStatementSignedAmount(value))
+    .filter((value) => Math.abs(value) > 0)
+    .map((value) => Math.abs(value))
+    .sort((left, right) => right - left);
+  const amount = amountCandidates[0] || 0;
+
+  const issueDate =
+    row.map((value) => parseStatementDateValue(value)).find(Boolean) || today();
+
+  if (!client || !amount) {
+    return null;
+  }
+
+  return {
+    client,
+    document,
+    amount,
+    issueDate,
+    dueDate: issueDate,
+    status: "pending",
+    partialAmount: 0,
+    importMode: "fallback",
+    note: "Por revisar",
+    type: "por_cobrar",
+  };
+}
+
+function isLooseReceivableHeaderText(value) {
+  const normalizedValue = normalizeStatementHeader(value);
+
+  return [
+    "cliente",
+    "nombre cliente",
+    "detalle",
+    "razon social",
+    "deudor",
+    "documento",
+    "factura",
+    "folio",
+    "fecha",
+    "fecha vencimiento",
+    "vencimiento",
+    "monto",
+    "total",
+    "saldo",
+    "pendiente",
+    "estado",
+    "abono",
+    "nota",
+  ].includes(normalizedValue);
+}
+
+function parseSiiPurchaseRegisterPayableRow(row) {
+  const keys = Object.keys(row);
+  const vendor = normalizeStatementDescription(
+    pickStatementValueByPriority(row, keys, [
+      ["razon social", "razón social"],
+      ["proveedor", "nombre proveedor"],
+    ])
+  );
+  const document = normalizeStatementDescription(
+    pickStatementValueByPriority(row, keys, [["folio"], ["factura", "documento"]])
+  );
+  const amount = Math.abs(
+    parseStatementSignedAmount(
+      pickStatementValueByPriority(row, keys, [
+        ["monto total"],
+        ["total"],
+        ["monto neto"],
+      ])
+    )
+  );
+  const issueDate =
+    parseStatementDateValue(
+      pickStatementValueByPriority(row, keys, [
+        ["fecha docto"],
+        ["fecha documento", "fecha factura", "emision", "fecha emision"],
+      ])
+    ) || "";
+  const dueDate =
+    parseStatementDateValue(
+      pickStatementValueByPriority(row, keys, [
+        ["fecha vencimiento", "vencimiento", "vence"],
+        ["fecha recepcion", "fecha recepción"],
+      ])
+    ) ||
+    issueDate ||
+    today();
+  const note = normalizeStatementDescription(
+    pickStatementValueByPriority(row, keys, [["tipo compra"], ["rut proveedor"]])
+  );
+
+  if (!vendor || !amount) {
+    return null;
+  }
+
+  return {
+    vendor,
+    document: document || "Documento pendiente",
+    amount,
+    issueDate: issueDate || today(),
+    dueDate,
+    status: "pending",
+    partialAmount: 0,
+    note: note || "",
+  };
+}
+
+function buildLoosePayableImportItems(sheet) {
+  const rows = window.XLSX.utils.sheet_to_json(sheet, {
+    header: 1,
+    defval: "",
+    raw: false,
+    blankrows: false,
+  });
+
+  return rows
+    .map((row) => parseLoosePayableImportRow(row))
+    .filter(Boolean);
+}
+
+function parseLoosePayableImportRow(row) {
+  if (!Array.isArray(row) || !row.length) {
+    return null;
+  }
+
+  const textCandidates = row
+    .map((value) => normalizeStatementDescription(value))
+    .filter(
+      (value) =>
+        value &&
+        /[a-záéíóúñ]/i.test(value) &&
+        !isLoosePayableHeaderText(value) &&
+        !/^\d{1,2}\/\d{1,2}\/\d{2,4}/.test(value) &&
+        !/^\d{7,}-[\dk]$/i.test(value)
+    )
+    .sort((left, right) => right.length - left.length);
+
+  const vendor = textCandidates[0] || "";
+  const document =
+    row
+      .map((value) => String(value || "").trim())
+      .find(
+        (value) =>
+          value &&
+          value !== vendor &&
+          /\d/.test(value) &&
+          value.length <= 24 &&
+          !/^\d{1,2}\/\d{1,2}\/\d{2,4}/.test(value)
+      ) || "Documento pendiente";
+
+  const amountCandidates = row
+    .map((value) => parseStatementSignedAmount(value))
+    .filter((value) => Math.abs(value) > 0)
+    .map((value) => Math.abs(value))
+    .sort((left, right) => right - left);
+  const amount = amountCandidates[0] || 0;
+
+  const issueDate =
+    row.map((value) => parseStatementDateValue(value)).find(Boolean) || today();
+
+  if (!vendor || !amount) {
+    return null;
+  }
+
+  return {
+    vendor,
+    document,
+    amount,
+    issueDate,
+    dueDate: issueDate,
+    status: "pending",
+    partialAmount: 0,
+    importMode: "fallback",
+    note: "Por revisar",
+  };
+}
+
+function isLoosePayableHeaderText(value) {
+  const normalizedValue = normalizeStatementHeader(value);
+
+  return [
+    "nro",
+    "tipo compra",
+    "rut proveedor",
+    "razon social",
+    "folio",
+    "fecha docto",
+    "fecha recepcion",
+    "fecha acuse",
+    "monto exento",
+    "monto neto",
+    "monto iva recuperable",
+    "monto total",
+  ].includes(normalizedValue);
 }
 
 function normalizeReceivableImportStatus(value) {
@@ -7046,7 +8557,7 @@ function deriveReceivableImportStatus(status, amount, partialAmount, pendingAmou
     return status;
   }
 
-  if (pendingAmount === 0 && amount > 0) {
+  if (partialAmount >= amount && amount > 0) {
     return "paid";
   }
 
@@ -7062,7 +8573,7 @@ function derivePayableImportStatus(status, amount, partialAmount, pendingAmount)
     return status;
   }
 
-  if (pendingAmount === 0 && amount > 0) {
+  if (partialAmount >= amount && amount > 0) {
     return "paid";
   }
 
@@ -7223,7 +8734,7 @@ function parsePdfStatementLine(line) {
   const withoutDate = line.replace(dateMatch[1], " ").replace(/\s+/g, " ").trim();
   const amountTokens = [
     ...normalizeOcrNumberText(withoutDate).matchAll(
-      /-?\$?\s*\d{1,3}(?:[.,]\d{3})+(?:,\d{2})?|-?\$?\s*\d{4,}(?:,\d{2})?/g
+      /-?\$?\s*\d{1,3}(?:[.,]\d{3})+(?:[.,]\d{2})?|-?\$?\s*\d{4,}(?:[.,]\d{2})?/g
     ),
   ].map((match) => match[0]);
 
@@ -7308,7 +8819,7 @@ function inferStatementTypeFromText(value) {
 }
 
 function normalizeStatementHeader(value) {
-  return String(value || "")
+  return normalizeStatementText(value)
     .toLowerCase()
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
@@ -7317,7 +8828,7 @@ function normalizeStatementHeader(value) {
 }
 
 function normalizeStatementDescription(value) {
-  return String(value || "")
+  return normalizeStatementText(value)
     .replace(/\s+/g, " ")
     .replace(/\b(saldo disponible|saldo contable)\b/gi, "")
     .trim();
@@ -7335,7 +8846,7 @@ function parseStatementDateValue(value) {
     }
   }
 
-  const normalizedValue = String(value).trim();
+  const normalizedValue = normalizeStatementText(value);
   if (!normalizedValue) {
     return "";
   }
@@ -7374,16 +8885,26 @@ function parseSpreadsheetSerialDate(serial) {
 }
 
 function parseStatementSignedAmount(value) {
-  const rawValue = String(value || "").trim();
-  if (!rawValue) {
-    return 0;
+  const rawValue = normalizeStatementText(value);
+  if (!rawValue) return 0;
+
+  const normalized = normalizeStatementText(rawValue).replace(/\s+/g, "");
+  const isNegative = normalized.includes("-") || /^\(.*\)$/.test(normalized);
+
+  const hasThousandDot = /\d{1,3}(\.\d{3})+/.test(normalized);
+  const hasThousandComma = /\d{1,3}(,\d{3})+/.test(normalized);
+
+  let clean = normalized.replace(/[^0-9.,]/g, "");
+
+  if (hasThousandDot && !hasThousandComma) {
+    clean = clean.replace(/\./g, "");
+  } else if (hasThousandComma) {
+    clean = clean.replace(/,/g, "");
+  } else {
+    clean = clean.replace(/[.,]/g, "");
   }
 
-  const normalizedValue = normalizeOcrNumberText(rawValue).replace(/\s+/g, "");
-  const isNegative = normalizedValue.includes("-") || /^\(.*\)$/.test(normalizedValue);
-  const digits = normalizedValue.replace(/[^\d]/g, "");
-  const amount = Number(digits) || 0;
-
+  const amount = Number(clean) || 0;
   return isNegative ? -amount : amount;
 }
 
