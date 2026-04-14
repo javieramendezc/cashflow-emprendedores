@@ -1615,6 +1615,10 @@ function clearAuthUrlState() {
   window.history.replaceState({}, document.title, window.location.pathname);
 }
 
+function isValidAuthEmail(email) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(email || "").trim());
+}
+
 function syncAuthModeUI() {
   const isSignIn = state.authMode === "signIn";
   const isResetPassword = state.authMode === "resetPassword";
@@ -1677,6 +1681,12 @@ async function handlePasswordResetRequest() {
     return;
   }
 
+  if (!isValidAuthEmail(email)) {
+    setAuthMessage(copyText("errors.auth.emailInvalid"));
+    authEmailInput.focus();
+    return;
+  }
+
   forgotPasswordBtn.disabled = true;
   setAuthMessage(copyText("auth.recovery.sending"), "info");
 
@@ -1691,6 +1701,8 @@ async function handlePasswordResetRequest() {
     }
 
     setAuthMessage(copyText("auth.recovery.sent"), "success");
+  } catch (error) {
+    setAuthMessage(getFriendlyErrorMessage("auth_reset_request", error));
   } finally {
     forgotPasswordBtn.disabled = false;
   }
@@ -1784,32 +1796,54 @@ async function handleAuthSubmit() {
     return;
   }
 
+  if (!email) {
+    setAuthMessage(copyText("errors.auth.emailRequired"));
+    authEmailInput.focus();
+    return;
+  }
+
+  if (!isValidAuthEmail(email)) {
+    setAuthMessage(copyText("errors.auth.emailInvalid"));
+    authEmailInput.focus();
+    return;
+  }
+
+  if (password.length < 6) {
+    setAuthMessage(copyText("errors.auth.password"));
+    authPasswordInput.focus();
+    return;
+  }
+
   authSubmitBtn.disabled = true;
   setAuthMessage(copyText("auth.processing"), "info");
 
-  const authResponse =
-    state.authMode === "signIn"
-      ? await supabaseClient.auth.signInWithPassword({ email, password })
-      : await supabaseClient.auth.signUp({ email, password });
+  try {
+    const authResponse =
+      state.authMode === "signIn"
+        ? await supabaseClient.auth.signInWithPassword({ email, password })
+        : await supabaseClient.auth.signUp({ email, password });
 
-  authSubmitBtn.disabled = false;
+    if (authResponse.error) {
+      setAuthMessage(getFriendlyErrorMessage("auth", authResponse.error));
+      return;
+    }
 
-  if (authResponse.error) {
-    setAuthMessage(getFriendlyErrorMessage("auth", authResponse.error));
-    return;
-  }
+    if (state.authMode === "signUp" && !authResponse.data.session) {
+      setAuthMode("signIn", {
+        message: copyText("auth.signUpSuccess"),
+        tone: "success",
+      });
+      authForm.reset();
+      return;
+    }
 
-  if (state.authMode === "signUp" && !authResponse.data.session) {
-    setAuthMode("signIn", {
-      message: copyText("auth.signUpSuccess"),
-      tone: "success",
-    });
+    setAuthMessage("");
     authForm.reset();
-    return;
+  } catch (error) {
+    setAuthMessage(getFriendlyErrorMessage("auth", error));
+  } finally {
+    authSubmitBtn.disabled = false;
   }
-
-  setAuthMessage("");
-  authForm.reset();
 }
 
 async function syncSessionView() {

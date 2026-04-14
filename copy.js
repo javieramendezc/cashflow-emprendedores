@@ -326,6 +326,7 @@
         invalid: "Revisa correo y clave. Y vuelve a intentar.",
         emailNotConfirmed: "Confirma tu correo. Luego vuelve a entrar.",
         registered: "Ese correo ya existe. Prueba iniciar sesión.",
+        emailInvalid: "Escribe un correo válido para continuar.",
         password: "La clave es muy corta. Usa 6 o más.",
         emailRequired: "Escribe tu correo. Y te mando el link.",
         passwordMismatch: "Las claves no coinciden. Revísalas.",
