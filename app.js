@@ -166,9 +166,18 @@ const connectionBannerTitle = document.querySelector("#connectionBannerTitle");
 const connectionBannerText = document.querySelector("#connectionBannerText");
 const connectionBannerBtn = document.querySelector("#connectionBannerBtn");
 const authForm = document.querySelector("#authForm");
+const authTitle = document.querySelector("#authTitle");
+const authCopy = document.querySelector("#authCopy");
 const authMessage = document.querySelector("#authMessage");
 const authSubmitBtn = document.querySelector("#authSubmitBtn");
 const toggleAuthModeBtn = document.querySelector("#toggleAuthModeBtn");
+const forgotPasswordBtn = document.querySelector("#forgotPasswordBtn");
+const cancelRecoveryBtn = document.querySelector("#cancelRecoveryBtn");
+const authEmailInput = document.querySelector("#authEmailInput");
+const authPasswordInput = document.querySelector("#authPasswordInput");
+const authPasswordLabel = document.querySelector("#authPasswordLabel");
+const authPasswordConfirmField = document.querySelector("#authPasswordConfirmField");
+const authPasswordConfirmInput = document.querySelector("#authPasswordConfirmInput");
 const appHeaderCashValue = document.querySelector("#appHeaderCashValue");
 const userEmailLabel = document.querySelector("#userEmailLabel");
 const logoutBtn = document.querySelector("#logoutBtn");
@@ -419,6 +428,7 @@ switchPage(state.activePage);
 switchDetailTab(state.activeDetailTab);
 applyUXComponentRules({ resetProgressiveDisclosure: true });
 render();
+syncAuthModeUI();
 initializeAuth();
 
 transactionFields.type.addEventListener("change", (event) => {
@@ -470,17 +480,15 @@ authForm.addEventListener("submit", async (event) => {
 });
 
 toggleAuthModeBtn.addEventListener("click", () => {
-  state.authMode = state.authMode === "signIn" ? "signUp" : "signIn";
-  authMessage.textContent = "";
-  authMessage.classList.remove("success");
-  authSubmitBtn.textContent =
-    state.authMode === "signIn"
-      ? copyText("auth.actions.signIn")
-      : copyText("auth.actions.signUp");
-  toggleAuthModeBtn.textContent =
-    state.authMode === "signIn"
-      ? copyText("auth.actions.switchToSignUp")
-      : copyText("auth.actions.switchToSignIn");
+  setAuthMode(state.authMode === "signIn" ? "signUp" : "signIn");
+});
+
+forgotPasswordBtn?.addEventListener("click", async () => {
+  await handlePasswordResetRequest();
+});
+
+cancelRecoveryBtn?.addEventListener("click", async () => {
+  await cancelPasswordRecoveryFlow();
 });
 
 logoutBtn.addEventListener("click", async () => {
@@ -1167,6 +1175,9 @@ receivableForm.addEventListener("submit", async (event) => {
   const amount = Number(formData.get("amount"));
   const partialAmount = Number(formData.get("pendingAmount"));
   const status = formData.get("status");
+  const existingReceivable = state.data.receivables.find((item) =>
+    idsMatch(item.id, formData.get("receivableId"))
+  );
 
   if (status === "partial" && (partialAmount <= 0 || partialAmount >= amount)) {
     showUXFeedback(getFriendlyErrorMessage("partial_amount"), "warn");
@@ -1183,6 +1194,7 @@ receivableForm.addEventListener("submit", async (event) => {
     dueDate: formData.get("dueDate"),
     status,
     note: String(formData.get("note") || "").trim(),
+    linkedMovement: Boolean(existingReceivable?.linkedMovement),
   };
 
   if (!receivable.client || !receivable.document || !receivable.amount || !receivable.dueDate) {
@@ -1217,6 +1229,9 @@ payableForm.addEventListener("submit", async (event) => {
   const amount = Number(formData.get("amount"));
   const partialAmount = Number(formData.get("pendingAmount"));
   const status = formData.get("status");
+  const existingPayable = state.data.payables.find((item) =>
+    idsMatch(item.id, formData.get("payableId"))
+  );
 
   if (status === "partial" && (partialAmount <= 0 || partialAmount >= amount)) {
     showUXFeedback(getFriendlyErrorMessage("partial_amount"), "warn");
@@ -1235,6 +1250,13 @@ payableForm.addEventListener("submit", async (event) => {
     note: String(formData.get("note") || "").trim(),
     invoicePhoto: state.payableInvoiceDraft.image,
     invoiceText: state.payableInvoiceDraft.ocrText,
+    linkedMovement: Boolean(existingPayable?.linkedMovement),
+    paidDate:
+      status === "paid"
+        ? existingPayable?.status === "paid" && existingPayable?.paidDate
+          ? existingPayable.paidDate
+          : today()
+        : "",
   };
 
   if (!payable.vendor || !payable.document || !payable.amount || !payable.dueDate) {
@@ -1558,6 +1580,168 @@ confirmResetModalBtn.addEventListener("click", async () => {
   showUXFeedback(copyText("feedback.resetDone"), "risk");
 });
 
+function setAuthMessage(message = "", tone = "") {
+  authMessage.textContent = message;
+  authMessage.classList.remove("success", "info");
+
+  if (tone === "success" || tone === "info") {
+    authMessage.classList.add(tone);
+  }
+}
+
+function getAuthUrlParam(key) {
+  const searchParams = new URLSearchParams(window.location.search || "");
+  const hashParams = new URLSearchParams(String(window.location.hash || "").replace(/^#/, ""));
+  return searchParams.get(key) || hashParams.get(key) || "";
+}
+
+function isPasswordRecoveryUrl() {
+  return getAuthUrlParam("type") === "recovery";
+}
+
+function shouldEnterPasswordRecovery(session) {
+  return Boolean(session?.user) && isPasswordRecoveryUrl();
+}
+
+function getPasswordRecoveryRedirectUrl() {
+  return `${window.location.origin}${window.location.pathname}`;
+}
+
+function clearAuthUrlState() {
+  if (!window.history?.replaceState) {
+    return;
+  }
+
+  window.history.replaceState({}, document.title, window.location.pathname);
+}
+
+function syncAuthModeUI() {
+  const isSignIn = state.authMode === "signIn";
+  const isResetPassword = state.authMode === "resetPassword";
+
+  authTitle.textContent = isResetPassword ? copyText("auth.recovery.title") : copyText("auth.title");
+  authCopy.textContent = isResetPassword ? copyText("auth.recovery.body") : copyText("auth.body");
+  authPasswordLabel.textContent = isResetPassword
+    ? copyText("auth.labels.newPassword")
+    : copyText("auth.labels.password");
+
+  authEmailInput.disabled = isResetPassword;
+  authEmailInput.required = !isResetPassword;
+  authPasswordInput.autocomplete = isSignIn ? "current-password" : "new-password";
+  authPasswordConfirmField.hidden = !isResetPassword;
+  authPasswordConfirmInput.disabled = !isResetPassword;
+  authPasswordConfirmInput.required = isResetPassword;
+
+  if (!isResetPassword) {
+    authPasswordConfirmInput.value = "";
+  }
+
+  authSubmitBtn.textContent = isResetPassword
+    ? copyText("auth.recovery.submit")
+    : isSignIn
+      ? copyText("auth.actions.signIn")
+      : copyText("auth.actions.signUp");
+  toggleAuthModeBtn.hidden = isResetPassword;
+  toggleAuthModeBtn.textContent = isSignIn
+    ? copyText("auth.actions.switchToSignUp")
+    : copyText("auth.actions.switchToSignIn");
+  forgotPasswordBtn.hidden = !isSignIn || isResetPassword;
+  forgotPasswordBtn.textContent = copyText("auth.recovery.action");
+  cancelRecoveryBtn.hidden = !isResetPassword;
+  cancelRecoveryBtn.textContent = copyText("auth.recovery.cancel");
+}
+
+function setAuthMode(nextMode, { message = "", tone = "" } = {}) {
+  state.authMode = nextMode;
+  setAuthMessage(message, tone);
+  syncAuthModeUI();
+}
+
+function enterPasswordRecoveryMode() {
+  state.authMode = "resetPassword";
+  authForm.reset();
+  authEmailInput.value = state.session?.user?.email || "";
+  setAuthMessage("");
+  syncAuthModeUI();
+  authScreen.hidden = false;
+  appShell.hidden = true;
+  authPasswordInput.focus();
+}
+
+async function handlePasswordResetRequest() {
+  const email = String(authEmailInput.value || "").trim();
+
+  if (!email) {
+    setAuthMessage(copyText("errors.auth.emailRequired"));
+    authEmailInput.focus();
+    return;
+  }
+
+  forgotPasswordBtn.disabled = true;
+  setAuthMessage(copyText("auth.recovery.sending"), "info");
+
+  try {
+    const { error } = await supabaseClient.auth.resetPasswordForEmail(email, {
+      redirectTo: getPasswordRecoveryRedirectUrl(),
+    });
+
+    if (error) {
+      setAuthMessage(getFriendlyErrorMessage("auth_reset_request", error));
+      return;
+    }
+
+    setAuthMessage(copyText("auth.recovery.sent"), "success");
+  } finally {
+    forgotPasswordBtn.disabled = false;
+  }
+}
+
+async function cancelPasswordRecoveryFlow() {
+  clearAuthUrlState();
+  setAuthMode("signIn");
+  authForm.reset();
+
+  if (state.session?.user) {
+    await supabaseClient.auth.signOut();
+  }
+
+  await syncSessionView();
+}
+
+async function handlePasswordUpdate(password, passwordConfirm) {
+  if (String(password || "").length < 6) {
+    setAuthMessage(copyText("errors.auth.password"));
+    authPasswordInput.focus();
+    return;
+  }
+
+  if (password !== passwordConfirm) {
+    setAuthMessage(copyText("errors.auth.passwordMismatch"));
+    authPasswordConfirmInput.focus();
+    return;
+  }
+
+  authSubmitBtn.disabled = true;
+  setAuthMessage(copyText("auth.recovery.updating"), "info");
+
+  try {
+    const { error } = await supabaseClient.auth.updateUser({ password });
+
+    if (error) {
+      setAuthMessage(getFriendlyErrorMessage("auth_password_update", error));
+      return;
+    }
+
+    clearAuthUrlState();
+    setAuthMode("signIn");
+    authForm.reset();
+    showUXFeedback(copyText("auth.recovery.updated"), "ok");
+    await syncSessionView();
+  } finally {
+    authSubmitBtn.disabled = false;
+  }
+}
+
 async function initializeAuth() {
   try {
     const {
@@ -1565,14 +1749,26 @@ async function initializeAuth() {
     } = await supabaseClient.auth.getSession();
 
     state.session = session;
+
+    if (shouldEnterPasswordRecovery(session)) {
+      enterPasswordRecoveryMode();
+      return;
+    }
+
     await syncSessionView();
   } catch {
     state.session = null;
     await syncSessionView();
   }
 
-  supabaseClient.auth.onAuthStateChange(async (_event, sessionState) => {
+  supabaseClient.auth.onAuthStateChange(async (event, sessionState) => {
     state.session = sessionState;
+
+    if (event === "PASSWORD_RECOVERY" || shouldEnterPasswordRecovery(sessionState)) {
+      enterPasswordRecoveryMode();
+      return;
+    }
+
     await syncSessionView();
   });
 }
@@ -1581,10 +1777,15 @@ async function handleAuthSubmit() {
   const formData = new FormData(authForm);
   const email = String(formData.get("email") || "").trim();
   const password = String(formData.get("password") || "");
+  const passwordConfirm = String(formData.get("passwordConfirm") || "");
+
+  if (state.authMode === "resetPassword") {
+    await handlePasswordUpdate(password, passwordConfirm);
+    return;
+  }
 
   authSubmitBtn.disabled = true;
-  authMessage.classList.remove("success");
-  authMessage.textContent = copyText("auth.processing");
+  setAuthMessage(copyText("auth.processing"), "info");
 
   const authResponse =
     state.authMode === "signIn"
@@ -1594,21 +1795,20 @@ async function handleAuthSubmit() {
   authSubmitBtn.disabled = false;
 
   if (authResponse.error) {
-    authMessage.textContent = getFriendlyErrorMessage("auth", authResponse.error);
+    setAuthMessage(getFriendlyErrorMessage("auth", authResponse.error));
     return;
   }
 
   if (state.authMode === "signUp" && !authResponse.data.session) {
-    authMessage.classList.add("success");
-    authMessage.textContent = copyText("auth.signUpSuccess");
-    state.authMode = "signIn";
-    authSubmitBtn.textContent = copyText("auth.actions.signIn");
-    toggleAuthModeBtn.textContent = copyText("auth.actions.switchToSignUp");
+    setAuthMode("signIn", {
+      message: copyText("auth.signUpSuccess"),
+      tone: "success",
+    });
     authForm.reset();
     return;
   }
 
-  authMessage.textContent = "";
+  setAuthMessage("");
   authForm.reset();
 }
 
@@ -1633,6 +1833,11 @@ async function syncSessionView() {
     state.historyTransactionsAccordion = createHistoryAccordionState(["controls", "table"]);
     state.historyReceivablesAccordion = createHistoryAccordionState(["filters", "table"]);
     state.historyPayablesAccordion = createHistoryAccordionState(["filters", "summary", "table"]);
+    if (state.authMode === "resetPassword") {
+      setAuthMode("signIn");
+    } else {
+      syncAuthModeUI();
+    }
     syncHistoryFilterInput();
     renderStatementImportState();
     renderReceivableImportState();
@@ -1645,6 +1850,11 @@ async function syncSessionView() {
     return;
   }
 
+  if (state.authMode !== "signIn") {
+    setAuthMode("signIn");
+  } else {
+    syncAuthModeUI();
+  }
   userEmailLabel.textContent = state.session.user.email || "-";
   authScreen.hidden = true;
   appShell.hidden = false;
@@ -2114,6 +2324,7 @@ async function confirmReceivableImport() {
       dueDate: item.dueDate,
       status: item.status,
       note: item.note,
+      linkedMovement: false,
     }));
 
     state.data.receivables = [...importedReceivables, ...state.data.receivables].sort(sortByDueDateAsc);
@@ -2344,6 +2555,8 @@ async function confirmPayableImport() {
       note: item.note,
       invoicePhoto: "",
       invoiceText: "",
+      linkedMovement: false,
+      paidDate: item.status === "paid" ? item.dueDate || item.issueDate || today() : "",
     }));
 
     state.data.payables = [...importedPayables, ...state.data.payables].sort(sortByDueDateAsc);
@@ -3133,24 +3346,11 @@ function buildMoneyCurvePoints(currentBalance, cashFloor) {
   const points = [
     {
       label: formatDate(toISODate(baseDate)),
-      amount: Math.round(currentBalance),
+      amount: normalizeCurrencyNumber(currentBalance),
       tone: getForecastTone(currentBalance, cashFloor),
     },
   ];
   let rollingAmount = currentBalance;
-  const todayIso = toISODate(baseDate);
-
-  state.data.receivables
-    .filter((item) => item.status !== "paid" && item.dueDate === todayIso)
-    .forEach((item) => {
-      rollingAmount += getOutstandingAmount(item);
-    });
-
-  state.data.payables
-    .filter((item) => item.status !== "paid" && item.dueDate === todayIso)
-    .forEach((item) => {
-      rollingAmount -= getOutstandingAmount(item);
-    });
 
   const cursorDate = new Date(baseDate);
   cursorDate.setDate(cursorDate.getDate() + 1);
@@ -3158,23 +3358,16 @@ function buildMoneyCurvePoints(currentBalance, cashFloor) {
   for (let date = cursorDate; date <= endDate; date.setDate(date.getDate() + 1)) {
     const isoDate = toISODate(date);
 
-    state.data.transactions
-      .filter((item) => item.date === isoDate)
-      .forEach((item) => {
-        rollingAmount += item.type === "income" ? item.amount : -item.amount;
-      });
+    rollingAmount += sumMovementCashImpact(
+      state.data.transactions,
+      (item) => item.date === isoDate
+    );
 
-    state.data.receivables
-      .filter((item) => item.status !== "paid" && item.dueDate === isoDate)
-      .forEach((item) => {
-        rollingAmount += getOutstandingAmount(item);
-      });
-
-    state.data.payables
-      .filter((item) => item.status !== "paid" && item.dueDate === isoDate)
-      .forEach((item) => {
-        rollingAmount -= getOutstandingAmount(item);
-      });
+    rollingAmount -= sumStandalonePaidPayables(
+      state.data.payables,
+      (item) => getPayableCashImpactDate(item) === isoDate,
+      state.data.transactions
+    );
 
     const isKeyPoint =
       date.getTime() === endDate.getTime() ||
@@ -3183,7 +3376,7 @@ function buildMoneyCurvePoints(currentBalance, cashFloor) {
     if (isKeyPoint) {
       points.push({
         label: formatDate(isoDate),
-        amount: Math.round(rollingAmount),
+        amount: normalizeCurrencyNumber(rollingAmount),
         tone: getForecastTone(rollingAmount, cashFloor),
       });
     }
@@ -3197,32 +3390,30 @@ function findCriticalCashDate(currentBalance, cashFloor) {
     return "";
   }
 
+  if (currentBalance < cashFloor) {
+    return today();
+  }
+
   const baseDate = new Date(`${today()}T12:00:00`);
   const endDate = new Date(baseDate.getFullYear(), baseDate.getMonth() + 1, 0, 12, 0, 0);
   let rollingAmount = currentBalance;
 
-  for (let date = new Date(baseDate); date <= endDate; date.setDate(date.getDate() + 1)) {
+  const cursorDate = new Date(baseDate);
+  cursorDate.setDate(cursorDate.getDate() + 1);
+
+  for (let date = cursorDate; date <= endDate; date.setDate(date.getDate() + 1)) {
     const isoDate = toISODate(date);
 
-    if (isoDate > today()) {
+    rollingAmount += sumMovementCashImpact(
+      state.data.transactions,
+      (item) => item.date === isoDate
+    );
+
+    rollingAmount -= sumStandalonePaidPayables(
+      state.data.payables,
+      (item) => getPayableCashImpactDate(item) === isoDate,
       state.data.transactions
-        .filter((item) => item.date === isoDate)
-        .forEach((item) => {
-          rollingAmount += item.type === "income" ? item.amount : -item.amount;
-        });
-    }
-
-    state.data.receivables
-      .filter((item) => item.status !== "paid" && item.dueDate === isoDate)
-      .forEach((item) => {
-        rollingAmount += getOutstandingAmount(item);
-      });
-
-    state.data.payables
-      .filter((item) => item.status !== "paid" && item.dueDate === isoDate)
-      .forEach((item) => {
-        rollingAmount -= getOutstandingAmount(item);
-      });
+    );
 
     if (rollingAmount < cashFloor) {
       return isoDate;
@@ -3415,44 +3606,56 @@ function createActionFeedback(actionLabel, targetMonth = currentMonth()) {
   };
 }
 
-function calculateAvailableCashToday() {
-  const todayIso = today();
+function getMovementCashImpact(item) {
+  const amount = Number(item?.amount) || 0;
+  return item?.type === "income" ? amount : -amount;
+}
 
-  return state.data.transactions.reduce((total, item) => {
-    if (item.date > todayIso) {
+function sumMovementCashImpact(items, predicate = () => true) {
+  return (Array.isArray(items) ? items : []).reduce((total, item) => {
+    if (!predicate(item)) {
       return total;
     }
 
-    return total + (item.type === "income" ? item.amount : -item.amount);
+    return total + getMovementCashImpact(item);
   }, 0);
+}
+
+// Reglas de caja:
+// 1. Los movimientos siempre impactan caja.
+// 2. Las cuentas por cobrar no impactan caja hasta que exista movimiento real.
+// 3. Las facturas pagadas solo impactan caja si no tienen movimiento asociado.
+function calculateAvailableCashToday() {
+  const todayIso = today();
+  const movementBalance = sumMovementCashImpact(
+    state.data.transactions,
+    (item) => item.date <= todayIso
+  );
+  const standalonePaidPayables = sumStandalonePaidPayables(
+    state.data.payables,
+    (item) => getPayableCashImpactDate(item) <= todayIso,
+    state.data.transactions
+  );
+
+  return movementBalance - standalonePaidPayables;
 }
 
 function calculateProjectedMonthEndCash(currentCash, targetMonth) {
   const todayIso = today();
-  const futureTransactions = state.data.transactions
-    .filter((item) => item.date > todayIso && item.date.startsWith(targetMonth))
-    .reduce(
-      (total, item) => total + (item.type === "income" ? item.amount : -item.amount),
-      0
-    );
-  const futureReceivables = state.data.receivables
-    .filter(
-      (item) =>
-        item.status !== "paid" &&
-        item.dueDate >= todayIso &&
-        item.dueDate.startsWith(targetMonth)
-    )
-    .reduce((total, item) => total + getOutstandingAmount(item), 0);
-  const futurePayables = state.data.payables
-    .filter(
-      (item) =>
-        item.status !== "paid" &&
-        item.dueDate >= todayIso &&
-        item.dueDate.startsWith(targetMonth)
-    )
-    .reduce((total, item) => total + getOutstandingAmount(item), 0);
+  const futureTransactions = sumMovementCashImpact(
+    state.data.transactions,
+    (item) => item.date > todayIso && item.date.startsWith(targetMonth)
+  );
+  const futureStandalonePaidPayables = sumStandalonePaidPayables(
+    state.data.payables,
+    (item) => {
+      const cashImpactDate = getPayableCashImpactDate(item);
+      return cashImpactDate > todayIso && cashImpactDate.startsWith(targetMonth);
+    },
+    state.data.transactions
+  );
 
-  return currentCash + futureTransactions + futureReceivables - futurePayables;
+  return currentCash + futureTransactions - futureStandalonePaidPayables;
 }
 
 function render() {
@@ -3509,6 +3712,16 @@ function render() {
   const liveIncomes = liveTransactions.filter((item) => item.type === "income");
   const liveSalesIncomes = liveIncomes.filter((item) => item.category === "Ventas");
   const liveExpenses = liveTransactions.filter((item) => item.type === "expense");
+  const standalonePaidPayablesTotal = sumStandalonePaidPayables(
+    allPayables,
+    () => true,
+    allTransactions
+  );
+  const liveStandalonePaidPayablesTotal = sumStandalonePaidPayables(
+    livePayables,
+    () => true,
+    allTransactions
+  );
   const liveOpenReceivables = liveReceivables.filter((item) => item.status !== "paid");
   const liveOpenPayables = livePayables.filter((item) => item.status !== "paid");
 
@@ -3520,17 +3733,20 @@ function render() {
   );
   const expenseTotal = sum(expenses);
   const liveExpenseTotal = sum(liveExpenses);
+  const cashExpenseTotal = expenseTotal + standalonePaidPayablesTotal;
+  const liveCashExpenseTotal = liveExpenseTotal + liveStandalonePaidPayablesTotal;
   const receivableTotal = sum(openReceivables);
   const payableTotal = sum(openPayables);
   const liveReceivableTotal = sum(liveOpenReceivables);
   const livePayableTotal = sum(liveOpenPayables);
-  const netTotal = incomeTotal - expenseTotal;
+  const netTotal = incomeTotal - cashExpenseTotal;
+  const liveNetTotal = liveIncomeTotal - liveCashExpenseTotal;
   const currentBalance = calculateAvailableCashToday();
   const projectedBalance = calculateProjectedMonthEndCash(currentBalance, currentMonthKey);
   const recurring = transactions.filter((item) => item.recurring);
   const liveRecurring = liveTransactions.filter((item) => item.recurring);
   const averageIncome = liveIncomes.length
-    ? Math.round(liveIncomeTotal / liveIncomes.length)
+    ? normalizeCurrencyNumber(liveIncomeTotal / liveIncomes.length)
     : 0;
   const liveTopCategory = findTopExpenseCategory(liveExpenses);
   const hasMovements = state.data.transactions.length > 0;
@@ -3553,8 +3769,6 @@ function render() {
     liveRecurring,
     liveIncomes,
     liveExpenses,
-    liveReceivableTotal,
-    livePayableTotal,
     cashFloor
   );
   const lowCashWeek = cashFloor
@@ -3562,7 +3776,7 @@ function render() {
     : null;
   const criticalCashDate = findCriticalCashDate(currentBalance, cashFloor);
   const health = hasAnyData
-    ? getHealth(liveIncomeTotal, liveExpenseTotal, projectedBalance, cashFloor)
+    ? getHealth(liveIncomeTotal, liveCashExpenseTotal, projectedBalance, cashFloor)
     : {
         label: copyText("health.labels.neutral"),
         tone: "neutral",
@@ -3571,7 +3785,7 @@ function render() {
   const isRiskState = isNormalState && isHomeRiskState(projectedBalance);
   const isPositiveState = isNormalState && isHomePositiveState(health, projectedBalance);
   const assistantMessage = createAdvice(
-    liveIncomeTotal - liveExpenseTotal,
+    liveNetTotal,
     liveRecurring.length,
     liveTopCategory,
     liveReceivableTotal,
@@ -3607,12 +3821,12 @@ function render() {
   });
 
   text("#incomeTotal", formatCurrency(liveIncomeTotal));
-  text("#expenseTotal", formatCurrency(liveExpenseTotal));
+  text("#expenseTotal", formatCurrency(liveCashExpenseTotal));
   text("#receivableTotal", formatCurrency(liveReceivableTotal));
   text("#payableTotal", formatCurrency(livePayableTotal));
   text("#monthlyVatTotal", formatCurrency(monthlyVatTotal));
   text("#monthlyVatCreditTotal", formatCurrency(monthlyVatCreditTotal));
-  text("#netTotal", formatCurrency(liveIncomeTotal - liveExpenseTotal));
+  text("#netTotal", formatCurrency(liveNetTotal));
   setAnimatedCurrency("#sidebarBalance", currentBalance);
   setAnimatedCurrency("#appHeaderCashValue", currentBalance);
   text("#sidebarHealth", health.description);
@@ -4252,7 +4466,7 @@ function renderMonthlySummary() {
 
   monthlySummaryTableBody.innerHTML = rows
     .map(([month, values]) => {
-      const projected = values.income - values.expense + values.receivable - values.payable;
+      const projected = getMonthlyCashResult(values);
       return `
         <tr>
           <td><strong>${formatMonthLabel(month)}</strong></td>
@@ -4278,6 +4492,16 @@ function getMonthlySummaryData() {
     monthlyData[month][item.type] += item.amount;
   });
 
+  state.data.payables
+    .filter((item) => isStandalonePaidPayable(item, state.data.transactions))
+    .forEach((item) => {
+      const month = getPayableCashImpactDate(item).slice(0, 7);
+      if (!monthlyData[month]) {
+        monthlyData[month] = { income: 0, expense: 0, receivable: 0, payable: 0 };
+      }
+      monthlyData[month].expense += Number(item.amount || 0);
+    });
+
   state.data.receivables
     .filter((item) => item.status !== "paid")
     .forEach((item) => {
@@ -4299,6 +4523,10 @@ function getMonthlySummaryData() {
     });
 
   return monthlyData;
+}
+
+function getMonthlyCashResult(values) {
+  return (Number(values?.income) || 0) - (Number(values?.expense) || 0);
 }
 
 function renderMonthlyFlowChart(rows) {
@@ -4391,8 +4619,6 @@ function createForecastWeeks(
   recurring,
   incomes,
   expenses,
-  receivableTotal,
-  payableTotal,
   cashFloor
 ) {
   const weeklyRecurring = recurring.reduce((total, item) => total + item.amount / 4, 0);
@@ -4401,13 +4627,9 @@ function createForecastWeeks(
 
   let rollingBalance = balance;
   const weeks = Array.from({ length: 4 }, (_, index) => {
-    if (index === 0) {
-      rollingBalance += receivableTotal * 0.35 - payableTotal * 0.45;
-    }
-
     rollingBalance += weeklyIncome - Math.max(weeklyExpense, weeklyRecurring);
 
-    const amount = Math.round(rollingBalance);
+    const amount = normalizeCurrencyNumber(rollingBalance);
 
     return {
       label: `Semana ${index + 1}`,
@@ -5321,27 +5543,41 @@ function sum(items) {
   return items.reduce((total, item) => total + getOutstandingAmount(item), 0);
 }
 
+const CLP_FORMATTER = new Intl.NumberFormat("es-CL", {
+  style: "currency",
+  currency: "CLP",
+  minimumFractionDigits: 0,
+  maximumFractionDigits: 0,
+});
+
+const CLP_DECIMAL_FORMATTER = new Intl.NumberFormat("es-CL", {
+  style: "currency",
+  currency: "CLP",
+  minimumFractionDigits: 2,
+  maximumFractionDigits: 2,
+});
+
+function normalizeCurrencyNumber(value) {
+  const numericValue = Number(value);
+  if (!Number.isFinite(numericValue)) {
+    return 0;
+  }
+
+  return Math.abs(numericValue % 1) > 0.000001
+    ? Number(numericValue.toFixed(2))
+    : numericValue;
+}
+
 function formatCurrency(value) {
-  return new Intl.NumberFormat("es-CL", {
-    style: "currency",
-    currency: "CLP",
-    maximumFractionDigits: 0,
-  }).format(value);
+  const normalizedValue = normalizeCurrencyNumber(value);
+  const formatter =
+    Math.abs(normalizedValue % 1) > 0.000001 ? CLP_DECIMAL_FORMATTER : CLP_FORMATTER;
+
+  return formatter.format(normalizedValue);
 }
 
 function formatCompactCurrency(value) {
-  const absoluteValue = Math.abs(Number(value) || 0);
-  const sign = Number(value) < 0 ? "-" : "";
-
-  if (absoluteValue >= 1000000) {
-    return `${sign}$${(absoluteValue / 1000000).toFixed(1).replace(".0", "")}M`;
-  }
-
-  if (absoluteValue >= 1000) {
-    return `${sign}$${Math.round(absoluteValue / 1000)}K`;
-  }
-
-  return `${sign}$${absoluteValue}`;
+  return formatCurrency(value);
 }
 
 function formatDate(value) {
@@ -5410,6 +5646,10 @@ function sortByDueDateAsc(a, b) {
   return a.dueDate.localeCompare(b.dueDate);
 }
 
+function sortByDueDateDesc(a, b) {
+  return b.dueDate.localeCompare(a.dueDate);
+}
+
 function normalizeLedgerSortMode(value) {
   return ["date", "pending", "paid"].includes(value) ? value : "date";
 }
@@ -5419,7 +5659,7 @@ function sortLedgerItems(items, sortMode = "date") {
   const sortedItems = [...items];
 
   if (normalizedSort === "date") {
-    return sortedItems.sort(sortByDueDateAsc);
+    return sortedItems.sort(sortByDueDateDesc);
   }
 
   return sortedItems.sort((left, right) => {
@@ -5430,7 +5670,7 @@ function sortLedgerItems(items, sortMode = "date") {
       return priorityDiff;
     }
 
-    return sortByDueDateAsc(left, right);
+    return sortByDueDateDesc(left, right);
   });
 }
 
@@ -5553,13 +5793,15 @@ function getAvailableCategories(type) {
 }
 
 function cloneSeedState() {
+  const transactions = [...seedState.transactions].sort(sortByDateDesc);
+
   return {
     companyLogo: seedState.companyLogo,
     cashFloor: seedState.cashFloor,
     customCategories: normalizeCustomCategories(seedState.customCategories),
-    transactions: [...seedState.transactions].sort(sortByDateDesc),
-    receivables: normalizeLedgerItems([...seedState.receivables]).sort(sortByDueDateAsc),
-    payables: normalizeLedgerItems([...seedState.payables]).sort(sortByDueDateAsc),
+    transactions,
+    receivables: normalizeLedgerItems([...seedState.receivables], transactions).sort(sortByDueDateAsc),
+    payables: normalizeLedgerItems([...seedState.payables], transactions).sort(sortByDueDateAsc),
   };
 }
 
@@ -5581,13 +5823,15 @@ function createInitialVisibilityState() {
 }
 
 function normalizeStatePayload(payload) {
+  const transactions = (payload?.transactions || []).sort(sortByDateDesc);
+
   return {
     companyLogo: typeof payload?.companyLogo === "string" ? payload.companyLogo : "",
     cashFloor: Math.max(0, Number(payload?.cashFloor) || 0),
     customCategories: normalizeCustomCategories(payload?.customCategories),
-    transactions: (payload?.transactions || []).sort(sortByDateDesc),
-    receivables: normalizeLedgerItems(payload?.receivables || []).sort(sortByDueDateAsc),
-    payables: normalizeLedgerItems(payload?.payables || []).sort(sortByDueDateAsc),
+    transactions,
+    receivables: normalizeLedgerItems(payload?.receivables || [], transactions).sort(sortByDueDateAsc),
+    payables: normalizeLedgerItems(payload?.payables || [], transactions).sort(sortByDueDateAsc),
   };
 }
 
@@ -5954,11 +6198,12 @@ function setAnimatedCurrency(selector, value, options = {}) {
     return;
   }
 
-  const nextValue = Math.round(value);
+  const nextValue = normalizeCurrencyNumber(value);
   const previousValue = Number(element.dataset.currencyValue);
   const shouldAnimate = options.animate !== false && Number.isFinite(previousValue);
+  const isSameValue = Number.isFinite(previousValue) && Math.abs(previousValue - nextValue) < 0.005;
 
-  if (!shouldAnimate || previousValue === nextValue) {
+  if (!shouldAnimate || isSameValue) {
     element.textContent = formatCurrency(nextValue);
     element.dataset.currencyValue = String(nextValue);
     return;
@@ -5977,7 +6222,7 @@ function setAnimatedCurrency(selector, value, options = {}) {
   const tick = (now) => {
     const progress = Math.min((now - startTime) / duration, 1);
     const eased = 1 - Math.pow(1 - progress, 3);
-    const currentValue = Math.round(startValue + delta * eased);
+    const currentValue = normalizeCurrencyNumber(startValue + delta * eased);
     element.textContent = formatCurrency(currentValue);
 
     if (progress < 1) {
@@ -6155,7 +6400,7 @@ function showUXFeedback(message, tone = "ok") {
 function getFriendlyErrorMessage(context, error) {
   const rawMessage = String(error?.message || "").toLowerCase();
 
-  if (context === "auth") {
+  if (context === "auth" || context === "auth_reset_request" || context === "auth_password_update") {
     if (rawMessage.includes("invalid login credentials")) {
       return copyText("errors.auth.invalid");
     }
@@ -6170,6 +6415,27 @@ function getFriendlyErrorMessage(context, error) {
 
     if (rawMessage.includes("password")) {
       return copyText("errors.auth.password");
+    }
+
+    if (rawMessage.includes("same password")) {
+      return copyText("errors.auth.samePassword");
+    }
+
+    if (
+      rawMessage.includes("expired") ||
+      rawMessage.includes("otp") ||
+      rawMessage.includes("token") ||
+      rawMessage.includes("flow state")
+    ) {
+      return copyText("errors.auth.recoveryExpired");
+    }
+
+    if (context === "auth_reset_request") {
+      return copyText("errors.auth.resetFallback");
+    }
+
+    if (context === "auth_password_update") {
+      return copyText("errors.auth.updateFallback");
     }
 
     return copyText("errors.auth.fallback");
@@ -6303,12 +6569,14 @@ function resolvePendingAmount(totalAmount, partialAmount, status) {
   return totalAmount;
 }
 
-function normalizeLedgerItems(items) {
+function normalizeLedgerItems(items, transactions = []) {
   return items.map((item) => ({
     ...item,
     pendingAmount: normalizeOutstandingAmount(item),
     invoicePhoto: typeof item.invoicePhoto === "string" ? item.invoicePhoto : "",
     invoiceText: typeof item.invoiceText === "string" ? item.invoiceText : "",
+    linkedMovement: normalizeLedgerLinkedMovement(item, transactions),
+    paidDate: normalizeLedgerPaidDate(item),
   }));
 }
 
@@ -6328,6 +6596,122 @@ function normalizeOutstandingAmount(item) {
   }
 
   return amount;
+}
+
+function normalizeLedgerPaidDate(item) {
+  const explicitDate = parseStatementDateValue(item?.paidDate);
+  if (explicitDate) {
+    return explicitDate;
+  }
+
+  if (item?.status !== "paid") {
+    return "";
+  }
+
+  return parseStatementDateValue(item?.dueDate) || parseStatementDateValue(item?.issueDate) || "";
+}
+
+function normalizeLedgerLinkedMovement(item, transactions = []) {
+  if (isPayableLedgerItem(item)) {
+    return Boolean(item?.linkedMovement) || inferPayableLinkedMovement(item, transactions);
+  }
+
+  return Boolean(item?.linkedMovement);
+}
+
+function isPayableLedgerItem(item) {
+  return typeof item === "object" && item !== null && ("vendor" in item || "invoicePhoto" in item);
+}
+
+function inferPayableLinkedMovement(item, transactions = []) {
+  if (!isPayableLedgerItem(item) || item.status !== "paid") {
+    return false;
+  }
+
+  const amount = Math.abs(Number(item.amount) || 0);
+  if (!amount) {
+    return false;
+  }
+
+  const referenceDates = [
+    normalizeLedgerPaidDate(item),
+    parseStatementDateValue(item?.dueDate),
+    parseStatementDateValue(item?.issueDate),
+  ].filter(Boolean);
+  const payableTerms = buildLedgerLinkTerms([item.vendor, item.document, item.note]);
+
+  return transactions
+    .filter(
+      (movement) =>
+        movement?.type === "expense" && Math.abs(Number(movement.amount) || 0) === amount
+    )
+    .some((movement) => {
+      const movementDate = parseStatementDateValue(movement.date);
+      const movementText = normalizeStatementHeader(
+        `${movement.description || ""} ${movement.note || ""} ${movement.category || ""}`
+      );
+      let score = 0;
+
+      if (referenceDates.includes(movementDate)) {
+        score += 6;
+      } else if (
+        movementDate &&
+        referenceDates.some((referenceDate) => getIsoDateDistance(referenceDate, movementDate) <= 3)
+      ) {
+        score += 3;
+      }
+
+      if (payableTerms.some((term) => term.length >= 6 && movementText.includes(term))) {
+        score += 4;
+      }
+
+      return score >= 6;
+    });
+}
+
+function buildLedgerLinkTerms(values) {
+  return [...new Set(values.map((value) => normalizeStatementHeader(value)).filter((term) => term.length >= 4))];
+}
+
+function getIsoDateDistance(leftDate, rightDate) {
+  if (!leftDate || !rightDate) {
+    return Number.POSITIVE_INFINITY;
+  }
+
+  const left = new Date(`${leftDate}T12:00:00`);
+  const right = new Date(`${rightDate}T12:00:00`);
+
+  if (Number.isNaN(left.getTime()) || Number.isNaN(right.getTime())) {
+    return Number.POSITIVE_INFINITY;
+  }
+
+  return Math.abs(Math.round((left - right) / 86400000));
+}
+
+function getPayableCashImpactDate(item) {
+  return (
+    normalizeLedgerPaidDate(item) ||
+    parseStatementDateValue(item?.dueDate) ||
+    parseStatementDateValue(item?.issueDate) ||
+    today()
+  );
+}
+
+function isStandalonePaidPayable(item, transactions) {
+  const movementList = Array.isArray(transactions) ? transactions : state.data.transactions;
+  return item?.status === "paid" && !normalizeLedgerLinkedMovement(item, movementList);
+}
+
+function sumStandalonePaidPayables(payables, predicate = () => true, transactions) {
+  const movementList = Array.isArray(transactions) ? transactions : state.data.transactions;
+
+  return (Array.isArray(payables) ? payables : []).reduce((total, item) => {
+    if (!isStandalonePaidPayable(item, movementList) || !predicate(item)) {
+      return total;
+    }
+
+    return total + (Number(item.amount) || 0);
+  }, 0);
 }
 
 function getOutstandingAmount(item) {
@@ -9053,7 +9437,7 @@ function exportToExcel() {
             values.expense,
             values.receivable,
             values.payable,
-            values.income - values.expense + values.receivable - values.payable,
+            getMonthlyCashResult(values),
           ])
         )}
       </body>
@@ -9124,7 +9508,7 @@ function exportToPdf() {
             formatCurrency(values.expense),
             formatCurrency(values.receivable),
             formatCurrency(values.payable),
-            formatCurrency(values.income - values.expense + values.receivable - values.payable),
+            formatCurrency(getMonthlyCashResult(values)),
           ])
         )}
 
@@ -9199,37 +9583,7 @@ function exportToPdf() {
 }
 
 function buildMonthlySummaryRows() {
-  const monthlyData = {};
-
-  state.data.transactions.forEach((item) => {
-    const month = item.date.slice(0, 7);
-    if (!monthlyData[month]) {
-      monthlyData[month] = { income: 0, expense: 0, receivable: 0, payable: 0 };
-    }
-    monthlyData[month][item.type] += item.amount;
-  });
-
-  state.data.receivables
-    .filter((item) => item.status !== "paid")
-    .forEach((item) => {
-      const month = item.dueDate.slice(0, 7);
-      if (!monthlyData[month]) {
-        monthlyData[month] = { income: 0, expense: 0, receivable: 0, payable: 0 };
-      }
-      monthlyData[month].receivable += getOutstandingAmount(item);
-    });
-
-  state.data.payables
-    .filter((item) => item.status !== "paid")
-    .forEach((item) => {
-      const month = item.dueDate.slice(0, 7);
-      if (!monthlyData[month]) {
-        monthlyData[month] = { income: 0, expense: 0, receivable: 0, payable: 0 };
-      }
-      monthlyData[month].payable += getOutstandingAmount(item);
-    });
-
-  return Object.entries(monthlyData).sort(([monthA], [monthB]) =>
+  return Object.entries(getMonthlySummaryData()).sort(([monthA], [monthB]) =>
     monthB.localeCompare(monthA)
   );
 }

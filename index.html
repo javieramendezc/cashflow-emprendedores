@@ -22,8 +22,8 @@
         </div>
         <p class="auth-headline">Tu caja,<br /><em>sin estrés.</em></p>
         <p class="eyebrow" data-ux-copy>Acceso privado</p>
-        <h1>Entra a Flujo Claro</h1>
-        <p class="auth-copy" data-ux-copy>
+        <h1 id="authTitle">Entra a Flujo Claro</h1>
+        <p class="auth-copy" id="authCopy" data-ux-copy>
           Crea tu cuenta o inicia sesión para guardar tu plata en la nube y ver
           solo tu información.
         </p>
@@ -31,13 +31,14 @@
         <form id="authForm" class="transaction-form">
           <label>
             Correo
-            <input type="email" name="email" autocomplete="email" required />
+            <input type="email" id="authEmailInput" name="email" autocomplete="email" required />
           </label>
 
           <label>
-            Contraseña
+            <span id="authPasswordLabel">Contraseña</span>
             <input
               type="password"
+              id="authPasswordInput"
               name="password"
               autocomplete="current-password"
               minlength="6"
@@ -45,14 +46,34 @@
             />
           </label>
 
+          <label id="authPasswordConfirmField" hidden>
+            <span>Repite la nueva clave</span>
+            <input
+              type="password"
+              id="authPasswordConfirmInput"
+              name="passwordConfirm"
+              autocomplete="new-password"
+              minlength="6"
+            />
+          </label>
+
           <p class="auth-message" id="authMessage"></p>
 
-          <div class="form-actions">
+          <div class="form-actions auth-form-actions">
             <button type="submit" class="primary-btn" id="authSubmitBtn">
               Iniciar sesión
             </button>
             <button type="button" class="ghost-btn" id="toggleAuthModeBtn">
               Crear cuenta
+            </button>
+          </div>
+
+          <div class="auth-secondary-actions">
+            <button type="button" class="auth-text-btn" id="forgotPasswordBtn">
+              Olvidé mi clave
+            </button>
+            <button type="button" class="auth-text-btn" id="cancelRecoveryBtn" hidden>
+              Volver
             </button>
           </div>
         </form>
